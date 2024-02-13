@@ -32,8 +32,7 @@ dependencies {
     compileOnly("com.google.auto.service:auto-service-annotations:1.0.1")
     implementation("com.facebook:ktfmt:0.43")
 
-    // Actually this is going to be 0.0.5 - using an unpublished one now
-    implementation("io.exoquery:decomat-core:0.0.7")
+    implementation("io.exoquery:decomat-core:0.1.0")
     implementation("io.exoquery:pprint-kotlin:2.0.2")
     api(kotlin("reflect"))
 }

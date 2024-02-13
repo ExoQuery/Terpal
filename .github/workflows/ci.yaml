@@ -14,4 +14,4 @@ jobs:
           distribution: 'adopt'
       - name: Validate Gradle wrapper
         uses: gradle/wrapper-validation-action@v1
-      - run: ./gradlew clean build test --stacktrace
+      - run: ./gradlew clean build --stacktrace -PisCI -Pnosign

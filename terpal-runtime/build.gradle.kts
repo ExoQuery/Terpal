@@ -21,7 +21,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 dependencies {
     api(kotlin("reflect"))
     implementation("io.exoquery:pprint-kotlin:2.0.2")
-    implementation("io.exoquery:decomat-core:0.0.7")
+    implementation("io.exoquery:decomat-core:0.1.0")
 }
 
 // Needed for testing
