@@ -1,9 +1,9 @@
 package io.exoquery.terpal
 
-class InterlacePartsParams<T>(val isPart: (T) -> Boolean, val concatPart: (T, T) -> T, val emptyPart: () -> T) {
+class UnzipPartsParams<T>(val isPart: (T) -> Boolean, val concatPart: (T, T) -> T, val emptyPart: () -> T) {
   data class Components<T>(val parts: List<T>, val params: List<T>)
 
-  fun invoke(values: List<T>): Components<T> {
+  operator fun invoke(values: List<T>): Components<T> {
     val identifyIsPart = isPart
     fun T.isPart(): Boolean = identifyIsPart(this@isPart)
     fun T.isParam(): Boolean = !this.isPart()

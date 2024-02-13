@@ -3,7 +3,7 @@ package io.exoquery.terpal.plugin.transform
 import io.decomat.Is
 import io.decomat.case
 import io.decomat.on
-import io.exoquery.terpal.InterlacePartsParams
+import io.exoquery.terpal.UnzipPartsParams
 import io.exoquery.terpal.Interpolator
 import io.exoquery.terpal.parseError
 import io.exoquery.terpal.plugin.findMethodOrFail
@@ -28,8 +28,8 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
     expression.dispatchReceiver?.type?.isClass<Interpolator<*, *>>() ?: false &&
       expression.symbol.safeName == "invoke"
 
-  fun transform(expression: IrCall): IrExpression {
-    val (caller, comps) =
+  fun transform(expression: IrCall, superTransformer: VisitTransformExpressions): IrExpression {
+    val (caller, compsRaw) =
       with(compileLogger) {
         on(expression).match(
           // interpolatorSubclass.invoke(.. { stuff } ...)
@@ -52,6 +52,10 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
         )
       }
 
+    // before doing anything else need to run recursive transformations on the components because they could be
+    // there could be nested interpolations e.g. stmt("foo_#{stmt("bar")}_baz")
+    val comps = compsRaw.map { it.transform(superTransformer, null) }
+
     val parentCaller =
       caller.type.superTypes()
         .find { it.isClass<Interpolator<*, *>>() }
@@ -73,7 +77,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       }
 
     val (parts, params) =
-      InterlacePartsParams<IrExpression>({ it.isClass<String>() }, concatStringExprs, { ctx.builder.irString("") })
+      UnzipPartsParams<IrExpression>({ it.isClass<String>() }, concatStringExprs, { ctx.builder.irString("") })
         .invoke(comps)
 
     for ((i, comp) in params.withIndex()) {

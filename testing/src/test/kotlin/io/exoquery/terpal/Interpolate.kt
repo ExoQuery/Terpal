@@ -1,29 +1,68 @@
 package io.exoquery.terpal
 
-data class In(val value: String)
-data class Out(val parts: List<String>, val params: List<In?>)
+import kotlin.test.Test
 
-object StaticTerp: Interpolator<In?, Out> {
-  override fun interpolate(parts: () -> List<String>, params: () -> List<In?>): Out =
-    Out(parts(), params())
-}
+class Interpolate: InterpolateTestBase {
+  companion object {
+    data class In(val value: String)
+    data class Out(val parts: List<String>, val params: List<In>, val info: String)
 
-class InstanceTerp: Interpolator<In?, Out> {
-  override fun interpolate(parts: () -> List<String>, params: () -> List<In?>): Out =
-    Out(parts(), params())
-}
+    object StaticTerp: Interpolator<In, Out> {
+      override fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
+        Out(parts(), params(), "Static")
+    }
 
+    class InstanceTerp(val info: String): Interpolator<In, Out> {
+      override fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
+        Out(parts(), params(), info)
+    }
+  }
 
-fun main() {
-//  printSource {
-//    StaticTerp.interpolate({listOf("foo, bar")}, {listOf(In("baz"))})
-//  }
+  val instanceTerp = InstanceTerp("Dynamic")
 
+  val A = In("A")
+  val B = In("B")
+  val C = In("C")
 
-  val inExample: In? = null
+  @Test
+  fun simpleConstantTest() {
+    StaticTerp("foo") shouldBe
+      Out(listOf("foo"), listOf(), "Static")
+  }
 
-  //StaticTerp("foo_${In("One")}_bar_${In("Two")}${In("Three")}")
-  // TODO need to have a case for a single string const
-  //println(StaticTerp("foo ${In("123")}"))
-  println(StaticTerp("foo ${inExample}"))
+  @Test
+  fun simpleStaticTest1() {
+    StaticTerp("foo_${A}${B}${C}_baz") shouldBe
+      Out(listOf("foo_", "", "", "_baz"), listOf(A, B, C), "Static")
+  }
+
+  @Test
+  fun simpleStaticTest2() {
+    StaticTerp("foo_${A}_bar") shouldBe
+      Out(listOf("foo_", "_bar"), listOf(A), "Static")
+  }
+
+  @Test
+  fun simpleStaticTest3() {
+    StaticTerp("foo_${A}${B}${C}") shouldBe
+      Out(listOf("foo_", "", "", ""), listOf(A, B, C), "Static")
+  }
+
+  @Test
+  fun simpleStaticTest4() {
+    StaticTerp("${A}${B}${C}_foo") shouldBe
+      Out(listOf("", "", "", "_foo"), listOf(A, B, C), "Static")
+  }
+
+  @Test
+  fun complexStaticTest1() {
+    StaticTerp("foo_${A}_bar_${B}${C}_baz") shouldBe
+      Out(listOf("foo_", "_bar_", "", "_baz"), listOf(A, B, C), "Static")
+  }
+
+  @Test
+  fun complexDynamicTest1() {
+    instanceTerp("foo_${A}_bar_${B}${C}_baz") shouldBe
+      Out(listOf("foo_", "_bar_", "", "_baz"), listOf(A, B, C), "Dynamic")
+  }
 }

@@ -52,7 +52,7 @@ class VisitTransformExpressions(
       }
 
       transformInterpolations.matches(expression) -> {
-        transformInterpolations.transform(expression)
+        transformInterpolations.transform(expression, this)
       }
 
       else ->
