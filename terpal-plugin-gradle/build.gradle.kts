@@ -1,6 +1,6 @@
 plugins {
+    // No inclusion of `publish` here because this project is not published to maven directly
     id("conventions")
-
     id("java-gradle-plugin")
     id("com.gradle.plugin-publish") version "1.1.0"
 
@@ -24,7 +24,7 @@ gradlePlugin {
     vcsUrl.set("https://github.com/exoquery/terpal.git")
 
     plugins {
-        create("exoqueryPlugin") {
+        create("terpalPlugin") {
             id = "io.exoquery.terpal-plugin"
             displayName = "Terpal Plugin"
             description = "Kotlin Terpal Compiler Plugin"

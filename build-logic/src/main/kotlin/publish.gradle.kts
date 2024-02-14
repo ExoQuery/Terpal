@@ -1,3 +1,5 @@
+import org.jetbrains.dokka.gradle.AbstractDokkaTask
+
 plugins {
   id("conventions")
   `java-library`
@@ -70,20 +72,19 @@ apply {
   plugin("org.jetbrains.dokka")
 }
 
-// TODO Need to fix this
-// val dokkaHtml: org.jetbrains.dokka.gradle.DokkaTask by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class)
+val dokkaHtml by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class)
 
-// tasks {
-//   val javadocJar by creating(Jar::class) {
-//     dependsOn(dokkaHtml)
-//     archiveClassifier.set("javadoc")
-//     from(dokkaHtml.outputDirectory)
-//   }
-//   val sourcesJar by creating(Jar::class) {
-//     archiveClassifier.set("sources")
-//     from(sourceSets["main"].allSource)
-//   }
-// }
+ tasks {
+   val javadocJar by creating(Jar::class) {
+     dependsOn(dokkaHtml)
+     archiveClassifier.set("javadoc")
+     from(dokkaHtml.get().outputDirectory)
+   }
+   val sourcesJar by creating(Jar::class) {
+     archiveClassifier.set("sources")
+     from(sourceSets["main"].allSource)
+   }
+ }
 
 /*
 Cannot use `publications.withType<MavenPublication> { ... } ` approach using kotlin-jvm unlike KMP

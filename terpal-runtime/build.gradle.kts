@@ -1,5 +1,6 @@
 plugins {
-  id("publish")
+    id("conventions")
+    id("publish")
 }
 
 kotlin {
