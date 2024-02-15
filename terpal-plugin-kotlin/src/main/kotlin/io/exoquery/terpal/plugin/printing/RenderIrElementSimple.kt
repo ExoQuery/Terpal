@@ -1,6 +1,5 @@
 package io.exoquery.terpal.plugin.printing
 
-import io.exoquery.fansi.Str
 import io.exoquery.terpal.plugin.safeName
 import org.jetbrains.kotlin.com.intellij.openapi.util.text.StringUtil
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
@@ -20,17 +19,6 @@ import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.util.capitalizeDecapitalize.toLowerCaseAsciiOnly
 import org.jetbrains.kotlin.utils.addIfNotNull
 import org.jetbrains.kotlin.utils.addToStdlib.ifTrue
-import io.exoquery.fansi.Color.Green
-import io.exoquery.fansi.Color.Red
-import io.exoquery.fansi.Color.Yellow
-import io.exoquery.fansi.Color.LightYellow
-import io.exoquery.fansi.Color.DarkGray
-import io.exoquery.fansi.Color.LightGray
-import io.exoquery.fansi.Color.LightGreen
-import io.exoquery.fansi.Color.Blue
-import io.exoquery.fansi.Color.Cyan
-import io.exoquery.fansi.Color.Magenta
-import io.exoquery.fansi.Color.LightMagenta
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 
 
@@ -326,7 +314,7 @@ class RenderIrElementVisitorSimple(normalizeNames: Boolean = false, private val 
         expression.extensionReceiver?.let { "extension=${it.type.classFqName?.asString()}" } ?: "<>"
 
     //return "[IrCall] ${expression.symbol.safeName} "
-    return "${Green("[IrCall]")} ${Red(expression.symbol.renderReference())} - ${reciever}"
+    return "${"[IrCall]"} ${expression.symbol.renderReference()} - ${reciever}"
   }
 
   private fun IrCall.renderSuperQualifier(): String =

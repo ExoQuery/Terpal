@@ -25,15 +25,14 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 }
 
 dependencies {
-    implementation("io.exoquery:terpal-runtime")
+    // Looks like it knows to do a project-dependency even if there is a version attached (i.e. I guess it ignores the version?)
+    api("io.exoquery:terpal-runtime:1.0.1")
 
     compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable")
 
     kapt("com.google.auto.service:auto-service:1.0.1")
     compileOnly("com.google.auto.service:auto-service-annotations:1.0.1")
-    implementation("com.facebook:ktfmt:0.43")
 
-    implementation("io.exoquery:decomat-core:0.1.0")
-    implementation("io.exoquery:pprint-kotlin:2.0.2")
+    api("io.exoquery:decomat-core:0.1.0")
     api(kotlin("reflect"))
 }
