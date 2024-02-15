@@ -26,6 +26,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 
 dependencies {
     // Looks like it knows to do a project-dependency even if there is a version attached (i.e. I guess it ignores the version?)
+    // version = 1.0.1
     api("io.exoquery:terpal-runtime:1.0.1")
 
     compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable")
