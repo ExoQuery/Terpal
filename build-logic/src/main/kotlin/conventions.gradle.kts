@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "io.exoquery"
-version = "1.0.1"
+version = "1.0.2"
 
 check("$version".isNotBlank() && version != "unspecified")
     { "invalid version $version" }

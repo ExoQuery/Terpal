@@ -117,10 +117,11 @@ object ExtractorsDomain {
         if (!interpolatorReturnType.isSubtypeOfClass(returnTypeClass))
           error("The type that the interpolation function `${call.symbol.safeName}` returns `${interpolatorReturnType.asString()}` is not a subtype of `${call.symbol.owner.returnType.asString()}` which the ${interpolatorType.asString()} interpolator returns. This will result in a class-cast error and is therefore not allowed.")
 
+        if (!(call.extensionReceiver?.isClass<kotlin.String>() ?: false))
+          error("A InterpolatorFunction must be an extension reciever on a String, ${if (call.extensionReceiver == null) "but no reciver was found" else "but it was a `${call.extensionReceiver?.type?.asString()}` reciver."}")
+
         return Match(interpolatorType, interpolatorClassSymbol)
       }
-
-
 
       context (CompileLogger) operator fun <AP: Pattern<InterpolatorFunctionInvoke.Match>, BP: Pattern<List<IrExpression>>> get(reciver: AP, terpComps: BP) =
         customPattern2(reciver, terpComps) { call: IrCall ->
@@ -128,16 +129,8 @@ object ExtractorsDomain {
           if (match != null) {
             //error("------------ Is Operator: ${call.symbol.owner.isOperator}")
 
-            // If it's an operator e.g. `+"foo ${bar} baz"` then the reciver is supposed to be the string-concatenation.
-            // Otherwise the 1st argument is supposed to be
-
-            val concatExpr =
-              if (call.symbol.owner.isOperator)
-                call.extensionReceiver ?: call.dispatchReceiver
-              else
-                // TODO Make sure there's only one argument
-                call.simpleValueArgs.first()
-
+            // If it's an function or operator e.g. `+"foo ${bar} baz"` then the reciver is supposed to be the string-concatenation
+            val concatExpr = call.extensionReceiver
             on(concatExpr).match(
               case(Ir.StringConcatenation[Is()]).then { components ->
                 Components2(match, components)
