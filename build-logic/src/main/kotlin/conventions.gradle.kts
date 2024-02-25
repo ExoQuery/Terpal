@@ -10,7 +10,8 @@ plugins {
 }
 
 group = "io.exoquery"
-version = "1.0.2"
+// Everything inherits the version from here
+version = "1.0.6"
 
 check("$version".isNotBlank() && version != "unspecified")
     { "invalid version $version" }

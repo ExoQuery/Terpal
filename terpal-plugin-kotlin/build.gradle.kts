@@ -24,10 +24,14 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     }
 }
 
+// Version from conventions.gradle.kts
+val thisVersion = version
+//println("------------------ This Version: ${thisVersion} --------------------------")
+
 dependencies {
     // Looks like it knows to do a project-dependency even if there is a version attached (i.e. I guess it ignores the version?)
     // version = 1.0.1
-    api("io.exoquery:terpal-runtime:1.0.1")
+    api("io.exoquery:terpal-runtime:${thisVersion}")
 
     compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable")
 
