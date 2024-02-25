@@ -1,9 +1,11 @@
 package io.exoquery.terpal
 
+fun interpolatorBody(): Nothing = throw IllegalStateException(Messages.PluginWasNotExecuted)
+
 interface Interpolator<T, R> {
   // TODO better error message
-  operator fun invoke(string: String): R =
-    throw IllegalStateException(Messages.PluginWasNotExecuted)
+  operator fun invoke(string: String): R = interpolatorBody()
+
 
   fun interpolate(parts: () -> List<String>, params: () -> List<T>): R
 

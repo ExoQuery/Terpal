@@ -7,34 +7,46 @@ import io.exoquery.terpal.UnzipPartsParams
 import io.exoquery.terpal.Interpolator
 import io.exoquery.terpal.parseError
 import io.exoquery.terpal.plugin.findMethodOrFail
+import io.exoquery.terpal.plugin.location
 import io.exoquery.terpal.plugin.printing.dumpSimple
 import io.exoquery.terpal.plugin.safeName
-import io.exoquery.terpal.plugin.trees.ExtractorsDomain
+import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
 import io.exoquery.terpal.plugin.trees.isClass
 import io.exoquery.terpal.plugin.trees.simpleTypeArgs
+import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
+import org.jetbrains.kotlin.ir.backend.js.utils.asString
+import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.types.isSubtypeOfClass
+import org.jetbrains.kotlin.ir.util.classId
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
+import org.jetbrains.kotlin.ir.util.isObject
 import org.jetbrains.kotlin.ir.util.superTypes
+import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.isClassTypeConstructor
 
 class TransformInterepolatorInvoke(val ctx: BuilderContext) {
   private val compileLogger = ctx.logger
 
   fun matches(expression: IrCall): Boolean =
-    expression.dispatchReceiver?.type?.isClass<Interpolator<*, *>>() ?: false &&
-      expression.symbol.safeName == "invoke"
+    with (compileLogger) {
+      Call.InterpolateInvoke.matchesMethod(expression) || Call.InterpolatorFunctionInvoke.matchesMethod(expression)
+    }
 
   fun transform(expression: IrCall, superTransformer: VisitTransformExpressions): IrExpression {
     val (caller, compsRaw) =
       with(compileLogger) {
         on(expression).match(
           // interpolatorSubclass.invoke(.. { stuff } ...)
-          case(ExtractorsDomain.Call.InterpolateInvoke[Is(), Is()]).then { caller, comps ->
+          case(Call.InterpolateInvoke[Is(), Is()]).then { caller, comps ->
             caller to comps
+          },
+          case(Call.InterpolatorFunctionInvoke[Is(), Is()]).then { callerData, comps ->
+            ctx.builder.irGetObject(callerData.interpolatorClass) to comps
           }
         )
       } ?: run {
@@ -52,6 +64,8 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
         )
       }
 
+
+
     // before doing anything else need to run recursive transformations on the components because they could be
     // there could be nested interpolations e.g. stmt("foo_#{stmt("bar")}_baz")
     val comps = compsRaw.map { it.transform(superTransformer, null) }
@@ -61,7 +75,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
         .find { it.isClass<Interpolator<*, *>>() }
         ?: parseError("Could not isolate the parent type Interpolator<T, R>. This shuold be impossible.")
 
-    // TODO need to catch parseError externally & not transform the expressions
+    // TODO need to catch parseError externally (i.e. in VisitTransformExpressions) & not transform the expressions
 
     // Interpolator type T
     val interpolateType = parentCaller.simpleTypeArgs.get(0)
@@ -82,8 +96,8 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
 
     for ((i, comp) in params.withIndex()) {
       if (!comp.type.isSubtypeOfClass(interpolateTypeClass))
-        error(
-          """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` but a type `${interpolateType.dumpKotlinLike()}` was expected by the ${caller.type} interpolator.
+        compileLogger.error(
+          """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.asString()} interpolator.
              |========= The faulty expression was: =========
              |${comp.dumpKotlinLike()}
           """.trimMargin()
@@ -100,10 +114,14 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       val runCall = caller.type.findMethodOrFail("interpolate")
       val partsLiftedFun = createLambda0(partsLifted, runCall.owner)
       val paramsLiftedFun = createLambda0(paramsLifted, runCall.owner)
-      caller.callMethodWithType("interpolate", interpolateReturn)(
-        partsLiftedFun,
-        paramsLiftedFun
-      )
+
+      val callOutput =
+        caller.callMethodWithType("interpolate", interpolateReturn)(
+          partsLiftedFun,
+          paramsLiftedFun
+        )
+
+      callOutput
     }
   }
 }

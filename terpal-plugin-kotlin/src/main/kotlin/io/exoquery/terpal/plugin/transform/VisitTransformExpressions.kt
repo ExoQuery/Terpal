@@ -23,8 +23,6 @@ class VisitTransformExpressions(
   private val projectDir: Path
 ) : IrElementTransformerVoidWithContext() {
 
-  val logger = CompileLogger(config)
-
   private fun typeIsFqn(type: IrType, fqn: String): Boolean {
     if (type !is IrSimpleType) return false
 
@@ -36,15 +34,19 @@ class VisitTransformExpressions(
 
   override fun visitCall(expression: IrCall): IrExpression {
     val scopeOwner = currentScope!!.scope.scopeOwnerSymbol
-    val compileLogger = CompileLogger(config)
 
-    val transformPrint = TransformPrintSource(context, config, scopeOwner)
-    val transformerCtx = TransformerOrigin(context, config, this.currentFile)
+
+    val transformerCtx = TransformerOrigin(context, config, this.currentFile, expression)
+    val compileLogger = transformerCtx.logger
 
     val builderContext = transformerCtx.makeBuilderContext(expression, scopeOwner)
+    val transformPrint = TransformPrintSource(builderContext)
     val transformInterpolations = TransformInterepolatorInvoke(builderContext)
 
+
+    // TODO need to catch parseError here in VisitTransformExpressions & not transform the expressions
     val out = when {
+
       // 1st that that runs here because printed stuff should not be transformed
       // (and this does not recursively transform stuff inside)
       transformPrint.matches(expression) -> {

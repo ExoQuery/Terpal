@@ -1,28 +1,27 @@
 package io.exoquery.terpal.plugin.logging
 
+import io.exoquery.terpal.plugin.location
 import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocationWithRange
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.wasm.ir.source.location.SourceLocation
 
-data class CompileLogger(val messageCollector: MessageCollector) {
+data class CompileLogger(val messageCollector: MessageCollector, val currentFile: IrFile, val macroCallSite: IrElement) {
   fun warn(msg: String) =
-    messageCollector.report(CompilerMessageSeverity.WARNING, msg)
+    messageCollector.report(CompilerMessageSeverity.WARNING, msg, macroCallSite.location(currentFile.fileEntry))
 
   fun error(msg: String) =
-    messageCollector.report(CompilerMessageSeverity.ERROR, msg)
-
-  fun error(msg: String, loc: CompilerMessageSourceLocation) {
-    messageCollector.report(CompilerMessageSeverity.ERROR, msg, loc)
-  }
+    messageCollector.report(CompilerMessageSeverity.ERROR, msg, macroCallSite.location(currentFile.fileEntry))
 
   companion object {
-    operator fun invoke(config: CompilerConfiguration) =
+    operator fun invoke(config: CompilerConfiguration, currentFile: IrFile, macroCallSite: IrElement) =
       config.get(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, MessageCollector.NONE).let {
-        CompileLogger(it)
+        CompileLogger(it, currentFile, macroCallSite)
       }
   }
 }

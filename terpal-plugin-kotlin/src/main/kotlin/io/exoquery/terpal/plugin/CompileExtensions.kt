@@ -1,6 +1,7 @@
 package io.exoquery.terpal.plugin
 
 import io.decomat.fail.fail
+import io.exoquery.terpal.plugin.transform.BuilderContext
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocationWithRange
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
 import org.jetbrains.kotlin.ir.IrElement

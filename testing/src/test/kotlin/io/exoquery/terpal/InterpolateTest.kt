@@ -2,7 +2,7 @@ package io.exoquery.terpal
 
 import kotlin.test.Test
 
-class Interpolate: InterpolateTestBase {
+class InterpolateTest: InterpolateTestBase {
   companion object {
     data class In(val value: String)
     data class Out(val parts: List<String>, val params: List<In>, val info: String)
