@@ -18,6 +18,8 @@ import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.ir.util.isClass
 import org.jetbrains.kotlin.ir.util.isObject
 import org.jetbrains.kotlin.ir.util.superTypes
+import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.extractTypeParameters
+import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.getArguments
 
 inline fun <reified T> IrExpression.isClass(): Boolean {
   val className = T::class.qualifiedNameForce
@@ -87,7 +89,7 @@ object ExtractorsDomain {
 
         val interpolatorClassSymbol =
           interpolatorType.classOrNull ?: run {
-            error("The interpolator type `${interpolatorType.asString()}` (from the annotation: ${matchingAnnotationClass.type.asString()}) is not a class")
+            error("The interpolator type `${interpolatorType.asString()}` (from the annotation: ${matchingAnnotationClass.type.asString()}) is not a class in: ${call.dumpKotlinLike()}")
             return null
           }
 

@@ -10,10 +10,10 @@ class LocalInterpolatorFunctionTest: InterpolateTestBase {
       Stmt(parts(), params(), "local")
   }
 
-  @InterpolatorFunction<StaticTerp>
+  @InterpolatorFunction<StaticTerp>(StaticTerp::class)
   fun staticTerp(str: String): Stmt = interpolatorBody()
 
-  @InterpolatorFunction<StaticTerp>
+  @InterpolatorFunction<StaticTerp>(StaticTerp::class)
   operator fun String.unaryPlus(): Stmt = interpolatorBody()
 
   val A = Stmt(listOf("A"), listOf(), "local")

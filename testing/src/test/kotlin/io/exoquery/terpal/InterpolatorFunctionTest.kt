@@ -2,10 +2,10 @@ package io.exoquery.terpal
 
 import kotlin.test.Test
 
-@InterpolatorFunction<InterpolatorFunctionTest.StaticTerp>
+@InterpolatorFunction<InterpolatorFunctionTest.StaticTerp>(InterpolatorFunctionTest.StaticTerp::class)
 fun staticTerp(str: String): InterpolatorFunctionTest.Stmt = interpolatorBody()
 
-@InterpolatorFunction<InterpolatorFunctionTest.StaticTerp>
+@InterpolatorFunction<InterpolatorFunctionTest.StaticTerp>(InterpolatorFunctionTest.StaticTerp::class)
 operator fun String.unaryPlus(): InterpolatorFunctionTest.Stmt = interpolatorBody()
 
 class InterpolatorFunctionTest: InterpolateTestBase {
