@@ -7,19 +7,18 @@ import io.exoquery.terpal.plugin.logging.CompileLogger
 import io.exoquery.terpal.plugin.qualifiedNameForce
 import io.exoquery.terpal.plugin.safeName
 import org.jetbrains.kotlin.ir.backend.js.utils.asString
+import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.getConstructorTypeArguments
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.isSubtypeOfClass
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
-import org.jetbrains.kotlin.ir.util.isClass
 import org.jetbrains.kotlin.ir.util.isObject
 import org.jetbrains.kotlin.ir.util.superTypes
-import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.extractTypeParameters
-import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.getArguments
 
 inline fun <reified T> IrExpression.isClass(): Boolean {
   val className = T::class.qualifiedNameForce
@@ -72,24 +71,33 @@ object ExtractorsDomain {
         extractComponents(call) != null
 
       context (CompileLogger) fun extractComponents(call: IrCall): Match? {
-        val matchingAnnotationClass =
+        val matchingAnnotationConstructor =
           call.symbol.owner.annotations.find {
             it.type.classFqName?.asString() == interpolatorFunctionName
           } ?: return null
 
         // E.g. StaticTerp
         val interpolatorType =
-          matchingAnnotationClass.type.simpleTypeArgs.let { typeArgs ->
-            if (typeArgs.size != 1) {
-              error("Fatal Error: Invalid interpolation expression by `${matchingAnnotationClass.dumpKotlinLike()}`. The expression shuold have only one type arg but found: ${typeArgs.map { it.asString() }.toList()}")
+          matchingAnnotationConstructor.valueArguments.let { args ->
+            if (args.size != 1) {
+              error("Fatal Error: Invalid interpolation expression by `${matchingAnnotationConstructor.dumpKotlinLike()}`. The expression shuold have only one arg but found: ${args.map { it?.dumpKotlinLike() }.toList()}")
               null
-            } else
-              typeArgs.first()
-          } ?: return null
+            } else {
+              val first = args.first()
+              when {
+                first == null -> {
+                  error("Fatal Error: First constructor type arg of  ")
+                  null
+                }
+                // argument StaticTerp from the KClass<StaticTerp> in the annotation constructor
+                else          -> first.type.simpleTypeArgs.first()
+              }
+            } ?: return null
+          }
 
         val interpolatorClassSymbol =
           interpolatorType.classOrNull ?: run {
-            error("The interpolator type `${interpolatorType.asString()}` (from the annotation: ${matchingAnnotationClass.type.asString()}) is not a class in: ${call.dumpKotlinLike()}")
+            error("The interpolator type `${interpolatorType.asString()}` (from the annotation: `${matchingAnnotationConstructor.dumpKotlinLike()}` typed as: ${matchingAnnotationConstructor.type.asString()}) is not a class in: ${call.dumpKotlinLike()}")
             return null
           }
 
