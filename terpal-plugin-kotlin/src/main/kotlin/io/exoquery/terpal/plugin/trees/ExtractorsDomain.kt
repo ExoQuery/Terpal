@@ -87,7 +87,7 @@ object ExtractorsDomain {
 
         val interpolatorClassSymbol =
           interpolatorType.classOrNull ?: run {
-            error("The interpolator type `${interpolatorType.asString()}` is not a class")
+            error("The interpolator type `${interpolatorType.asString()}` (from the annotation: ${matchingAnnotationClass.type.asString()}) is not a class")
             return null
           }
 
