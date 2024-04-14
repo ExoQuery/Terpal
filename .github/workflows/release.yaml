@@ -22,8 +22,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    #      if: success() && github.ref == 'refs/heads/github-release'
-    #      needs: build
+    needs: [create_staging_repository]
     env:
       SONATYPE_REPOSITORY_ID: ${{ needs.create_staging_repository.outputs.repository_id }}
       SONATYPE_USERNAME: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
