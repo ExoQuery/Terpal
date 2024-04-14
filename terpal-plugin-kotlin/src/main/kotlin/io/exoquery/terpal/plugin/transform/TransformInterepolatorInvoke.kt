@@ -18,6 +18,8 @@ import org.jetbrains.kotlin.ir.backend.js.utils.asString
 import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.expressions.IrCall
+import org.jetbrains.kotlin.ir.expressions.IrConst
+import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.types.classOrNull
@@ -91,7 +93,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       }
 
     val (parts, params) =
-      UnzipPartsParams<IrExpression>({ it.isClass<String>() }, concatStringExprs, { ctx.builder.irString("") })
+      UnzipPartsParams<IrExpression>({ it.isClass<String>() && it is IrConst<*> && it.kind == IrConstKind.String }, concatStringExprs, { ctx.builder.irString("") })
         .invoke(comps)
 
     for ((i, comp) in params.withIndex()) {

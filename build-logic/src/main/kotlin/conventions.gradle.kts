@@ -11,7 +11,7 @@ plugins {
 
 group = "io.exoquery"
 // Everything inherits the version from here
-version = "1.0.6"
+version = "1.8.21-0.1.0"
 
 check("$version".isNotBlank() && version != "unspecified")
     { "invalid version $version" }

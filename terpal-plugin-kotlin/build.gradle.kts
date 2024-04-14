@@ -30,7 +30,6 @@ val thisVersion = version
 
 dependencies {
     // Looks like it knows to do a project-dependency even if there is a version attached (i.e. I guess it ignores the version?)
-    // version = 1.0.1
     api("io.exoquery:terpal-runtime:${thisVersion}")
 
     compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable")
