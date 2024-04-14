@@ -10,7 +10,6 @@ import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.*
-import org.jetbrains.kotlin.ir.types.impl.ReturnTypeIsNotInitializedException
 import org.jetbrains.kotlin.ir.types.impl.originalKotlinType
 import org.jetbrains.kotlin.ir.util.parentAsClass
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
@@ -649,13 +648,6 @@ private fun IrFunction.renderTypeParameters(): String =
   else
     typeParameters.joinToString(separator = ", ", prefix = "<", postfix = ">") { it.name.toString() }
 
-private val IrFunction.safeReturnType: IrType?
-  get() = try {
-    returnType
-  } catch (e: ReturnTypeIsNotInitializedException) {
-    null
-  }
-
 private fun IrLocalDelegatedProperty.renderLocalDelegatedPropertyFlags() =
   if (isVar) "var" else "val"
 
@@ -672,7 +664,7 @@ private fun IrVariable.normalizedName(data: VariableNameData): String {
 }
 
 private fun IrFunction.renderReturnType(renderer: RenderIrElementVisitorSimple?, verboseErrorTypes: Boolean): String =
-  safeReturnType?.renderTypeWithRenderer(renderer, verboseErrorTypes) ?: "<Uninitialized>"
+  returnType.renderTypeWithRenderer(renderer, verboseErrorTypes)
 
 private fun IrType.renderTypeWithRenderer(renderer: RenderIrElementVisitorSimple?, verboseErrorTypes: Boolean): String =
   "${renderTypeAnnotations(annotations, renderer, verboseErrorTypes)}${renderTypeInner(renderer, verboseErrorTypes)}"
