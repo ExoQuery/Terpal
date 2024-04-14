@@ -97,13 +97,13 @@ object ExtractorsDomain {
 
         val interpolatorClassSymbol =
           interpolatorType.classOrNull ?: run {
-            error("The interpolator type `${interpolatorType.asString()}` (from the annotation: `${matchingAnnotationConstructor.dumpKotlinLike()}` typed as: ${matchingAnnotationConstructor.type.asString()}) is not a class in: ${call.dumpKotlinLike()}")
+            error("The interpolator type `${interpolatorType.dumpKotlinLike()}` (from the annotation: `${matchingAnnotationConstructor.dumpKotlinLike()}` typed as: ${matchingAnnotationConstructor.type.dumpKotlinLike()}) is not a class in: ${call.dumpKotlinLike()}")
             return null
           }
 
         // TODO need to test this
         if (!interpolatorClassSymbol.owner.isObject) {
-          error("The interpolator type `${interpolatorType.asString()}` was not an object. It can object constructed as an object.")
+          error("The interpolator type `${interpolatorType.dumpKotlinLike()}` was not an object. It can object constructed as an object.")
           return null
         }
 
@@ -116,23 +116,23 @@ object ExtractorsDomain {
         // The return-type of the interpolation function e.g. Out for StaticTerp (also frequently Stmt, or String)
         val interpolatorReturnType =
           interpolatorImplementation.simpleTypeArgs.getOrNull(1)
-            ?: throw IllegalStateException("Fatal Exception: The interpolator type ${interpolatorImplementation.asString()} has no 2nd argument (i.e. the output-type)")
+            ?: throw IllegalStateException("Fatal Exception: The interpolator type ${interpolatorImplementation.dumpKotlinLike()} has no 2nd argument (i.e. the output-type)")
 
         // The return-type of the interpolation function e.g. `Out`
-        val returnTypeClass = call.symbol.owner.returnType.classOrNull ?: throw IllegalStateException("Fatal Error: Type type `${call.symbol.owner.returnType.asString()}` is not a class.")
+        val returnTypeClass = call.symbol.owner.returnType.classOrNull ?: throw IllegalStateException("Fatal Error: Type type `${call.symbol.owner.returnType.dumpKotlinLike()}` is not a class.")
 
         // The thing that the function returns must be the same (or a subtype) of what the interpolator "inside"
         // will actualy return, otherwise it will be a class cast error
         // TODO Need to test this
         if (!interpolatorReturnType.isSubtypeOfClass(returnTypeClass))
-          error("The type that the interpolation function `${call.symbol.safeName}` returns `${interpolatorReturnType.asString()}` is not a subtype of `${call.symbol.owner.returnType.asString()}` which the ${interpolatorType.asString()} interpolator returns. This will result in a class-cast error and is therefore not allowed.")
+          error("The type that the interpolation function `${call.symbol.safeName}` returns `${interpolatorReturnType.dumpKotlinLike()}` is not a subtype of `${call.symbol.owner.returnType.dumpKotlinLike()}` which the ${interpolatorType.dumpKotlinLike()} interpolator returns. This will result in a class-cast error and is therefore not allowed.")
 
 
         // either it has the form of `fun String.unaryPlus():Result` or `fun staticTerp(str: String):Result`
         // it it has a extension reciver it must be a `fun String.unaryPlus():Result`
         if (call.extensionReceiver != null) {
           if (!(call.extensionReceiver?.isClass<kotlin.String>() ?: false))
-            error("A InterpolatorFunction must be an extension reciever on a String, ${if (call.extensionReceiver == null) "but no reciver was found" else "but it was a `${call.extensionReceiver?.type?.asString()}` reciver."}")
+            error("A InterpolatorFunction must be an extension reciever on a String, ${if (call.extensionReceiver == null) "but no reciver was found" else "but it was a `${call.extensionReceiver?.type?.dumpKotlinLike()}` reciver."}")
         }
         // Otherwise it has the form of `fun staticTerp(str: String):Result`
         return Match(interpolatorType, interpolatorClassSymbol)
