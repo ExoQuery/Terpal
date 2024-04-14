@@ -105,7 +105,7 @@ fun sql2(sqlString: String): PreparedStatement = interpolatorBody()
 sql2("SELECT * FROM users WHERE id = $id AND name = $name")
 ```
 
-By using this combined with an string extension function, you can create a very compact DSL for interpolation:
+By using this combined with a string extension function, you can create a very compact DSL for interpolation:
 ```kotlin
 @InterpolatorFunction<SqlInterpolator>(SqlInterpolator::class)
 operator fun String.unaryPlus() = interpolatorBody()
