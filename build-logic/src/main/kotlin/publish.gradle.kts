@@ -112,14 +112,6 @@ publishing {
         password = pass
       }
     }
-    maven {
-      name = "Snapshot"
-      setUrl { "https://s01.oss.sonatype.org/content/repositories/snapshots/" }
-      credentials {
-        username = user
-        password = pass
-      }
-    }
   }
 
   publications {
