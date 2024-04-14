@@ -23,4 +23,4 @@ jobs:
           distribution: 'adopt'
       - name: Validate Gradle wrapper
         uses: gradle/wrapper-validation-action@v1
-      - run: ./gradlew clean build :terpal-runtime:publishToSonatype :terpal-plugin-kotlin:publishToSonatype :terpal-plugin-gradle:publishToSonatype -PisCI -no-daemon --stacktrace
+      - run: ./gradlew clean build :terpal-runtime:publish :terpal-plugin-kotlin:publish :terpal-plugin-gradle:publish -PisCI -no-daemon --stacktrace
