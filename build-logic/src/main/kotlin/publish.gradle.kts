@@ -91,6 +91,31 @@ Cannot use `publications.withType<MavenPublication> { ... } ` approach using kot
 it seems that in KMP the publication is is already created internally and you just have to configure it.
   */
 publishing {
+  val user = System.getenv("SONATYPE_USERNAME")
+  val pass = System.getenv("SONATYPE_PASSWORD")
+
+  repositories {
+    maven {
+      name = "Oss"
+      setUrl {
+        val repositoryId = System.getenv("SONATYPE_REPOSITORY_ID") ?: error("Missing env variable: SONATYPE_REPOSITORY_ID")
+        "https://s01.oss.sonatype.org/service/local/staging/deployByRepositoryId/$repositoryId/"
+      }
+      credentials {
+        username = user
+        password = pass
+      }
+    }
+    maven {
+      name = "Snapshot"
+      setUrl { "https://s01.oss.sonatype.org/content/repositories/snapshots/" }
+      credentials {
+        username = user
+        password = pass
+      }
+    }
+  }
+
   publications {
     create<MavenPublication>("mavenJava") {
       from(components["kotlin"])
