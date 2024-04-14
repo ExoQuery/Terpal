@@ -21,6 +21,12 @@ class InterpolatorFunctionTest: InterpolateTestBase {
   val C = Stmt(listOf("C"), listOf())
 
   @Test
+  fun simpleConstantTestFunc() {
+    staticTerp("foo") shouldBe
+      Stmt(listOf("foo"), listOf())
+  }
+
+  @Test
   fun simpleConstantTest() {
     +"foo" shouldBe
       Stmt(listOf("foo"), listOf())

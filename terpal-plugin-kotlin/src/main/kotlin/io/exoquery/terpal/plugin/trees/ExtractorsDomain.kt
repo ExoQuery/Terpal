@@ -127,9 +127,14 @@ object ExtractorsDomain {
         if (!interpolatorReturnType.isSubtypeOfClass(returnTypeClass))
           error("The type that the interpolation function `${call.symbol.safeName}` returns `${interpolatorReturnType.asString()}` is not a subtype of `${call.symbol.owner.returnType.asString()}` which the ${interpolatorType.asString()} interpolator returns. This will result in a class-cast error and is therefore not allowed.")
 
-        if (!(call.extensionReceiver?.isClass<kotlin.String>() ?: false))
-          error("A InterpolatorFunction must be an extension reciever on a String, ${if (call.extensionReceiver == null) "but no reciver was found" else "but it was a `${call.extensionReceiver?.type?.asString()}` reciver."}")
 
+        // either it has the form of `fun String.unaryPlus():Result` or `fun staticTerp(str: String):Result`
+        // it it has a extension reciver it must be a `fun String.unaryPlus():Result`
+        if (call.extensionReceiver != null) {
+          if (!(call.extensionReceiver?.isClass<kotlin.String>() ?: false))
+            error("A InterpolatorFunction must be an extension reciever on a String, ${if (call.extensionReceiver == null) "but no reciver was found" else "but it was a `${call.extensionReceiver?.type?.asString()}` reciver."}")
+        }
+        // Otherwise it has the form of `fun staticTerp(str: String):Result`
         return Match(interpolatorType, interpolatorClassSymbol)
       }
 
@@ -137,10 +142,15 @@ object ExtractorsDomain {
         customPattern2(reciver, terpComps) { call: IrCall ->
           val match = extractComponents(call)
           if (match != null) {
-            //error("------------ Is Operator: ${call.symbol.owner.isOperator}")
+            val concatExpr =
+              // If it's an function or operator e.g. `+"foo ${bar} baz"` then the reciver is supposed to be the string-concatenation
+              if (call.extensionReceiver != null) {
+                call.extensionReceiver
+              } else {
+                // otherwise it's an argument to a function e.g. `staticTerp("foo ${bar} baz")`
+                call.simpleValueArgs.first()
+              }
 
-            // If it's an function or operator e.g. `+"foo ${bar} baz"` then the reciver is supposed to be the string-concatenation
-            val concatExpr = call.extensionReceiver
             on(concatExpr).match(
               case(Ir.StringConcatenation[Is()]).then { components ->
                 Components2(match, components)
