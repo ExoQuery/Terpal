@@ -18,8 +18,8 @@ however this is highly problematic as it opens up the possibility of SQL injecti
 "SELECT * FROM users WHERE id = 1234; DROP TABLE users; AND name = 'Joe'"
 ```
 
-Scala's string interpolation allows the library
-to know that "id" is a variable and should be escaped before splicing it into the string. It uses the following API:
+Scala's string interpolation allows the library to know that "id" is a variable and should be escaped before 
+splicing it into the string. It uses the following API:
 
 ```scala
 implicit class SqlInterpolator(val sc: StringContext) extends AnyVal {
