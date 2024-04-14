@@ -10,10 +10,15 @@ plugins {
 }
 
 nexusPublishing {
+  val user = System.getenv("SONATYPE_USERNAME")
+  val pass = System.getenv("SONATYPE_PASSWORD")
+
   repositories {
     sonatype {
       nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
       snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+      username.set(user)
+      password.set(pass)
     }
   }
 }

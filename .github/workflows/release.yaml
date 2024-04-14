@@ -1,4 +1,4 @@
-name: Redecomatlease
+name: Release
 
 on:
   workflow_dispatch
