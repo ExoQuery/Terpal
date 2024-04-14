@@ -9,19 +9,19 @@ plugins {
   id("org.jetbrains.dokka")
 }
 
-nexusPublishing {
-  val user = System.getenv("SONATYPE_USERNAME")
-  val pass = System.getenv("SONATYPE_PASSWORD")
-
-  repositories {
-    sonatype {
-      nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-      snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-      username.set(user)
-      password.set(pass)
-    }
-  }
-}
+// nexusPublishing {
+//   val user = System.getenv("SONATYPE_USERNAME")
+//   val pass = System.getenv("SONATYPE_PASSWORD")
+//
+//   repositories {
+//     sonatype {
+//       nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+//       snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+//       username.set(user)
+//       password.set(pass)
+//     }
+//   }
+// }
 
 apply(plugin = "io.github.gradle-nexus.publish-plugin")
 apply(plugin = "kotlin")
@@ -78,18 +78,17 @@ apply {
 }
 
 val dokkaHtml by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class)
-
- tasks {
-   val javadocJar by creating(Jar::class) {
-     dependsOn(dokkaHtml)
-     archiveClassifier.set("javadoc")
-     from(dokkaHtml.get().outputDirectory)
-   }
-   val sourcesJar by creating(Jar::class) {
-     archiveClassifier.set("sources")
-     from(sourceSets["main"].allSource)
-   }
- }
+tasks {
+  val javadocJar by creating(Jar::class) {
+    dependsOn(dokkaHtml)
+    archiveClassifier.set("javadoc")
+    from(dokkaHtml.get().outputDirectory)
+  }
+  val sourcesJar by creating(Jar::class) {
+    archiveClassifier.set("sources")
+    from(sourceSets["main"].allSource)
+  }
+}
 
 /*
 Cannot use `publications.withType<MavenPublication> { ... } ` approach using kotlin-jvm unlike KMP
@@ -118,6 +117,9 @@ publishing {
     create<MavenPublication>("mavenJava") {
       from(components["kotlin"])
       artifactId = varintName
+
+      artifact(tasks["javadocJar"])
+      artifact(tasks["sourcesJar"])
 
       pom {
         name.set("terpal")
