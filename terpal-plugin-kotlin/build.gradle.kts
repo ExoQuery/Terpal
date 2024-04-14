@@ -1,7 +1,7 @@
 plugins {
     id("conventions")
     id("publish")
-    kotlin("kapt") version "1.9.20"
+    kotlin("kapt") version "1.9.21"
 }
 
 kotlin {
