@@ -1,15 +1,18 @@
 # Terpal - Typed String Interpolation for Kotlin
 
-Unlike Kotlin string-interpolation, Scala's string interpolation allows customizeability.
-This becomes very important for DSLs that need to know "the $interpolated $parts of a input string"
-before they are actually spliced into the resulting string.
+Terpal is a Kotlin compiler-plugin that allows capturing the "the $dollar $sign $varaibles" of a string before they are spliced back into the string.
 
-For example, libraries like Doobie and Quill use a the string-prefix "sql" to specify SQL snippets such as:
+### Why do we Need This?
+
+Kotlin's text-interpolation currently cannot be customized at all. It is impossible to capture the value of "the $dollar $sign $varaibles" 
+before they are spliced into the surrounding string. This makes Kotlin miss out on some very powerful tools.
+
+For example, in Scala, libraries like Doobie and Quill use the string-prefix "sql" to specify SQL snippets such as:
 
 ```scala
 sql"SELECT * FROM users WHERE id = $id AND name = $name"
 ```
-Normally the value of "id" would be spliced directly into the string e.g. "SELECT * FROM users WHERE id = 1234 AND name = 'Joe'"
+In Kotlin the value of `id` would be spliced directly into the string e.g. "SELECT * FROM users WHERE id = 1234 AND name = 'Joe'"
 however this is highly problematic as it opens up the possibility of SQL injection attacks for example:
 ```scala
 "SELECT * FROM users WHERE id = 1234; DROP TABLE users; AND name = 'Joe'"
@@ -21,21 +24,18 @@ to know that "id" is a variable and should be escaped before splicing it into th
 ```scala
 implicit class SqlInterpolator(val sc: StringContext) extends AnyVal {
   // Values of $dollar_sign_variables i.e. `id`, `name` are this list i.e. [1234, "Joe"]
-  def sql(args: Any*): PreparedStatement = {
+  def sql(params: Any*): PreparedStatement = {
     // The string-parts ["SELECT * FROM users WHERE id = ", " AND name = " and ""] are this list
-    val stringParts = sc.parts
-    //Then we can construct safe prepared-statement
-    val stmt = connection.prepareStatement(stringParts.mkString("?"))  // i.e. joinToString("?")
-    for ((arg, i) <- args.zipWithIndex) {
-      stmt.setObject(i + 1, arg)
-    }
-    return stmt
+    val stringParts: List[String] = sc.parts
+    ...
   }
 }
 ```
 
 This is a very powerful feature that allows libraries to create DSLs that are both safe and easy to use.
 Sadly Kotlin does not have it.
+
+### The Solution
 
 Terpal remedies this problem with a compiler-plugin that contains these exact semantics.
 Using Terpal, you would write the above as the following: 
@@ -44,12 +44,7 @@ class SqlInterpolator(val connection: Connection): Interpolator<Any, PreparedSta
   // Parts is ["SELECT * FROM users WHERE id = ", " AND name = ", ""]
   // Params is [`id`, `name`] i.e. [1234, "Joe"]
   override fun interpolate(parts: () -> List<String>, params: () -> List<Any>): PreparedStatement {
-    val stringParts = parts()
-    val stmt = connection.prepareStatement(stringParts.joinToString("?"))
-    for ((arg, i) in params().withIndex()) {
-      stmt.setObject(i + 1, arg) // remember with JDBC it's an index starting from 1
-    }
-    return stmt
+    ...
   }
 }
 
@@ -57,6 +52,17 @@ val sql = SqlInterpolator<Any, PreparedStatement>(connection)
 val (id, name) = 1234 to "Joe"
 val stmt = sql("SELECT * FROM users WHERE id = $id AND name = $name")
 // I.e the `sql.invoke(...)` function forwards the parts/params to sql.interpolate
+```
+
+The actual `interpolate` function could easily be implemented as something like this:
+```
+override fun interpolate(parts: () -> List<String>, params: () -> List<Any>): PreparedStatement {
+  val stmt = connection.prepareStatement(parts().joinToString("?"))
+  for ((arg, i) <- params().zipWithIndex) {
+    stmt.setObject(i + 1, arg)
+  }
+  return stmt
+}
 ```
 
 ## Usage
