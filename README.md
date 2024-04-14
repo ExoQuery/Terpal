@@ -5,7 +5,7 @@ Terpal is a Kotlin compiler-plugin that allows capturing the "the $dollar $sign 
 ### Why do we Need This?
 
 Kotlin's text-interpolation currently cannot be customized at all. It is impossible to capture the value of "the $dollar $sign $varaibles" 
-before they are spliced into the surrounding string. This makes Kotlin miss out on some very powerful tools.
+before they are spliced into the surrounding string. This makes Kotlin miss out on some very powerful tools that Scala and _even_ Java now have (check out [JEP-430](https://openjdk.org/jeps/430)).
 
 For example, in Scala, libraries like Doobie and Quill use the string-prefix "sql" to specify SQL snippets such as:
 
