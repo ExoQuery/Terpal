@@ -71,8 +71,8 @@ In order to use Terpal in your projects, you need to add the following to your `
 
 ```kotlin
 plugins {
-  kotlin("jvm") version "2.0.0-Beta5"
-  id("io.exoquery.terpal-plugin") version "2.0.0-Beta5-0.1.0"
+  kotlin("jvm") version "2.0.0-RC1"
+  id("io.exoquery.terpal-plugin") version "2.0.0-RC1-0.1.0"
 }
 
 dependencies {
