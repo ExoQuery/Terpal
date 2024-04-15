@@ -41,4 +41,4 @@ jobs:
       #- name: Publish Library
       #  run: ./gradlew clean build :terpal-runtime:publish :terpal-plugin-kotlin:publish :terpal-plugin-gradle:publish -PisCI -no-daemon --stacktrace
       - name: Publish Gradle plugin
-        run: ./gradlew :kapshot-plugin-gradle:publishPlugins -PisCI -no-daemon --stacktrace
+        run: ./gradlew :terpal-plugin-gradle:publishPlugins -PisCI -no-daemon --stacktrace
