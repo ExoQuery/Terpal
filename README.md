@@ -69,6 +69,8 @@ override fun interpolate(parts: () -> List<String>, params: () -> List<Any>): Pr
 
 In order to use Terpal in your projects, you need to add the following to your `build.gradle.kts`:
 
+> I am currently having an issue publishing to gradle. It shuold be resolved by tomorrow.
+
 ```kotlin
 plugins {
   kotlin("jvm") version "1.9.22"
