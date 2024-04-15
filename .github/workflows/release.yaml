@@ -38,4 +38,7 @@ jobs:
           distribution: 'adopt'
       - name: Validate Gradle wrapper
         uses: gradle/wrapper-validation-action@v1
-      - run: ./gradlew clean build :terpal-runtime:publish :terpal-plugin-kotlin:publish :terpal-plugin-gradle:publish -PisCI -no-daemon --stacktrace
+      #- name: Publish Library
+      #  run: ./gradlew clean build :terpal-runtime:publish :terpal-plugin-kotlin:publish :terpal-plugin-gradle:publish -PisCI -no-daemon --stacktrace
+      - name: Publish Gradle plugin
+        run: ./gradlew :kapshot-plugin-gradle:publishPlugins -PisCI -no-daemon --stacktrace
