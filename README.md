@@ -69,6 +69,8 @@ override fun interpolate(parts: () -> List<String>, params: () -> List<Any>): Pr
 
 ## Usage
 
+> (UPDATE - I am currently waiting for approval for this plugin on plugins.gradle.org. Hopefully it will be done in a few days. Thanks for your patience!)
+
 In order to use Terpal in your projects, you need to add the following to your `build.gradle.kts`:
 
 > I am currently having an issue publishing to gradle. It should be resolved by tomorrow.
