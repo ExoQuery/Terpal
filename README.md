@@ -1,6 +1,6 @@
 # Terpal - Typed String Interpolation for Kotlin
 
-(UPDATE - I am currently waiting for approval for this plugin on `plugins.gradle.org`. Hopefully it will be done in a few days. Thanks for your patience!)
+(UPDATE - This plugin is now **fully approved** and available via plugins.gradle.org)
 
 Terpal is a Kotlin compiler-plugin that allows capturing the "the $dollar $sign $varaibles" of a string before they are spliced back into the string.
 
@@ -69,7 +69,7 @@ override fun interpolate(parts: () -> List<String>, params: () -> List<Any>): Pr
 
 ## Usage
 
-> (UPDATE - I am currently waiting for approval for this plugin on plugins.gradle.org. Hopefully it will be done in a few days. Thanks for your patience!)
+> (UPDATE - This plugin is now **fully approved** and available via plugins.gradle.org)
 
 In order to use Terpal in your projects, you need to add the following to your `build.gradle.kts`:
 
@@ -83,6 +83,18 @@ plugins {
 
 dependencies {
   api("io.exoquery:terpal-runtime:1.0.6")
+}
+```
+
+Be sure to include the Gradle Plugin Repository and Maven repos in the `pluginManagement/repositories` block of your `settings.gradle.kts`:
+```kotlin
+pluginManagement {
+    ...
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        mavenLocal()
+    }
 }
 ```
 
