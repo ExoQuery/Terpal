@@ -145,7 +145,7 @@ class RenderIrElementVisitorSimple(normalizeNames: Boolean = false, private val 
       }
       when (parent) {
         is IrPackageFragment -> {
-          val fqn = parent.fqName.asString()
+          val fqn = parent.packageFqName.asString()
           append(fqn.ifEmpty { "<root>" })
         }
         is IrDeclaration -> {
@@ -179,10 +179,10 @@ class RenderIrElementVisitorSimple(normalizeNames: Boolean = false, private val 
     "[IrModuleFragment] name:${declaration.name}"
 
   override fun visitExternalPackageFragment(declaration: IrExternalPackageFragment, data: Nothing?): String =
-    "[IrExternalPackageFragment] fqName:${declaration.fqName}"
+    "[IrExternalPackageFragment] packageFqName:${declaration.packageFqName}"
 
   override fun visitFile(declaration: IrFile, data: Nothing?): String =
-    "[IrFile] fqName:${declaration.fqName} fileName:${declaration.path}"
+    "[IrFile] packageFqName:${declaration.packageFqName} fileName:${declaration.path}"
 
   override fun visitFunction(declaration: IrFunction, data: Nothing?): String =
     declaration.runTrimEnd {
@@ -525,7 +525,7 @@ private fun IrDeclaration.renderDeclarationParentFqn(sb: StringBuilder) {
     if (parent is IrDeclaration) {
       parent.renderDeclarationFqn(sb)
     } else if (parent is IrPackageFragment) {
-      sb.append(parent.fqName.toString())
+      sb.append(parent.packageFqName.toString())
     }
   } catch (e: UninitializedPropertyAccessException) {
     sb.append("<uninitialized parent>")

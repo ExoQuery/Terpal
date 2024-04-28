@@ -99,7 +99,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
     for ((i, comp) in params.withIndex()) {
       if (!comp.type.isSubtypeOfClass(interpolateTypeClass))
         compileLogger.error(
-          """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.asString()} interpolator.
+          """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.dumpKotlinLike()} interpolator.
              |========= The faulty expression was: =========
              |${comp.dumpKotlinLike()}
           """.trimMargin()
