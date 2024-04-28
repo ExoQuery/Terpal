@@ -99,14 +99,10 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       val paramsLifted =
         with (lifter) { params.liftExprTyped(interpolateType) }
 
-      val runCall = caller.type.findMethodOrFail("interpolate")
-      val partsLiftedFun = createLambda0(partsLifted, runCall.owner)
-      val paramsLiftedFun = createLambda0(paramsLifted, runCall.owner)
-
       val callOutput =
         caller.callMethodWithType("interpolate", interpolateReturn)(
-          partsLiftedFun,
-          paramsLiftedFun
+          partsLifted,
+          paramsLifted
         )
 
       callOutput

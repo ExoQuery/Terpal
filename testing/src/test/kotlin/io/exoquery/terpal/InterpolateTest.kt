@@ -8,13 +8,13 @@ class InterpolateTest: InterpolateTestBase {
     data class Out(val parts: List<String>, val params: List<In>, val info: String)
 
     object StaticTerp: Interpolator<In, Out> {
-      override fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
-        Out(parts(), params(), "Static")
+      override fun interpolate(parts: List<String>, params: List<In>): Out =
+        Out(parts, params, "Static")
     }
 
     class InstanceTerp(val info: String): Interpolator<In, Out> {
-      override fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
-        Out(parts(), params(), info)
+      override fun interpolate(parts: List<String>, params: List<In>): Out =
+        Out(parts, params, info)
     }
   }
 

@@ -7,7 +7,7 @@ interface Interpolator<T, R> {
   operator fun invoke(string: String): R = interpolatorBody()
 
 
-  fun interpolate(parts: () -> List<String>, params: () -> List<T>): R
+  fun interpolate(parts: List<String>, params: List<T>): R
 
   companion object {
     fun <T> interlace(parts: List<String>, params: List<T>, empty: () -> T, lift: (String) -> T, combine: (T, T) -> T): T {
