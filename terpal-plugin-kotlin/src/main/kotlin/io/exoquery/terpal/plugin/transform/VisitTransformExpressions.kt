@@ -1,6 +1,5 @@
 package io.exoquery.terpal.plugin.transform
 
-import io.exoquery.terpal.plugin.trees.ExtractorsDomain
 import io.exoquery.terpal.plugin.logging.CompileLogger
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
@@ -37,22 +36,11 @@ class VisitTransformExpressions(
 
 
     val transformerCtx = TransformerOrigin(context, config, this.currentFile, expression)
-    val compileLogger = transformerCtx.logger
-
     val builderContext = transformerCtx.makeBuilderContext(expression, scopeOwner)
-    val transformPrint = TransformPrintSource(builderContext)
     val transformInterpolations = TransformInterepolatorInvoke(builderContext)
-
 
     // TODO need to catch parseError here in VisitTransformExpressions & not transform the expressions
     val out = when {
-
-      // 1st that that runs here because printed stuff should not be transformed
-      // (and this does not recursively transform stuff inside)
-      transformPrint.matches(expression) -> {
-        transformPrint.transform(expression)
-      }
-
       transformInterpolations.matches(expression) -> {
         transformInterpolations.transform(expression, this)
       }

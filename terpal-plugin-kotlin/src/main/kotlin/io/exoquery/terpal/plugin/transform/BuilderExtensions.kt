@@ -1,7 +1,6 @@
 package io.exoquery.terpal.plugin.transform
 
 import io.exoquery.terpal.plugin.findMethodOrFail
-import io.exoquery.terpal.plugin.trees.simpleTypeArgs
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities

@@ -7,65 +7,53 @@ import io.exoquery.terpal.UnzipPartsParams
 import io.exoquery.terpal.Interpolator
 import io.exoquery.terpal.parseError
 import io.exoquery.terpal.plugin.findMethodOrFail
-import io.exoquery.terpal.plugin.location
-import io.exoquery.terpal.plugin.printing.dumpSimple
+import io.exoquery.terpal.plugin.qualifiedNameForce
 import io.exoquery.terpal.plugin.safeName
-import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
-import io.exoquery.terpal.plugin.trees.isClass
-import io.exoquery.terpal.plugin.trees.simpleTypeArgs
-import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
-import org.jetbrains.kotlin.ir.backend.js.utils.asString
-import org.jetbrains.kotlin.ir.builders.irGetObject
+import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.builders.irString
-import org.jetbrains.kotlin.ir.expressions.IrCall
-import org.jetbrains.kotlin.ir.expressions.IrConst
-import org.jetbrains.kotlin.ir.expressions.IrConstKind
-import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.types.classFqName
-import org.jetbrains.kotlin.ir.types.classOrNull
-import org.jetbrains.kotlin.ir.types.defaultType
-import org.jetbrains.kotlin.ir.types.isSubtypeOfClass
-import org.jetbrains.kotlin.ir.util.classId
+import org.jetbrains.kotlin.ir.expressions.*
+import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
-import org.jetbrains.kotlin.ir.util.isObject
 import org.jetbrains.kotlin.ir.util.superTypes
-import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.isClassTypeConstructor
+
+val IrCall.simpleValueArgsCount get() = this.valueArgumentsCount - this.contextReceiversCount
+val IrCall.simpleValueArgs get() =
+  if (this.contextReceiversCount > 0)
+    this.valueArguments.drop(this.contextReceiversCount)
+  else
+    this.valueArguments
+
+val IrType.simpleTypeArgs: List<IrType> get() =
+  when (this) {
+    is IrSimpleType ->
+      this.arguments.mapNotNull { it.typeOrNull }
+    else ->
+      listOf()
+  }
 
 class TransformInterepolatorInvoke(val ctx: BuilderContext) {
+  val className = Interpolator::class.qualifiedNameForce
+
   private val compileLogger = ctx.logger
 
-  fun matches(expression: IrCall): Boolean =
-    with (compileLogger) {
-      Call.InterpolateInvoke.matchesMethod(expression) || Call.InterpolatorFunctionInvoke.matchesMethod(expression)
-    }
+  fun matches(expression: IrCall): Boolean {
+    val dispatchtype =
+      (expression.dispatchReceiver ?: return false).type
 
-  fun transform(expression: IrCall, superTransformer: VisitTransformExpressions): IrExpression {
+    return expression.symbol.safeName == "invoke" &&
+      (dispatchtype.classFqName?.asString() == className ||
+        dispatchtype.superTypes().any { it.classFqName.toString() == className })
+  }
+
+  fun transform(expr: IrCall, superTransformer: VisitTransformExpressions): IrExpression {
     val (caller, compsRaw) =
-      with(compileLogger) {
-        on(expression).match(
-          // interpolatorSubclass.invoke(.. { stuff } ...)
-          case(Call.InterpolateInvoke[Is(), Is()]).then { caller, comps ->
-            caller to comps
-          },
-          case(Call.InterpolatorFunctionInvoke[Is(), Is()]).then { callerData, comps ->
-            ctx.builder.irGetObject(callerData.interpolatorClass) to comps
-          }
-        )
-      } ?: run {
-        val bar = "\${bar}"
-        parseError(
-          """|======= Parsing Error =======
-           |The contents of Interpolator.invoke(...) must be a single String concatenation statement e.g:
-           |myInterpolator.invoke("foo $bar baz")
-           |
-           |==== However, the following was found: ====
-           |${expression.dumpKotlinLike()}
-           |======= IR: =======
-           |${expression.dumpSimple()}"
-        """.trimMargin()
-        )
-      }
-
+      expr.simpleValueArgs.first()?.let { firstArg ->
+        when {
+          firstArg is IrStringConcatenation ->
+            expr.dispatchReceiver!! to firstArg.arguments
+          else -> throw IllegalStateException("Invalid inner context: ${firstArg.dumpKotlinLike()}")
+        }
+      } ?: throw IllegalStateException("invalid outer context")
 
 
     // before doing anything else need to run recursive transformations on the components because they could be
@@ -74,10 +62,8 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
 
     val parentCaller =
       caller.type.superTypes()
-        .find { it.isClass<Interpolator<*, *>>() }
+        .find { it.classFqName.toString() == className }
         ?: parseError("Could not isolate the parent type Interpolator<T, R>. This shuold be impossible.")
-
-    // TODO need to catch parseError externally (i.e. in VisitTransformExpressions) & not transform the expressions
 
     // Interpolator type T
     val interpolateType = parentCaller.simpleTypeArgs.get(0)
@@ -93,7 +79,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       }
 
     val (parts, params) =
-      UnzipPartsParams<IrExpression>({ it.isClass<String>() && it is IrConst<*> && it.kind == IrConstKind.String }, concatStringExprs, { ctx.builder.irString("") })
+      UnzipPartsParams<IrExpression>({ it is IrConst<*> && it.kind == IrConstKind.String }, concatStringExprs, { ctx.builder.irString("") })
         .invoke(comps)
 
     for ((i, comp) in params.withIndex()) {

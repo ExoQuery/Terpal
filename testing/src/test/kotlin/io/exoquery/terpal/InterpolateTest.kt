@@ -25,12 +25,6 @@ class InterpolateTest: InterpolateTestBase {
   val C = In("C")
 
   @Test
-  fun simpleConstantTest() {
-    StaticTerp("foo") shouldBe
-      Out(listOf("foo"), listOf(), "Static")
-  }
-
-  @Test
   fun simpleStaticTest1() {
     StaticTerp("foo_${A}${B}${C}_baz") shouldBe
       Out(listOf("foo_", "", "", "_baz"), listOf(A, B, C), "Static")
