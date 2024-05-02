@@ -10,7 +10,6 @@ import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.*
-import org.jetbrains.kotlin.ir.types.impl.ReturnTypeIsNotInitializedException
 import org.jetbrains.kotlin.ir.types.impl.originalKotlinType
 import org.jetbrains.kotlin.ir.util.parentAsClass
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
@@ -650,11 +649,7 @@ private fun IrFunction.renderTypeParameters(): String =
     typeParameters.joinToString(separator = ", ", prefix = "<", postfix = ">") { it.name.toString() }
 
 private val IrFunction.safeReturnType: IrType?
-  get() = try {
-    returnType
-  } catch (e: ReturnTypeIsNotInitializedException) {
-    null
-  }
+  get() = returnType
 
 private fun IrLocalDelegatedProperty.renderLocalDelegatedPropertyFlags() =
   if (isVar) "var" else "val"

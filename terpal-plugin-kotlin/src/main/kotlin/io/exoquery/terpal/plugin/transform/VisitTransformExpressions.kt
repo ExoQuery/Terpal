@@ -3,6 +3,7 @@ package io.exoquery.terpal.plugin.transform
 import io.exoquery.terpal.plugin.trees.ExtractorsDomain
 import io.exoquery.terpal.plugin.logging.CompileLogger
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
+import org.jetbrains.kotlin.backend.common.ScopeWithIr
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocationWithRange
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
@@ -22,6 +23,8 @@ class VisitTransformExpressions(
   private val config: CompilerConfiguration,
   private val projectDir: Path
 ) : IrElementTransformerVoidWithContext() {
+
+  fun peekCurrentScope() = super.currentDeclarationParent
 
   private fun typeIsFqn(type: IrType, fqn: String): Boolean {
     if (type !is IrSimpleType) return false
