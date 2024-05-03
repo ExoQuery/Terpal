@@ -113,9 +113,16 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       val paramsLifted =
         with (lifter) { params.liftExprTyped(interpolateType) }
 
-      val runCall = caller.type.findMethodOrFail("interpolate")
-      val partsLiftedFun = createLambda0(partsLifted, runCall.owner)
-      val paramsLiftedFun = createLambda0(paramsLifted, runCall.owner)
+      val currScope = superTransformer.peekCurrentScope() ?: run {
+        compileLogger.error(
+          """|Could not find parent scope of the following expression:
+             |${expression.dumpKotlinLike()}
+          """.trimMargin()
+        )
+        return expression
+      }
+      val partsLiftedFun = createLambda0(partsLifted, currScope)
+      val paramsLiftedFun = createLambda0(paramsLifted, currScope)
 
       val callOutput =
         caller.callMethodWithType("interpolate", interpolateReturn)(
