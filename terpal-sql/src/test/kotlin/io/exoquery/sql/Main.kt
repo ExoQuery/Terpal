@@ -1,0 +1,60 @@
+package io.exoquery.sql
+
+import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
+import java.sql.Connection
+
+fun main() {
+  EmbeddedPostgres.start().use { postgres ->
+    val conn = postgres.getPostgresDatabase().getConnection()
+    conn.runUpdate(
+      """
+      CREATE TABLE person (
+        id SERIAL PRIMARY KEY,
+        firstName VARCHAR,
+        lastName VARCHAR,
+        age INT
+      )  
+      """.trimIndent()
+    )
+    conn.runUpdate(
+      """
+      INSERT INTO person (firstName, lastName, age) VALUES ('Joe', 'Bloggs', 123)
+      """.trimIndent()
+    )
+    conn.runSelect("SELECT * FROM person")
+
+    val rs = conn.createStatement().executeQuery("SELECT id, firstName, lastName, age FROM person")
+    val serializer = Person.serializer()
+
+    println("----- Person -----")
+    while (rs.next()) {
+      val decoder = ResultDecoder(rs, serializer.descriptor)
+      val p = serializer.deserialize(decoder)
+      println(p)
+    }
+
+
+
+  }
+}
+
+fun Connection.runUpdate(sql: String) {
+  val stmt = this.createStatement()
+  stmt.executeUpdate(sql)
+}
+
+fun Connection.runSelect(sql: String) {
+  val stmt = this.createStatement()
+  val rs = stmt.executeQuery(sql)
+  val meta = rs.metaData
+  val numColumns = meta.columnCount
+  val colNames = (1..numColumns).map { meta.getColumnName(it) }
+  while (rs.next()) {
+    val colStr =
+      (1..numColumns).map { col ->
+        "${colNames[col-1]}=${rs.getString(col)}"
+      }.joinToString(", ")
+
+    println(colStr)
+  }
+}
