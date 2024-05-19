@@ -2,16 +2,15 @@ package io.exoquery.sql
 
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.descriptors.StructureKind
-import kotlinx.serialization.descriptors.elementDescriptors
-import kotlinx.serialization.descriptors.elementNames
+import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.CompositeDecoder
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.modules.EmptySerializersModule
 import kotlinx.serialization.modules.SerializersModule
 import java.sql.ResultSet
 import java.sql.ResultSetMetaData
+import java.time.LocalDate
+import kotlin.reflect.KClass
 
 // Maybe implement MappedResultDecoder<V, T>(mapper:V -> T) {
 
@@ -27,7 +26,19 @@ class OffsetCollector {
   override fun toString(): String = "OffsetCollector(${curr})"
 }
 
-open class ResultDecoder private constructor (val rs: ResultSet, val offset: OffsetCollector): Decoder, CompositeDecoder {
+
+
+
+data class ContextDecoder<T>(val cls: KClass<*>, val decodeType: (ResultSet, Int) -> T)
+
+object ContextDecoders {
+  val default = listOf(
+    ContextDecoder<LocalDate>(LocalDate::class, { rs, index -> rs.getDate(index).toLocalDate() })
+  )
+}
+
+@OptIn(ExperimentalSerializationApi::class)
+open class ResultDecoder private constructor (val rs: ResultSet, val offset: OffsetCollector, val contextDecoders: List<ContextDecoder<*>>): Decoder, CompositeDecoder {
   companion object {
     operator fun invoke(rs: ResultSet, descriptor: SerialDescriptor): ResultDecoder {
       fun metaColumnData(meta: ResultSetMetaData) =
@@ -52,7 +63,7 @@ open class ResultDecoder private constructor (val rs: ResultSet, val offset: Off
              |Class Columns (${descriptorColumns.size}): ${descriptorColumns.withIndex().map { (i, kv) -> "($i)${kv.first}:${kv.second}" }}
           """.trimMargin())
       }
-      return ResultDecoder(rs, OffsetCollector())
+      return ResultDecoder(rs, OffsetCollector(), ContextDecoders.default)
     }
   }
 
@@ -88,10 +99,7 @@ open class ResultDecoder private constructor (val rs: ResultSet, val offset: Off
   //override fun decodeSequentially(): Boolean = true
 
   @OptIn(ExperimentalSerializationApi::class)
-  override fun beginStructure(descriptor: SerialDescriptor): CompositeDecoder =
-    this
-    //ResultDecoder(rs, descriptor.elementsCount, elementIndex)
-
+  override fun beginStructure(descriptor: SerialDescriptor): CompositeDecoder = this
   override fun endStructure(descriptor: SerialDescriptor) {
     offset.advance(descriptor.elementsCount)
   }
@@ -129,16 +137,21 @@ open class ResultDecoder private constructor (val rs: ResultSet, val offset: Off
         rs.getArray(index.nx) as T
       }
       StructureKind.CLASS -> {
-        deserializer.deserialize(ResultDecoder(rs, offset))
+        deserializer.deserialize(ResultDecoder(rs, offset, contextDecoders))
+      }
+      SerialKind.CONTEXTUAL -> {
+        val decoder = contextDecoders.find { it.cls == childDesc.capturedKClass }
+        val columnName = try { rs.metaData.getColumnName(index.nx) } catch (e: Throwable) { "<UNKNOWN>" }
+        val decodedValueRaw =
+          decoder?.decodeType?.invoke(rs, index.nx) ?:
+            throw IllegalArgumentException("Could not decode the contextual column ${columnName} (index: ${index.nx}) whose expected class was: ${childDesc.capturedKClass}")
+
+        decodedValueRaw as T
       }
       else ->
-        throw IllegalArgumentException("Unsupported serial kind: ${descriptor.kind}")
+        throw IllegalArgumentException("Unsupported serial structure-kind: ${childDesc.kind}")
     }
   }
-
-
-
-
 
   override fun decodeEnum(enumDescriptor: SerialDescriptor): Int {
     TODO("Not yet implemented")

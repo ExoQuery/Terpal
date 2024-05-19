@@ -12,18 +12,23 @@ fun main() {
         id SERIAL PRIMARY KEY,
         firstName VARCHAR,
         lastName VARCHAR,
-        age INT
+        age INT,
+        lastUpdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )  
       """.trimIndent()
     )
     conn.runUpdate(
       """
-      INSERT INTO person (firstName, lastName, age) VALUES ('Joe', 'Bloggs', 123)
+      INSERT INTO person (firstName, lastName, age) VALUES ('Joe', 'Bloggs', 123);
+      INSERT INTO person (firstName, lastName, age) VALUES ('Jim', 'Roogs', 123);
       """.trimIndent()
     )
     conn.runSelect("SELECT * FROM person")
 
-    val rs = conn.createStatement().executeQuery("SELECT id, firstName, lastName, age FROM person")
+    val ps = conn.prepareStatement("SELECT id, firstName, lastName, age, lastUpdated FROM person WHERE firstName = ?")
+    val param = Param("Joe")
+    param.write(1, ps)
+    val rs = ps.executeQuery()
     val serializer = Person.serializer()
 
     println("----- Person -----")
