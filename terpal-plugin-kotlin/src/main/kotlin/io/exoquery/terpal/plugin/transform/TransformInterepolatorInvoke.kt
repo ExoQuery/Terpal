@@ -110,6 +110,12 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       val lifter = makeLifter()
       val partsLifted =
         with (lifter) { parts.liftExprTyped(context.symbols.string.defaultType) }
+
+
+      // TODO what if it's an interpolator in an interpolator (i.e. Sql("...${Sql(...)}...") ) so need to call recursive transform
+      // TODO if it's a InterpolatorWithPreProcess need to invoke the preProcess function on the Params (this is what will inoke the param & do the lift)
+      //      (it should also check if the user manually created a Param with it, if so just ignore it. Should unify Param and Statement also because it should just be Sql
+      //      interface which should make these things easier)
       val paramsLifted =
         with (lifter) { params.liftExprTyped(interpolateType) }
 
