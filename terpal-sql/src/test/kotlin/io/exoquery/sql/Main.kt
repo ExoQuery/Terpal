@@ -3,9 +3,10 @@ package io.exoquery.sql
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import java.sql.Connection
 
-fun main() {
+suspend fun main() {
   EmbeddedPostgres.start().use { postgres ->
-    val conn = postgres.getPostgresDatabase().getConnection()
+    val ds = postgres.getPostgresDatabase()
+    val conn = ds.getConnection()
     conn.runUpdate(
       """
       CREATE TABLE person (
@@ -25,19 +26,23 @@ fun main() {
     )
     conn.runSelect("SELECT * FROM person")
 
-    val ps = conn.prepareStatement("SELECT id, firstName, lastName, age, lastUpdated FROM person WHERE firstName = ?")
+    //val ps = conn.prepareStatement("SELECT id, firstName, lastName, age, lastUpdated FROM person WHERE firstName = ?")
+    //val param = Param("Joe")
+    //param.write(1, ps)
+    //val rs = ps.executeQuery()
+    //val serializer = Person.serializer()
+    //println("----- Person -----")
+    //while (rs.next()) {
+    //  val decoder = ResultDecoder(rs, serializer.descriptor)
+    //  val p = serializer.deserialize(decoder)
+    //  println(p)
+    //}
+
     val param = Param("Joe")
-    param.write(1, ps)
-    val rs = ps.executeQuery()
-    val serializer = Person.serializer()
+    val q =
+      Sql("SELECT id, firstName, lastName, age, lastUpdated FROM person WHERE firstName = ${param}").queryOf<Person>().run(ds).await()
 
-    println("----- Person -----")
-    while (rs.next()) {
-      val decoder = ResultDecoder(rs, serializer.descriptor)
-      val p = serializer.deserialize(decoder)
-      println(p)
-    }
-
+    println(q)
 
 
   }
