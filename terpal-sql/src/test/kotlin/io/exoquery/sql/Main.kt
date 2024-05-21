@@ -1,7 +1,9 @@
 package io.exoquery.sql
 
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
+import kotlinx.serialization.serializer
 import java.sql.Connection
+import java.time.LocalDate
 
 suspend fun main() {
   EmbeddedPostgres.start().use { postgres ->
@@ -38,9 +40,15 @@ suspend fun main() {
     //  println(p)
     //}
 
+    val d = LocalDate.now()
+
+    val ser = serializer<LocalDate>()
+
+    val par = Param(d)
+
     val param = Param("Joe")
     val q =
-      Sql("SELECT id, firstName, lastName, age, lastUpdated FROM person WHERE firstName = ${param}").queryOf<Person>().run(ds).await()
+      Sql("SELECT id, firstName, lastName, age, lastUpdated FROM person WHERE firstName = ${param} AND lastUpdate = ${par}").queryOf<Person>().run(ds).await()
 
     println(q)
 
