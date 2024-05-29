@@ -1,8 +1,5 @@
 package io.exoquery.sql
 
-import io.exoquery.sql.jdbc.context.CoroutineDataSource
-import io.exoquery.sql.jdbc.context.connection
-import io.exoquery.sql.jdbc.transaction
 import io.exoquery.terpal.Interpolator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,33 +44,7 @@ data class Statement(val ir: IR.Splice) {
   }
 }
 
-data class Query<T>(val sql: String, val params: List<Param<*>>, val resultMaker: KSerializer<T>) {
-  suspend fun runScoped(): List<T> {
-    val outputs = mutableListOf<T>()
-    coroutineContext.connection.prepareStatement(sql).use { stmt ->
-      // prepare params
-      params.withIndex().forEach { (idx, param) ->
-        param.write(idx, stmt)
-      }
-      // execute the query and encode results
-      stmt.executeQuery().use { rs ->
-        while (rs.next()) {
-          val decoder = ResultDecoder(rs, resultMaker.descriptor)
-          outputs += resultMaker.deserialize(decoder)
-        }
-      }
-    }
-    return outputs
-  }
-
-  suspend fun run(ds: DataSource) =
-    CoroutineScope(Dispatchers.IO + CoroutineDataSource(ds)).async {
-      transaction {
-        runScoped()
-      }
-    }
-
-}
+data class Query<T>(val sql: String, val params: List<Param<*>>, val resultMaker: KSerializer<T>)
 
 sealed interface IR {
   data class Part(val value: String): IR

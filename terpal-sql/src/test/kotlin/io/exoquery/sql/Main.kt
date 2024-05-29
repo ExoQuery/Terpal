@@ -1,5 +1,6 @@
 package io.exoquery.sql
 
+import io.exoquery.sql.jdbc.JdbcContext
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import kotlinx.serialization.serializer
 import java.sql.Connection
@@ -40,17 +41,18 @@ suspend fun main() {
     //  println(p)
     //}
 
-    val d = LocalDate.now()
-
-    val ser = serializer<LocalDate>()
-
-    val par = Param(d)
+    // val d = LocalDate.now()
+    // val par = Param(d)
+    // TODO figure out the serializersModule part with this
+    //  AND lastUpdate = ${par}"
 
     val param = Param("Joe")
-    val q =
-      Sql("SELECT id, firstName, lastName, age, lastUpdated FROM person WHERE firstName = ${param} AND lastUpdate = ${par}").queryOf<Person>().run(ds).await()
+    val query = Sql("SELECT id, firstName, lastName, age, lastUpdated FROM person WHERE firstName = ${param}").queryOf<Person>()
 
-    println(q)
+    val ctx = JdbcContext(ds)
+    val result = ctx.run(query).await()
+
+    println(result)
 
 
   }
