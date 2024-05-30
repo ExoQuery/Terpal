@@ -1,11 +1,11 @@
 package io.exoquery.sql.jdbc
 
-import io.exoquery.sql.Query
-import io.exoquery.sql.ResultDecoder
+import io.exoquery.sql.*
 import java.sql.Connection
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.*
+import java.sql.PreparedStatement
 import javax.sql.DataSource
 import kotlin.coroutines.AbstractCoroutineContextElement
 
@@ -46,6 +46,9 @@ class JdbcContext(override val database: DataSource): Context<Connection, DataSo
     }
   }
 
+
+
+
   internal inline fun <T> Connection.runWithManualCommit(block: Connection.() -> T): T {
     val before = autoCommit
 
@@ -57,6 +60,20 @@ class JdbcContext(override val database: DataSource): Context<Connection, DataSo
     }
   }
 
+  //serializer.serialize(PreparedStatementElementEncoder(ps, index+1), value)
+
+  val atomEncoders: AtomEncoders<Connection, PreparedStatement> =
+    AtomEncoders.single(CommonAtoms.LocalDate, JdbcAtomEncoder<java.time.LocalDate> { v, idx -> setObject(idx, v) })
+
+
+  // Do it this way so we can vaoid value casting in the runScoped function
+  fun <T> Param<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit =
+    when (val payload = this.payload) {
+      is Param.Payload.Serial -> payload.serializer.serialize(PreparedStatementElementEncoder(ps, index+1), value)
+      is Param.Payload.Atomic -> atomEncoders.get(payload.atomKind)?.let { it.encode(conn, ps, index+1, value) }
+        ?: error("Could nto find an encoder in the context ${this} for the atom-kind ${payload.atomKind}")
+    }
+
   private suspend fun <T> runScoped(query: Query<T>): List<T> {
     val outputs = mutableListOf<T>()
     withConnection {
@@ -64,7 +81,7 @@ class JdbcContext(override val database: DataSource): Context<Connection, DataSo
       conn.prepareStatement(query.sql).use { stmt ->
         // prepare params
         query.params.withIndex().forEach { (idx, param) ->
-          param.write(idx, stmt)
+          param.write(idx, conn, stmt)
         }
         // execute the query and encode results
         stmt.executeQuery().use { rs ->
@@ -82,6 +99,20 @@ class JdbcContext(override val database: DataSource): Context<Connection, DataSo
     CoroutineScope(Dispatchers.IO).async {
       runScoped(query)
     }
+}
+
+interface JdbcAtomEncoder<T>: AtomEncoder<Connection, PreparedStatement, T> {
+ companion object {
+   // TODO another constructor that uses the session (want in future for some rare clob-related use-cases)
+   operator fun <T> invoke(encoder: PreparedStatement.(T, Int) -> Unit): JdbcAtomEncoder<T> =
+     object: JdbcAtomEncoder<T> {
+       override fun encode(sess: Connection, stmt: PreparedStatement, idx: Int, value: T) = encoder(stmt, value, idx)
+     }
+ }
+}
+
+interface AtomEncoder<Session, Stmt, T> {
+  fun encode(sess: Session, stmt: Stmt, idx: Int, value: T)
 }
 
 abstract class Context<Session, Database> {

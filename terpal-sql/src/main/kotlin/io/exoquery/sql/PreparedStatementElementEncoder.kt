@@ -1,6 +1,8 @@
 package io.exoquery.sql
 
+import io.exoquery.sql.jdbc.SwitchingJdbcSerializer
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.CompositeEncoder
 import kotlinx.serialization.encoding.Encoder
@@ -33,4 +35,11 @@ class PreparedStatementElementEncoder(val ps: PreparedStatement, val index: Int)
     throw IllegalArgumentException("Need to know the type of the column to encode a null value")
 
   override fun encodeInline(descriptor: SerialDescriptor): Encoder = this
+
+  override public fun <T : Any?> encodeSerializableValue(serializer: SerializationStrategy<T>, value: T) {
+    when {
+      serializer is SwitchingJdbcSerializer -> serializer.encoder(ps, value, index)
+      else -> serializer.serialize(this, value)
+    }
+  }
 }

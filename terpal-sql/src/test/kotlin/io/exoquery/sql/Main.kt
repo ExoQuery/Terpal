@@ -41,13 +41,13 @@ suspend fun main() {
     //  println(p)
     //}
 
-    // val d = LocalDate.now()
-    // val par = Param(d)
+    val d = LocalDate.now()
+    val par = Param(d)
     // TODO figure out the serializersModule part with this
     //  AND lastUpdate = ${par}"
 
     val param = Param("Joe")
-    val query = Sql("SELECT id, firstName, lastName, age, lastUpdated FROM person WHERE firstName = ${param}").queryOf<Person>()
+    val query = Sql("SELECT id, firstName, lastName, age, lastUpdated FROM person WHERE firstName = ${param} AND lastUpdated > ${par}").queryOf<Person>()
 
     val ctx = JdbcContext(ds)
     val result = ctx.run(query).await()
