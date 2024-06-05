@@ -6,21 +6,15 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.*
 import java.sql.PreparedStatement
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import javax.sql.DataSource
 import kotlin.coroutines.AbstractCoroutineContextElement
 
-internal class CoroutineTransaction(private var completed: Boolean = false) : AbstractCoroutineContextElement(CoroutineTransaction) {
-  companion object Key : CoroutineContext.Key<CoroutineTransaction>
-  val incomplete: Boolean
-    get() = !completed
-
-  fun complete() {
-    completed = true
-  }
-  override fun toString(): String = "CoroutineTransaction(completed=$completed)"
-}
-
 class JdbcContext(override val database: DataSource): Context<Connection, DataSource>() {
+  companion object Params: JdbcParams
+
   override fun newSession(): Connection = database.connection
   override fun closeSession(session: Connection): Unit = session.close()
   override fun isClosedSession(session: Connection): Boolean = session.isClosed
@@ -46,9 +40,6 @@ class JdbcContext(override val database: DataSource): Context<Connection, DataSo
     }
   }
 
-
-
-
   internal inline fun <T> Connection.runWithManualCommit(block: Connection.() -> T): T {
     val before = autoCommit
 
@@ -60,19 +51,9 @@ class JdbcContext(override val database: DataSource): Context<Connection, DataSo
     }
   }
 
-  //serializer.serialize(PreparedStatementElementEncoder(ps, index+1), value)
-
-  val atomEncoders: AtomEncoders<Connection, PreparedStatement> =
-    AtomEncoders.single(CommonAtoms.LocalDate, JdbcAtomEncoder<java.time.LocalDate> { v, idx -> setObject(idx, v) })
-
-
-  // Do it this way so we can vaoid value casting in the runScoped function
-  fun <T> Param<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit =
-    when (val payload = this.payload) {
-      is Param.Payload.Serial -> payload.serializer.serialize(PreparedStatementElementEncoder(ps, index+1), value)
-      is Param.Payload.Atomic -> atomEncoders.get(payload.atomKind)?.let { it.encode(conn, ps, index+1, value) }
-        ?: error("Could nto find an encoder in the context ${this} for the atom-kind ${payload.atomKind}")
-    }
+  // Do it this way so we can avoid value casting in the runScoped function
+  fun <T> JdbcParam<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit =
+    encoder(conn, ps, value, index+1)
 
   private suspend fun <T> runScoped(query: Query<T>): List<T> {
     val outputs = mutableListOf<T>()
@@ -81,7 +62,10 @@ class JdbcContext(override val database: DataSource): Context<Connection, DataSo
       conn.prepareStatement(query.sql).use { stmt ->
         // prepare params
         query.params.withIndex().forEach { (idx, param) ->
-          param.write(idx, conn, stmt)
+          when (param) {
+            is JdbcParam<*> -> param.write(idx, conn, stmt)
+            else -> throw IllegalArgumentException("The parameter $param needs to be a JdbcParam type but it is ${param::class}.")
+          }
         }
         // execute the query and encode results
         stmt.executeQuery().use { rs ->
@@ -101,19 +85,40 @@ class JdbcContext(override val database: DataSource): Context<Connection, DataSo
     }
 }
 
-interface JdbcAtomEncoder<T>: AtomEncoder<Connection, PreparedStatement, T> {
- companion object {
-   // TODO another constructor that uses the session (want in future for some rare clob-related use-cases)
-   operator fun <T> invoke(encoder: PreparedStatement.(T, Int) -> Unit): JdbcAtomEncoder<T> =
-     object: JdbcAtomEncoder<T> {
-       override fun encode(sess: Connection, stmt: PreparedStatement, idx: Int, value: T) = encoder(stmt, value, idx)
-     }
- }
+interface JdbcParams: ContextParams<Connection, PreparedStatement> {
+  override fun <T> param(value: T, encoder: Encoder<Connection, PreparedStatement, T>): Param<Connection, PreparedStatement, T> =
+    JdbcParam<T>(value, encoder)
+
+  override fun param(value: Boolean): JdbcParam<Boolean> = JdbcParam<Boolean>(value, { _, ps, v, i -> ps.setBoolean(i, v) } )
+  override fun param(value: Byte): JdbcParam<Byte> = JdbcParam<Byte>(value, { _, ps, v, i -> ps.setByte(i, v) } )
+  override fun param(value: Char): JdbcParam<Char> = JdbcParam<Char>(value, { _, ps, v, i -> ps.setString(i, v.toString()) } )
+  override fun param(value: Double): JdbcParam<Double> = JdbcParam<Double>(value, { _, ps, v, i -> ps.setDouble(i, v) } )
+  override fun param(value: Float): JdbcParam<Float> = JdbcParam<Float>(value, { _, ps, v, i -> ps.setFloat(i, v) } )
+  override fun param(value: Int): JdbcParam<Int> = JdbcParam<Int>(value, { _, ps, v, i -> ps.setInt(i, v) } )
+  override fun param(value: Long): JdbcParam<Long> = JdbcParam<Long>(value, { _, ps, v, i -> ps.setLong(i, v) } )
+  override fun param(value: Short): JdbcParam<Short> = JdbcParam<Short>(value, { _, ps, v, i -> ps.setShort(i, v) } )
+  override fun param(value: String): JdbcParam<String> = JdbcParam<String>(value, { _, ps, v, i -> ps.setString(i, v) } )
+
+  fun param(value: LocalDate): JdbcParam<LocalDate> = JdbcParam(value, { _, ps, v, i -> ps.setObject(i, v) } )
+  fun param(value: LocalTime): JdbcParam<LocalTime> = JdbcParam(value, { _, ps, v, i -> ps.setObject(i, v) } )
+  fun param(value: LocalDateTime): JdbcParam<LocalDateTime> = JdbcParam(value, { _, ps, v, i -> ps.setObject(i, v) } )
 }
 
-interface AtomEncoder<Session, Stmt, T> {
-  fun encode(sess: Session, stmt: Stmt, idx: Int, value: T)
+
+interface ContextParams<Session, Stmt> {
+  fun <T> param(value: T, encoder: Encoder<Session, Stmt, T>): Param<Session, Stmt, T>
+
+  fun param(value: Boolean): Param<Session, Stmt, Boolean>
+  fun param(value: Byte): Param<Session, Stmt, Byte>
+  fun param(value: Char): Param<Session, Stmt, Char>
+  fun param(value: Double): Param<Session, Stmt, Double>
+  fun param(value: Float): Param<Session, Stmt, Float>
+  fun param(value: Int): Param<Session, Stmt, Int>
+  fun param(value: Long): Param<Session, Stmt, Long>
+  fun param(value: Short): Param<Session, Stmt, Short>
+  fun param(value: String): Param<Session, Stmt, String>
 }
+
 
 abstract class Context<Session, Database> {
   abstract val database: Database
@@ -160,51 +165,3 @@ abstract class Context<Session, Database> {
     }
   }
 }
-
-
-//suspend fun runScoped(): List<T> {
-//    val outputs = mutableListOf<T>()
-//    coroutineContext.connection.prepareStatement(sql).use { stmt ->
-//      // prepare params
-//      params.withIndex().forEach { (idx, param) ->
-//        param.write(idx, stmt)
-//      }
-//      // execute the query and encode results
-//      stmt.executeQuery().use { rs ->
-//        while (rs.next()) {
-//          val decoder = ResultDecoder(rs, resultMaker.descriptor)
-//          outputs += resultMaker.deserialize(decoder)
-//        }
-//      }
-//    }
-//    return outputs
-//  }
-//
-//  suspend fun run(ds: DataSource) =
-//    CoroutineScope(Dispatchers.IO + CoroutineDataSource(ds)).async {
-//      transaction {
-//        runScoped()
-//      }
-//    }
-
-//suspend inline fun <T> withConnection(crossinline block: suspend CoroutineScope.() -> T): T {
-//  return if (coroutineContext.hasOpenConnection()) {
-//    withContext(coroutineContext) { block() }
-//  } else {
-//    val connection = coroutineContext.dataSource.connection
-//    try {
-//      withContext(CoroutineConnection(connection)) { block() }
-//    } finally { connection.closeCatching() }
-//  }
-//}
-
-
-//@PublishedApi
-//internal fun Connection.isClosedCatching(): Boolean {
-//  return try {
-//    isClosed
-//  } catch (ex: SQLException) {
-//    //logger.warn(ex) { "Connection isClosedCatching check failed, assuming closed:" }
-//    true
-//  }
-//}

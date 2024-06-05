@@ -139,6 +139,7 @@ open class ResultDecoder private constructor (val rs: ResultSet, val offset: Off
       StructureKind.CLASS -> {
         deserializer.deserialize(ResultDecoder(rs, offset, contextDecoders))
       }
+      // TODO abstract out ResultDecoder, make a wrapper for contextDecoders the same way as AtomEncoders was done (i.e. call it AtomDecoders which abstracts over session etc...)
       SerialKind.CONTEXTUAL -> {
         val decoder = contextDecoders.find { it.cls == childDesc.capturedKClass }
         val columnName = try { rs.metaData.getColumnName(index.nx) } catch (e: Throwable) { "<UNKNOWN>" }

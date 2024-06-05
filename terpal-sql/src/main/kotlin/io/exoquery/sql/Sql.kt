@@ -13,12 +13,12 @@ import kotlin.coroutines.coroutineContext
 data class Statement(val ir: IR.Splice) {
   operator fun plus(other: Statement) = Statement(IR.Splice(listOf(this.ir, other.ir)))
 
-  data class QueryData(val sql: String, val params: List<Param<*>>)
+  data class QueryData(val sql: String, val params: List<Param<*, *, *>>)
 
   companion object {
     fun constructQuery(irs: IR.Splice): QueryData {
       val partsAccum = mutableListOf<String>()
-      val paramsAccum = mutableListOf<Param<*>>()
+      val paramsAccum = mutableListOf<Param<*, *, *>>()
       for (ir in irs.values) {
         when (ir) {
           is IR.Part -> partsAccum += ir.value
@@ -44,11 +44,11 @@ data class Statement(val ir: IR.Splice) {
   }
 }
 
-data class Query<T>(val sql: String, val params: List<Param<*>>, val resultMaker: KSerializer<T>)
+data class Query<T>(val sql: String, val params: List<Param<*, *, *>>, val resultMaker: KSerializer<T>)
 
 sealed interface IR {
   data class Part(val value: String): IR
-  data class Param(val value: io.exoquery.sql.Param<*>): IR
+  data class Param(val value: io.exoquery.sql.Param<*, *, *>): IR
   data class Splice(val values: List<IR>): IR
 }
 
@@ -66,7 +66,7 @@ object Sql: Interpolator<Any, Statement> {
       // if there is a next-parameter
       if (paramsIter.hasNext()) {
         when (val nextParam = paramsIter.next()) {
-          is Param<*> -> {
+          is Param<*, *, *> -> {
             irs += IR.Param(nextParam)
           }
           // if it's a statement need to splice everything we've seen in that statement here
