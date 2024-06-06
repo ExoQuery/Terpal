@@ -1,6 +1,7 @@
 package io.exoquery.sql.jdbc
 
 import io.exoquery.sql.JdbcParam
+import io.exoquery.sql.JdbcRowDecoder
 import io.exoquery.sql.Query
 import io.exoquery.sql.RowDecoder
 import kotlinx.coroutines.*
@@ -69,7 +70,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
         // execute the query and encode results
         stmt.executeQuery().use { rs ->
           while (rs.next()) {
-            val decoder = RowDecoder(rs, query.resultMaker.descriptor)
+            val decoder = JdbcRowDecoder(conn, rs, query.resultMaker.descriptor)
             outputs += query.resultMaker.deserialize(decoder)
           }
         }
