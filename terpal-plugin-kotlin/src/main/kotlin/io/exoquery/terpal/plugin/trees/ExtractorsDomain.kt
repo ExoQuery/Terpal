@@ -6,11 +6,9 @@ import io.exoquery.terpal.InterpolatorFunction
 import io.exoquery.terpal.plugin.logging.CompileLogger
 import io.exoquery.terpal.plugin.qualifiedNameForce
 import io.exoquery.terpal.plugin.safeName
-import org.jetbrains.kotlin.ir.backend.js.utils.asString
 import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.expressions.getConstructorTypeArguments
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classFqName
@@ -20,24 +18,37 @@ import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.ir.util.isObject
 import org.jetbrains.kotlin.ir.util.superTypes
 
-inline fun <reified T> IrExpression.isClass(): Boolean {
+inline fun <reified T> IrExpression.isSubclassOf(): Boolean {
   val className = T::class.qualifiedNameForce
-  return className == this.type.classFqName.toString() || type.superTypes().any { it.classFqName.toString() == className }
+  return className == this.type.classFqName.toString() || type.superTypesRecursive().any { it.classFqName.toString() == className }
 }
 
-inline fun <reified T> IrType.isClass(): Boolean {
+fun IrType.superTypesRecursive(): List<IrType> {
+  val superTypes = superTypes()
+  return superTypes + superTypes.flatMap { it.superTypesRecursive() }.distinct()
+}
+
+inline fun <reified T> IrType.isSubclassOf(): Boolean {
   val className = T::class.qualifiedNameForce
-  return className == this.classFqName.toString() || this.superTypes().any { it.classFqName.toString() == className }
+  return className == this.classFqName.toString() || this.superTypesRecursive().any { it.classFqName.toString() == className }
+}
+
+inline fun <reified T> IrType.isClassOf(): Boolean {
+  val className = T::class.qualifiedNameForce
+  return className == this.classFqName.toString()
 }
 
 inline fun <reified T> IrCall.reciverIs(methodName: String) =
-  this.dispatchReceiver?.isClass<T>() ?: false && this.symbol.safeName == methodName
+  this.dispatchReceiver?.isSubclassOf<T>() ?: false && this.symbol.safeName == methodName
 
 object ExtractorsDomain {
   object Call {
     object InterpolateInvoke {
-      context (CompileLogger) fun matchesMethod(it: IrCall): Boolean =
-        it.reciverIs<Interpolator<*, *>>("invoke") //&& it.simpleValueArgsCount == 2 && it.valueArguments.all{ it != null }
+      context (CompileLogger) fun matchesMethod(it: IrCall): Boolean {
+        // if (it.symbol.safeName == "invoke")
+        //   warn("------------ `invoke` Reciver Super Types: ${it.dispatchReceiver?.type?.superTypesRecursive()?.toList()?.map { it.dumpKotlinLike() }}")
+        return it.reciverIs<Interpolator<*, *>>("invoke") //&& it.simpleValueArgsCount == 2 && it.valueArguments.all{ it != null }
+      }
 
       context (CompileLogger) operator fun <AP: Pattern<IrExpression>, BP: Pattern<List<IrExpression>>> get(reciver: AP, terpComps: BP) =
         customPattern2(reciver, terpComps) { call: IrCall ->
@@ -110,7 +121,7 @@ object ExtractorsDomain {
         // The parent-type of the interpolator e.g. for StaticTerp it will be Interpolator<In, Out>
         val interpolatorImplementation =
           interpolatorType.superTypes().find {
-            it.isClass<Interpolator<*, *>>()
+            it.isSubclassOf<Interpolator<*, *>>()
           } ?: return null
 
         // The return-type of the interpolation function e.g. Out for StaticTerp (also frequently Stmt, or String)
@@ -131,7 +142,7 @@ object ExtractorsDomain {
         // either it has the form of `fun String.unaryPlus():Result` or `fun staticTerp(str: String):Result`
         // it it has a extension reciver it must be a `fun String.unaryPlus():Result`
         if (call.extensionReceiver != null) {
-          if (!(call.extensionReceiver?.isClass<kotlin.String>() ?: false))
+          if (!(call.extensionReceiver?.isSubclassOf<kotlin.String>() ?: false))
             error("A InterpolatorFunction must be an extension reciever on a String, ${if (call.extensionReceiver == null) "but no reciver was found" else "but it was a `${call.extensionReceiver?.type?.dumpKotlinLike()}` reciver."}")
         }
         // Otherwise it has the form of `fun staticTerp(str: String):Result`

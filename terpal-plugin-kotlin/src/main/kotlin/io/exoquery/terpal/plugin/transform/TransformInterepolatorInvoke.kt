@@ -6,15 +6,12 @@ import io.decomat.on
 import io.exoquery.terpal.UnzipPartsParams
 import io.exoquery.terpal.Interpolator
 import io.exoquery.terpal.parseError
-import io.exoquery.terpal.plugin.findMethodOrFail
-import io.exoquery.terpal.plugin.location
 import io.exoquery.terpal.plugin.printing.dumpSimple
-import io.exoquery.terpal.plugin.safeName
 import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
-import io.exoquery.terpal.plugin.trees.isClass
+import io.exoquery.terpal.plugin.trees.isClassOf
+import io.exoquery.terpal.plugin.trees.isSubclassOf
 import io.exoquery.terpal.plugin.trees.simpleTypeArgs
-import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
-import org.jetbrains.kotlin.ir.backend.js.utils.asString
+import io.exoquery.terpal.plugin.trees.superTypesRecursive
 import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.expressions.IrCall
@@ -25,11 +22,7 @@ import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.types.isSubtypeOfClass
-import org.jetbrains.kotlin.ir.util.classId
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
-import org.jetbrains.kotlin.ir.util.isObject
-import org.jetbrains.kotlin.ir.util.superTypes
-import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.isClassTypeConstructor
 
 class TransformInterepolatorInvoke(val ctx: BuilderContext) {
   private val compileLogger = ctx.logger
@@ -73,8 +66,8 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
     val comps = compsRaw.map { it.transform(superTransformer, null) }
 
     val parentCaller =
-      caller.type.superTypes()
-        .find { it.isClass<Interpolator<*, *>>() }
+      caller.type.superTypesRecursive()
+        .find { it.isClassOf<Interpolator<*, *>>() }
         ?: parseError("Could not isolate the parent type Interpolator<T, R>. This shuold be impossible.")
 
     // TODO need to catch parseError externally (i.e. in VisitTransformExpressions) & not transform the expressions
@@ -93,7 +86,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       }
 
     val (parts, params) =
-      UnzipPartsParams<IrExpression>({ it.isClass<String>() && it is IrConst<*> && it.kind == IrConstKind.String }, concatStringExprs, { ctx.builder.irString("") })
+      UnzipPartsParams<IrExpression>({ it.isSubclassOf<String>() && it is IrConst<*> && it.kind == IrConstKind.String }, concatStringExprs, { ctx.builder.irString("") })
         .invoke(comps)
 
     for ((i, comp) in params.withIndex()) {

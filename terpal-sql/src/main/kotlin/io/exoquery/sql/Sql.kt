@@ -52,8 +52,11 @@ sealed interface IR {
   data class Splice(val values: List<IR>): IR
 }
 
+// The Jdbc Specific Sql implemenation which will use the Jdbc wrapping functions to auto-wrap things
+object Sql: SqlBase()
 
-object Sql: Interpolator<Any, Statement> {
+// TODO Extend InterpolatorWithWrapping
+abstract class SqlBase: Interpolator<Any, Statement> {
   override fun interpolate(parts: () -> List<String>, params: () -> List<Any>): Statement {
     val irs = mutableListOf<IR>()
 
