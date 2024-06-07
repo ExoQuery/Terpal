@@ -1,9 +1,7 @@
 package io.exoquery.sql.jdbc
 
-import io.exoquery.sql.JdbcParam
 import io.exoquery.sql.JdbcRowDecoder
 import io.exoquery.sql.Query
-import io.exoquery.sql.RowDecoder
 import kotlinx.coroutines.*
 import java.sql.Connection
 import java.sql.PreparedStatement

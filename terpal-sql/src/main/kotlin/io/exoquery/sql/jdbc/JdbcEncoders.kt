@@ -1,6 +1,7 @@
 package io.exoquery.sql.jdbc
 
 import io.exoquery.sql.Encoder
+import io.exoquery.sql.Encoders
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.Timestamp

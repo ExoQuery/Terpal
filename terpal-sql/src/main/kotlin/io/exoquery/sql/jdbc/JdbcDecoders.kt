@@ -1,6 +1,7 @@
 package io.exoquery.sql.jdbc
 
 import io.exoquery.sql.Decoder
+import io.exoquery.sql.Decoders
 import java.sql.Connection
 import java.sql.ResultSet
 import java.time.*

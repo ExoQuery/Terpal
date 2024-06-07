@@ -5,6 +5,7 @@ import io.decomat.case
 import io.decomat.on
 import io.exoquery.terpal.UnzipPartsParams
 import io.exoquery.terpal.Interpolator
+import io.exoquery.terpal.InterpolatorWithWrapper
 import io.exoquery.terpal.parseError
 import io.exoquery.terpal.plugin.printing.dumpSimple
 import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
@@ -60,7 +61,6 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       }
 
 
-
     // before doing anything else need to run recursive transformations on the components because they could be
     // there could be nested interpolations e.g. stmt("foo_#{stmt("bar")}_baz")
     val comps = compsRaw.map { it.transform(superTransformer, null) }
@@ -85,21 +85,42 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
         }
       }
 
-    val (parts, params) =
+    val (parts, paramsRaw) =
       UnzipPartsParams<IrExpression>({ it.isSubclassOf<String>() && it is IrConst<*> && it.kind == IrConstKind.String }, concatStringExprs, { ctx.builder.irString("") })
         .invoke(comps)
 
-    for ((i, comp) in params.withIndex()) {
-      if (!comp.type.isSubtypeOfClass(interpolateTypeClass))
-        compileLogger.error(
-          """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.dumpKotlinLike()} interpolator.
-             |========= The faulty expression was: =========
-             |${comp.dumpKotlinLike()}
-          """.trimMargin()
-        )
-    }
-
     return with(ctx) {
+
+      // Put together an invocation call that would need to be used for the wrapper function (if it exists)
+      val wrapperFunctionInvoke = run {
+        val isInterpolatorWithWrapper =
+          caller.type.superTypesRecursive()
+            .find { it.isClassOf<InterpolatorWithWrapper<*, *>>() } != null
+
+        if (isInterpolatorWithWrapper) {
+          { expr: IrExpression -> caller.callMethod("wrap")(expr) }
+        } else
+          null
+      }
+
+      val params =
+        paramsRaw.withIndex().map { (i, comp) ->
+          if (!comp.type.isSubtypeOfClass(interpolateTypeClass)) {
+            comp
+          } else if (wrapperFunctionInvoke != null) {
+            wrapperFunctionInvoke(comp)
+          } else {
+            compileLogger.error(
+              """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.dumpKotlinLike()} interpolator.
+                 |========= The faulty expression was: =========
+                 |${comp.dumpKotlinLike()}
+              """.trimMargin()
+            )
+            // Return the param so logic can continue. In reality a class-cast-exception would happen (because the "... $component..." is not the required type and there's not wrapper function).
+            comp
+          }
+        }
+
       val lifter = makeLifter()
       val partsLifted =
         with (lifter) { parts.liftExprTyped(context.symbols.string.defaultType) }
