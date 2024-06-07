@@ -1,9 +1,11 @@
 package io.exoquery.terpal
 
+import kotlin.reflect.KClass
+
 fun interpolatorBody(): Nothing = throw IllegalStateException(Messages.PluginWasNotExecuted)
 
 interface InterpolatorWithWrapper<T, R>: Interpolator<T, R> {
-  fun <V> wrap(value: V): T
+  fun <V: Any> wrap(value: V): T
 }
 
 interface Interpolator<T, R> {

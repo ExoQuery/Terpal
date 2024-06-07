@@ -19,10 +19,7 @@ import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.types.classFqName
-import org.jetbrains.kotlin.ir.types.classOrNull
-import org.jetbrains.kotlin.ir.types.defaultType
-import org.jetbrains.kotlin.ir.types.isSubtypeOfClass
+import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 
 class TransformInterepolatorInvoke(val ctx: BuilderContext) {
@@ -65,9 +62,14 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
     // there could be nested interpolations e.g. stmt("foo_#{stmt("bar")}_baz")
     val comps = compsRaw.map { it.transform(superTransformer, null) }
 
+    val superTypes = caller.type.superTypesRecursive()
+
     val parentCaller =
-      caller.type.superTypesRecursive()
-        .find { it.isClassOf<Interpolator<*, *>>() }
+      // Need to find the most specific interpolator implementation because the less-specific one will have non-generics for their
+      // parameter specifications. E.g. if some interpolator e.g. Sql:Interpolator<Fragment, Statement> which implements
+      // Interpolator is looked up as (parentCaller:Interpolator).simpleTypeArgs you will get back T,R instead of Fragment,Statement.
+      superTypes.find { it.isClassOf<InterpolatorWithWrapper<*, *>>() }
+        ?: superTypes.find { it.isClassOf<Interpolator<*, *>>() }
         ?: parseError("Could not isolate the parent type Interpolator<T, R>. This shuold be impossible.")
 
     // TODO need to catch parseError externally (i.e. in VisitTransformExpressions) & not transform the expressions
@@ -105,13 +107,14 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
 
       val params =
         paramsRaw.withIndex().map { (i, comp) ->
-          if (!comp.type.isSubtypeOfClass(interpolateTypeClass)) {
+          if (comp.type.classOrFail.isSubtypeOfClass(interpolateTypeClass)) {
             comp
           } else if (wrapperFunctionInvoke != null) {
             wrapperFunctionInvoke(comp)
           } else {
             compileLogger.error(
               """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.dumpKotlinLike()} interpolator.
+                 |(Also no wrapper function has been defined because `${caller.type.classFqName}` is not a subtype of InterpolatorWithWrapper)
                  |========= The faulty expression was: =========
                  |${comp.dumpKotlinLike()}
               """.trimMargin()
