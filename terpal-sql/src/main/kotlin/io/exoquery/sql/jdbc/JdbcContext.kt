@@ -174,8 +174,31 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
       }
     }
 
-  suspend fun <T> run2(query: Query<T>): List<T> =
-    stream(query).toList()
+  // This will cause the former to run: flow.flowOn(CoroutineSession(localConnection()) + Dispatchers.IO)
+  suspend fun <T> run2(query: Query<T>): List<T> {
+    return withConnection {
+      run3(query)
+    }
+  }
+
+  suspend fun <T> run3(query: Query<T>): List<T> {
+    val flow =
+      flow {
+        val conn = localConnection()
+        makeStmt(query.sql, conn).use { stmt ->
+          prepare(stmt, conn, query.params)
+          stmt.executeQuery().use { rs ->
+            emitResultSet(conn, rs, query.makeExtractor())
+          }
+        }
+      }
+    val flowOn = if (coroutineContext.hasOpenConnection()) {
+      flow.flowOn(CoroutineSession(localConnection()) + Dispatchers.IO)
+    } else {
+      flow.flowOn(CoroutineSession(newSession()) + Dispatchers.IO)
+    }
+    return flowOn.toList()
+  }
 
   suspend fun <T> run(query: Action<T>): Int =
     withContext(Dispatchers.IO) {
