@@ -94,6 +94,23 @@ interface Fragment
 
 data class SqlBatch<T>(val parts: List<String>, val params: (T) -> List<Fragment>): Fragment {
 
+  /*
+  ----- Optimization -----
+  actually what we ant the interface to be is List<(T) -> Fragment> where each param is an element of T
+  need to change InterpolatorBatching macro to do that
+
+  What we need here once we have List<(T) -> Fragement> is a special kind of param i.e. AssignableParam
+
+  val sql = Sql(ir = Splice(parts, params.map(Param { ref -> encode(ref.property) })))
+  val query = sql.query // i.e. does a ir.flatten() and then constructs the query string
+  val flatIr = sql.ir.flatten
+  // i.e. query = Query(flatIr.parts.join("?"), flatIr.params)
+
+  for (person in people) {
+    ref.assign(person)
+
+  }
+   */
 }
 
 abstract class SqlBatchBase: InterpolatorBatchingWithWrapper<Fragment> {
