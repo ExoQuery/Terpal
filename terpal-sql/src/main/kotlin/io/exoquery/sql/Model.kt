@@ -3,7 +3,7 @@ package io.exoquery.sql
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.serializer
 
-data class Statement(val ir: IR.Splice): Fragment {
+data class Statement(val ir: IR.Splice): SqlFragment {
   operator fun plus(other: Statement) = Statement(IR.Splice(listOf(IR.Part.Empty, IR.Part.Empty, IR.Part.Empty), listOf(this.ir, other.ir)))
 
   data class QueryData(val sql: String, val params: List<Param<*, *, *>>)

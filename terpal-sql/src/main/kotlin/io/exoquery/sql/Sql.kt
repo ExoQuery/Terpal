@@ -76,7 +76,7 @@ object Sql: SqlJdbcBase(object: JdbcEncodersWithTime() {})
 
 // The Jdbc Specific Sql implemenation which will use the Jdbc wrapping functions to auto-wrap things
 abstract class SqlJdbcBase(val encoders: Encoders<Connection, PreparedStatement>): SqlBase() {
-  override fun <V: Any> wrap(value: V): Fragment {
+  override fun <V: Any> wrap(value: V): SqlFragment {
     val cls = value::class
     // Very not idea. We want to be able to just compare KClass instances directly by getting the
     // IrClass/IrClassSymbol as a KClass when the splicing happened
@@ -90,9 +90,11 @@ abstract class SqlJdbcBase(val encoders: Encoders<Connection, PreparedStatement>
 }
 
 
-interface Fragment
+interface SqlFragment
 
-data class SqlBatch<T>(val parts: List<String>, val params: (T) -> List<Fragment>): Fragment {
+data class SqlBatch<T: Any>(val parts: List<String>, val params: (T) -> List<Param<*, *, T>>) {
+  fun render(values: Sequence<T>) =
+    parts.joinToString("?") to values.map { params(it) }
 
   /*
   ----- Optimization -----
@@ -108,14 +110,15 @@ data class SqlBatch<T>(val parts: List<String>, val params: (T) -> List<Fragment
    */
 }
 
-abstract class SqlBatchBase: InterpolatorBatchingWithWrapper<Fragment> {
+abstract class SqlBatchBase<Session, Stmt>: InterpolatorBatchingWithWrapper<Param<*, *, *>> {
   override abstract fun <A : Any> invoke(create: (A) -> String): SqlBatch<A>
-  override fun <A : Any> interpolate(parts: () -> List<String>, params: (A) -> List<Fragment>): SqlBatch<A> =
-    SqlBatch(parts(), params)
+  @Suppress("UNCHECKED_CAST")
+  override fun <A : Any> interpolate(parts: () -> List<String>, params: (A) -> List<Param<*, *, *>>): SqlBatch<A> =
+    SqlBatch<A>(parts(), params as (A) -> List<Param<*, *, A>>)
 }
 
-abstract class SqlBase: InterpolatorWithWrapper<Fragment, Statement> {
-  override fun interpolate(parts: () -> List<String>, params: () -> List<Fragment>): Statement {
+abstract class SqlBase: InterpolatorWithWrapper<SqlFragment, Statement> {
+  override fun interpolate(parts: () -> List<String>, params: () -> List<SqlFragment>): Statement {
     val partsList = parts().map { IR.Part(it) }
     val paramsList = params().map {
       when (it) {

@@ -62,15 +62,14 @@ suspend fun collect2(rowData: RowData): Flow<String> {
 
 suspend fun collect3(rowData: RowData): Flow<String> {
   val eb = RowMaker(rowData)
-  return flow {
-    val list = mutableListOf<String>()
+  return channelFlow<String> {
     while (eb.hasNext()) {
       val next = eb.next()
-      list.addAll(next)
-      emitAll(flowOf(*list.toTypedArray()))
-      list.clear()
+      for (elem in next) {
+        send(elem)
+      }
     }
-  }
+  }.buffer(rowData.batchSize)
 }
 
 
@@ -138,13 +137,13 @@ fun main() {
     listEmits.forEach { println(it.tsv()) }
   }
 
-  //addToResults(experiment(RowData(1000000, 1, 1), 10))
-  //addToResults(experiment(RowData(100000, 10, 10), 10))
-  addToResults(experiment(RowData(10000, 100, 1), 1))
-  addToResults(experiment(RowData(1000, 1000, 10), 1))
-  addToResults(experiment(RowData(100, 10000, 100), 1))
-  addToResults(experiment(RowData(10, 100000, 1000), 1))
-  //addToResults(experiment(RowData(1, 1000000, 0), 10))
+  addToResults(experiment(RowData(1000000, 1, 0), 1))
+  addToResults(experiment(RowData(100000, 10, 0), 1))
+  addToResults(experiment(RowData(10000, 100, 0), 1))
+  addToResults(experiment(RowData(1000, 1000, 0), 1))
+  addToResults(experiment(RowData(100, 10000, 0), 1))
+  //addToResults(experiment(RowData(10, 100000, 0), 1))
+  //addToResults(experiment(RowData(1, 1000000, 0), 1))
 
   printResults()
 
