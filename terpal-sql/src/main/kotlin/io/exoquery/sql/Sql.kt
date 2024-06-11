@@ -99,10 +99,11 @@ data class SqlBatch<T>(val parts: List<String>, val params: (T) -> List<Fragment
   actually what we ant the interface to be is List<(T) -> Fragment> where each param is an element of T
   need to change InterpolatorBatching macro to do that
 
-  actually we can't do that because even fi we create a param/fragement that will be able to have a lambda
-  we won't actually be able to to flatten that fragment without providing it a runtime value so that optimization
-  is not very useful
-
+  make the assumption that all dollar signs in batch queries are params,
+  i.e. no Fragements so we don't actually need to flatten anything to make
+  that work. Go through the List<(T) -> Fragement> once the macro is updated
+  and create a List<Param<T>> from each List<(T) -> Fragment>
+  that will give us our List<List<Param<T>> that we can use with the batch query
   }
    */
 }
