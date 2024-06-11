@@ -5,9 +5,7 @@ import io.exoquery.sql.JdbcRowDecoder
 import io.exoquery.sql.Param
 import io.exoquery.sql.Query
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.*
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -85,34 +83,35 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
       }
     }
 
-  private fun <T> ResultSet.toFlow(conn: Connection, extract: (Connection, ResultSet) -> T): Flow<T> =
-    flow {
-      while (this@ResultSet.next()) {
-        emit(extract(conn, this@ResultSet))
-      }
+  suspend fun <T> FlowCollector<T>.emitResultSet(conn: Connection, rs: ResultSet, extract: (Connection, ResultSet) -> T) {
+    while (rs.next()) {
+      emit(extract(conn, rs))
     }
+  }
 
   protected suspend fun localConnection() =
     coroutineContext.get(sessionKey)?.session ?: error("No connection detected in withConnection scope. This should be impossible.")
 
-  private suspend fun <T> runQueryScoped(sql: String, params: List<Param<*, *, *>>, extract: (Connection, ResultSet) -> T): Flow<T> =
-    withConnection {
-      val conn = localConnection()
+
+  private fun <T> runQueryScoped(conn: Connection, sql: String, params: List<Param<*, *, *>>, extract: (Connection, ResultSet) -> T): Flow<T> =
+    flow {
       makeStmt(sql, conn).use { stmt ->
         prepare(stmt, conn, params)
         stmt.executeQuery().use { rs ->
-          rs.toFlow(conn, extract)
+          emitResultSet(conn, rs, extract)
         }
       }
     }
 
   private suspend fun <T> runUpdateReturningScoped(sql: String, params: List<Param<*, *, *>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
-    withConnection {
-      val conn = localConnection()
-      makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
-        prepare(stmt, conn, params)
-        stmt.executeUpdate()
-        stmt.generatedKeys.toFlow(conn, extract)
+    flow {
+      withConnection {
+        val conn = localConnection()
+        makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
+          prepare(stmt, conn, params)
+          stmt.executeUpdate()
+          emitResultSet(conn, stmt.generatedKeys, extract)
+        }
       }
     }
 
@@ -132,14 +131,16 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
   private suspend fun <T> updateBatchReturningScoped(sql: String, batches: List<() -> List<Param<*, *, *>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
     withConnection {
       val conn = localConnection()
-      makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
-        batches.forEach { makeBatch ->
-          val batch = makeBatch()
-          prepare(stmt, conn, batch)
-          stmt.addBatch()
+      flow {
+        makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
+          batches.forEach { makeBatch ->
+            val batch = makeBatch()
+            prepare(stmt, conn, batch)
+            stmt.addBatch()
+          }
+          stmt.executeBatch()
+          emitResultSet(conn, stmt.generatedKeys, extract)
         }
-        stmt.executeBatch()
-        stmt.generatedKeys.toFlow(conn, extract)
       }
     }
 
@@ -159,13 +160,22 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
 
   suspend fun <T> stream(query: Query<T>): Flow<T> =
     withContext(Dispatchers.IO) {
-      runQueryScoped(query.sql, query.params, query.makeExtractor())
+      withConnection {
+        val conn = localConnection()
+        runQueryScoped(conn, query.sql, query.params, query.makeExtractor())
+      }
     }
 
   suspend fun <T> run(query: Query<T>): List<T> =
     withContext(Dispatchers.IO) {
-      runQueryScoped(query.sql, query.params, query.makeExtractor()).toList()
+      withConnection {
+        val conn = localConnection()
+        runQueryScoped(conn, query.sql, query.params, query.makeExtractor()).toList()
+      }
     }
+
+  suspend fun <T> run2(query: Query<T>): List<T> =
+    stream(query).toList()
 
   suspend fun <T> run(query: Action<T>): Int =
     withContext(Dispatchers.IO) {

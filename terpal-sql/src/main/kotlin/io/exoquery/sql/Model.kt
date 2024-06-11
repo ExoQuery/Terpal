@@ -4,29 +4,30 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.serializer
 
 data class Statement(val ir: IR.Splice): Fragment {
-  operator fun plus(other: Statement) = Statement(IR.Splice(listOf(this.ir, other.ir)))
+  operator fun plus(other: Statement) = Statement(IR.Splice(listOf(IR.Part.Empty, IR.Part.Empty, IR.Part.Empty), listOf(this.ir, other.ir)))
 
   data class QueryData(val sql: String, val params: List<Param<*, *, *>>)
 
   companion object {
-    fun constructQuery(irs: IR.Splice): QueryData {
-      val partsAccum = mutableListOf<String>()
-      val paramsAccum = mutableListOf<Param<*, *, *>>()
-      for (ir in irs.values) {
-        when (ir) {
-          is IR.Part -> partsAccum += ir.value
-          is IR.Param -> {
-            paramsAccum += ir.value
-            partsAccum += "?"
-          }
-          is IR.Splice -> {
-            val (sql, params) = constructQuery(ir)
-            partsAccum += sql
-            paramsAccum += params
-          }
+    fun constructQuery(ir: IR.Splice): QueryData {
+      // At this point we should only have Parts and Params. Otherwise there's some kind of error
+      val flatIr = ir.flatten()
+      val parts = flatIr.parts
+      val params = flatIr.params.map {
+        when (it) {
+          is IR.Param -> it.value
+          else -> throw IllegalStateException("Unexpected IR type in params: $it.\nParams: ${flatIr.params}")
         }
       }
-      return QueryData(partsAccum.joinToString(""), paramsAccum)
+
+      if (parts.size != params.size + 1)
+        throw IllegalStateException(
+          """|Mismatched parts (${parts.size})  and params (${params.size}) in query:
+             |Parts: ${parts.map { it.value }}
+             |Params: ${params.map { it.value }}
+        """.trimMargin())
+
+      return QueryData(parts.map { it.value }.joinToString("?"), params)
     }
   }
 
