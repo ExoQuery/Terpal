@@ -48,10 +48,11 @@ suspend fun main() {
     //  AND lastUpdate = ${par}"
 
     val param = param("Joe") //
-    val query = Sql("SELECT id, firstName, lastName, age, lastUpdated FROM person WHERE firstName = ${param} AND lastUpdated > ${d}").queryOf<Person>()
+    val query = Sql("SELECT id, firstName, lastName, age, lastUpdated FROM person ${Sql("WHERE firstName = ${param}")} AND lastUpdated > ${d}").queryOf<Person>()
 
     val ctx = JdbcContext(ds)
-    val result = ctx.run(query).await()
+    val result = ctx.run(query)
+
 
     println(result)
 

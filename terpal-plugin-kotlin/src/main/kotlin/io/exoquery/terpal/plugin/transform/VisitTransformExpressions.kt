@@ -1,21 +1,14 @@
 package io.exoquery.terpal.plugin.transform
 
-import io.exoquery.terpal.plugin.trees.ExtractorsDomain
-import io.exoquery.terpal.plugin.logging.CompileLogger
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
-import org.jetbrains.kotlin.backend.common.ScopeWithIr
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
-import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocationWithRange
-import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
 import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
 import java.nio.file.Path
 import org.jetbrains.kotlin.ir.util.*
-import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 
 
 class VisitTransformExpressions(
@@ -45,6 +38,7 @@ class VisitTransformExpressions(
     val builderContext = transformerCtx.makeBuilderContext(expression, scopeOwner)
     val transformPrint = TransformPrintSource(builderContext)
     val transformInterpolations = TransformInterepolatorInvoke(builderContext)
+    val transformInterpolationsBatching = TransformInterepolatorBatchingInvoke(builderContext)
 
 
     // TODO need to catch parseError here in VisitTransformExpressions & not transform the expressions
@@ -58,6 +52,10 @@ class VisitTransformExpressions(
 
       transformInterpolations.matches(expression) -> {
         transformInterpolations.transform(expression, this)
+      }
+
+      transformInterpolationsBatching.matches(expression) -> {
+        transformInterpolationsBatching.transform(expression, this)
       }
 
       else ->

@@ -78,6 +78,15 @@ object Ir {
     operator fun <AP: Pattern<A>, A: List<S>, S: IrStatement> get(statements: AP) =
       customPattern1(statements) { it: IrBlockBody -> Components1(it.statements.toList()) }
 
+    object ReturnOnly {
+      operator fun <AP: Pattern<A>, A: IrExpression> get(statements: AP) =
+        customPattern1(statements) { it: IrBlockBody ->
+          on(it).match(
+            case(BlockBody[Is()]).then { (irReturn) -> Components1(irReturn) }
+          )
+        }
+    }
+
     object Statements {
       operator fun <AP: Pattern<A>, A: List<IrStatement>> get(statements: AP) =
         customPattern1(statements) { it: IrBlockBody ->
@@ -110,6 +119,20 @@ object Ir {
           )
         }
     }
+
+    object withReturnOnlyBlock {
+      operator fun <AP: Pattern<A>, A: IrExpression> get(body: AP) =
+        customPattern1(body) { it: IrFunctionExpression ->
+          on(it).match(
+            case(FunctionExpression[SimpleFunction.withReturnOnlyExpression[Is()]]).then { (expr) ->
+              on(expr).match(
+                // output the return-body
+                case(Return[Is()]).then { returnExpr -> Components1(returnExpr) }
+              )
+            }
+          )
+        }
+    }
   }
 
   object SimpleFunction {
@@ -131,6 +154,17 @@ object Ir {
           on(it).match(
             case(SimpleFunction[Is(), BlockBody.Statements[Is()]]).then { params, (b) ->
               Components2(params, b)
+            }
+          )
+        }
+    }
+
+    object withReturnOnlyExpression    {
+      operator fun <AP: Pattern<A>, A: IrExpression> get(body: AP) =
+        customPattern1(body) { it: IrSimpleFunction ->
+          on(it).match(
+            case(SimpleFunction[Is(), BlockBody.ReturnOnly[Is()]]).then { _, (b) ->
+              Components1(b)
             }
           )
         }

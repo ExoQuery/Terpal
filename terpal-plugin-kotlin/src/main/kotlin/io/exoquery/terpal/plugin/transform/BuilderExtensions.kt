@@ -12,16 +12,14 @@ import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGet
 import org.jetbrains.kotlin.ir.builders.irReturn
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationParent
-import org.jetbrains.kotlin.ir.declarations.IrFunction
-import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
+import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionExpressionImpl
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.types.typeWith
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.name.SpecialNames
@@ -72,13 +70,22 @@ fun IrExpression.callMethodTyped(name: String): CallMethodTypedArgs = CallMethod
 fun IrExpression.callMethodTypedWithType(name: String, tpe: IrType): CallMethodTypedArgs = CallMethodTypedArgs(this, name, tpe)
 
 context (BuilderContext) fun createLambda0(functionBody: IrExpression, functionParent: IrDeclarationParent): IrFunctionExpression =
+  createLambdaN(functionBody, listOf(), functionParent)
+
+context (BuilderContext) fun createLambdaN(functionBody: IrExpression, params: List<IrValueParameter>, functionParent: IrDeclarationParent): IrFunctionExpression =
   with(builder) {
-    val functionClosure = createLambda0Closure(functionBody, functionParent)
-    val functionType = pluginCtx.symbols.functionN(0).typeWith(functionClosure.returnType)
+    val functionClosure = createLambdaClosure(functionBody, params, functionParent)
+
+    val typeWith = params.map { it.type } + functionClosure.returnType
+    val functionType =
+      pluginCtx.symbols.functionN(params.size)
+        // Remember this is FunctionN<InputA, InputB, ... Output> so these input/output args need to be both specified here
+        .typeWith(typeWith)
+
     IrFunctionExpressionImpl(startOffset, endOffset, functionType, functionClosure, IrStatementOrigin.LAMBDA)
   }
 
-context (BuilderContext) fun createLambda0Closure(functionBody: IrExpression, functionParent: IrDeclarationParent): IrSimpleFunction {
+context (BuilderContext) fun createLambdaClosure(functionBody: IrExpression, params: List<IrValueParameter>, functionParent: IrDeclarationParent): IrSimpleFunction {
   return with(pluginCtx) {
     irFactory.buildFun {
       origin = IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
@@ -89,6 +96,10 @@ context (BuilderContext) fun createLambda0Closure(functionBody: IrExpression, fu
       isSuspend = false
     }.apply {
       parent = functionParent
+
+      if (params.size > 0) {
+        valueParameters = params
+      }
       /*
       VERY important here to create a new irBuilder from the symbol i.e. createIrBuilder because
       the return-point needs to be the caller-function (which kotlin gets from the irBuilder).
@@ -106,6 +117,9 @@ context (BuilderContext) fun createLambda0Closure(functionBody: IrExpression, fu
     }
   }
 }
+
+
+
 
 fun IrPluginContext.createIrBuilder(
   symbol: IrSymbol,

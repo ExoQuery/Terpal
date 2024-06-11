@@ -38,3 +38,4 @@ data class Statement(val ir: IR.Splice): Fragment {
 }
 
 data class Query<T>(val sql: String, val params: List<Param<*, *, *>>, val resultMaker: KSerializer<T>)
+data class Action<T>(val sql: String, val params: List<Param<*, *, *>>)

@@ -2,6 +2,7 @@ package io.exoquery.terpal.plugin.trees
 
 import io.decomat.*
 import io.exoquery.terpal.Interpolator
+import io.exoquery.terpal.InterpolatorBatching
 import io.exoquery.terpal.InterpolatorFunction
 import io.exoquery.terpal.plugin.logging.CompileLogger
 import io.exoquery.terpal.plugin.qualifiedNameForce
@@ -9,6 +10,7 @@ import io.exoquery.terpal.plugin.safeName
 import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classFqName
@@ -55,21 +57,59 @@ object ExtractorsDomain {
           if (matchesMethod(call)) {
             val caller = call.dispatchReceiver.also { if (it == null) error("Dispatch reciver of the Interpolator invocation `${call.dumpKotlinLike()}` was null. This should not be possible.") }
             val x = call.simpleValueArgs.first()
-            on(x).match(
-              case(Ir.StringConcatenation[Is()]).then { components ->
+            x.match(
+              case(InterpolationString[Is()]).then { components ->
                 Components2(caller, components)
-              },
-              // it's a single string-const in this case
-              case(Ir.Const[Is()]).then { const ->
-                Components2(caller, listOf(const))
               }
             )
           } else {
             null
           }
         }
-
     }
+
+    object InterpolationString {
+      context (CompileLogger) operator fun <AP : Pattern<List<IrExpression>>> get(reciver: AP) =
+        customPattern1(reciver) { expr: IrExpression ->
+          expr.match(
+            case(Ir.StringConcatenation[Is()]).then { components ->
+              Components1(components)
+            },
+            // it's a single string-const in this case
+            case(Ir.Const[Is()]).then { const ->
+              Components1(listOf(const))
+            }
+          )
+        }
+    }
+
+    object InterpolateBatchingInvoke {
+      context (CompileLogger) fun matchesMethod(it: IrCall): Boolean {
+        // if (it.symbol.safeName == "invoke")
+        //   warn("------------ `invoke` Reciver Super Types: ${it.dispatchReceiver?.type?.superTypesRecursive()?.toList()?.map { it.dumpKotlinLike() }}")
+        return it.reciverIs<InterpolatorBatching<*>>("invoke") //&& it.simpleValueArgsCount == 2 && it.valueArguments.all{ it != null }
+      }
+
+      data class Data(val caller: IrExpression, val components: List<IrExpression>, val funExpr: IrFunctionExpression)
+
+      context (CompileLogger) operator fun <AP: Pattern<Data>> get(callData: AP) =
+        customPattern1(callData) { call: IrCall ->
+          if (matchesMethod(call)) {
+            val caller = call.dispatchReceiver ?: throw IllegalStateException("Dispatch reciver of the Interpolator invocation `${call.dumpKotlinLike()}` was null. This should not be possible.")
+            val x = call.simpleValueArgs.first()
+            x.match(
+              case(Ir.FunctionExpression.withReturnOnlyBlock[InterpolationString[Is()]]).then { (components) ->
+                Components1(Data(caller, components, comp))
+              }
+            )
+          } else {
+            null
+          }
+        }
+    }
+
+
+
 
 
     object InterpolatorFunctionInvoke {
