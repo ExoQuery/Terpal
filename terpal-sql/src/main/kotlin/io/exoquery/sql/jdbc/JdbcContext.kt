@@ -85,6 +85,8 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
 
   suspend fun <T> FlowCollector<T>.emitResultSet(conn: Connection, rs: ResultSet, extract: (Connection, ResultSet) -> T) {
     while (rs.next()) {
+      val meta = rs.metaData
+      println("--- Emit: ${(1..meta.columnCount).map { rs.getObject(it) }.joinToString(",")}")
       emit(extract(conn, rs))
     }
   }

@@ -114,20 +114,20 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
   //override fun decodeSequentially(): Boolean = true
 
   @OptIn(ExperimentalSerializationApi::class)
-  override fun beginStructure(descriptor: SerialDescriptor): CompositeDecoder = this
+  override fun beginStructure(descriptor: SerialDescriptor): CompositeDecoder {
+    return this
+  }
   override fun endStructure(descriptor: SerialDescriptor) {
     // Update the rowIndex of the parent
     endCallback(rowIndex)
   }
 
   @ExperimentalSerializationApi
-  override fun <T : Any> decodeNullableSerializableElement(descriptor: SerialDescriptor, index: Int, deserializer: DeserializationStrategy<T?>, previousValue: T?): T? {
-    return if (decoders.isNull(rowIndex, rs)) {
-      rowIndex += 1
-      null
-    }
-    else deserializer.deserialize(this)
-  }
+  override fun <T : Any> decodeNullableSerializableElement(descriptor: SerialDescriptor, index: Int, deserializer: DeserializationStrategy<T?>, previousValue: T?): T? =
+    // Delegate to decodeSerializableElement since it includes the possiblity of a value being null (which would techinically be part of the T generic ie.
+    // the T generic would actually be some other G? which is nullable)
+    decodeSerializableElement(descriptor, index, deserializer, previousValue)
+
 
   override fun decodeInlineElement(descriptor: SerialDescriptor, index: Int): Decoder = this
   @OptIn(ExperimentalSerializationApi::class)
@@ -158,8 +158,21 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
         TODO()
       }
       StructureKind.CLASS -> {
-        //deserializer.deserialize(cloneSelf(rs, offset))
-        deserializer.deserialize(cloneSelf(rs, rowIndex, { childIndex -> this.rowIndex = childIndex }))
+        // Only if all the columns are null (and the returned element can be null) can we assume that the decoded element should be null
+        // Since we're always at the current index (e.g. (Person(name,age),Address(street,zip)) when we're on `street` the index will be 3
+        // so we need to check [street..<zip] indexes i.e. [3..<(3+2)] for nullity
+        val allRowsNull =
+          (rowIndex until (rowIndex + childDesc.elementsCount)).all {
+            decoders.isNull(it, rs)
+          }
+
+        if (allRowsNull && childDesc.isNullable) {
+          decodeNull() as T
+        } else {
+          //deserializer.deserialize(cloneSelf(rs, offset))
+          val out = deserializer.deserialize(cloneSelf(rs, rowIndex, { childIndex -> this.rowIndex = childIndex }))
+          out
+        }
       }
       SerialKind.CONTEXTUAL -> {
         val decoder = decoders.decoders.find { it.type == childDesc.capturedKClass }
@@ -181,9 +194,13 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
 
   override fun decodeInline(descriptor: SerialDescriptor): Decoder = this
 
+  /**
+   * Checks to see if the element is null before calling an actual deserialzier. Can't use this because
+   * we need to check all upcoming rows to see if all of them are null, only then is the parent element considered null.
+   */
   @ExperimentalSerializationApi
   override fun decodeNotNullMark(): Boolean {
-    return decoders.isNull(rowIndex, rs)
+    return true
   }
 
 

@@ -5,11 +5,15 @@ import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.jdbc.JdbcContext.Params.param
 import io.exoquery.sql.jdbc.SqlBatch
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.serializer
 import java.sql.Connection
 import java.time.LocalDate
 
 suspend fun main() {
+  EmbeddedPostgres.start()
+
   EmbeddedPostgres.start().use { postgres ->
     val ds = postgres.getPostgresDatabase()
     val conn = ds.getConnection()
@@ -50,6 +54,12 @@ suspend fun main() {
     val par = param(d)
     // TODO figure out the serializersModule part with this
     //  AND lastUpdate = ${par}"
+
+    @Serializable
+    data class Name(val firstName: String, val lastName: String)
+
+    @Serializable
+    data class Person(val id: Int, val name: Name, val age: Int, @Contextual val lastUpdated: LocalDate)
 
     val batch =
       SqlBatch { p: Person -> "INSERT INTO person (id, firstName, lastName, age) VALUES (${param(p.id)}, ${param(p.name.firstName)}, ${param(p.name.lastName)}, ${param(p.age)}) RETURNING *" }.values(
