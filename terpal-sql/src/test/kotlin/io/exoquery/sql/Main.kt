@@ -1,6 +1,7 @@
 package io.exoquery.sql
 
 import io.exoquery.sql.jdbc.JdbcContext
+import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.jdbc.JdbcContext.Params.param
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import kotlinx.serialization.serializer

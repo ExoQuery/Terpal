@@ -1,100 +1,31 @@
 package io.exoquery.sql
 
-import io.exoquery.sql.jdbc.JdbcEncodersWithTime
-import io.exoquery.sql.jdbc.JdbcParam
 import io.exoquery.terpal.InterpolatorBatchingWithWrapper
 import io.exoquery.terpal.InterpolatorWithWrapper
-import java.sql.Connection
-import java.sql.PreparedStatement
-import kotlin.reflect.full.isSubclassOf
-
-sealed interface IR {
-  data class Part(val value: String): IR {
-    companion object {
-      val Empty = Part("")
-    }
-  }
-
-  sealed interface Var: IR
-  data class Param(val value: io.exoquery.sql.Param<*, *, *>): Var
-  data class Splice(val parts: List<Part>, val params: List<Var>): Var {
-    fun flatten(): Splice {
-      val partsAccum = mutableListOf<IR.Part>()
-      val paramsAccum = mutableListOf<IR.Var>()
-
-      fun MutableList<IR.Part>.interlaceEdges(other: List<IR.Part>) {
-        if (this.isEmpty())
-          this.addAll(other)
-        else {
-          if (other.isNotEmpty()) {
-            val last = this.last()
-            val firstOther = other.first()
-            this.set(this.size-1, IR.Part(last.value + firstOther.value))
-            this.addAll(other.drop(1))
-          }
-        }
-      }
-
-      val partsIter = parts.iterator()
-      val paramsIter = params.iterator()
-
-      var afterSplice: Boolean = false
-
-      while(partsIter.hasNext()) {
-
-        if (!afterSplice) {
-          partsAccum += partsIter.next()
-        } else {
-          partsAccum.interlaceEdges(listOf(partsIter.next()))
-        }
-
-        if (paramsIter.hasNext()) {
-          when (val nextParam = paramsIter.next()) {
-            is Param -> {
-              paramsAccum += nextParam
-              afterSplice = false
-            }
-            // recursively flatten the inner splice, the grab out it's contents
-            // for example, Splice("--$A-${Splice("_$B_$C_")}-$D--) at the point of reaching ${Splice(...)}
-            // should be: (parts:["--", "-"], params:[A].
-            // When the the splice is complete it should be: (parts:["--", ("-" + "_"), "_", "_"], params:[A, B, C])
-            is Splice -> {
-              partsAccum.interlaceEdges(nextParam.parts)
-              paramsAccum.addAll(nextParam.params)
-              afterSplice = true
-            }
-          }
-        }
-      }
-
-      return IR.Splice(partsAccum, paramsAccum)
-    }
-  }
-}
-
-object Sql: SqlJdbcBase(object: JdbcEncodersWithTime() {})
-
-// The Jdbc Specific Sql implemenation which will use the Jdbc wrapping functions to auto-wrap things
-abstract class SqlJdbcBase(val encoders: Encoders<Connection, PreparedStatement>): SqlBase() {
-  override fun <V: Any> wrap(value: V): SqlFragment {
-    val cls = value::class
-    // Very not idea. We want to be able to just compare KClass instances directly by getting the
-    // IrClass/IrClassSymbol as a KClass when the splicing happened
-    val encoder =
-      encoders.encoders.find { cls.isSubclassOf(it.type) } ?: throw IllegalArgumentException("Could not find an encoder for the type: ${cls.qualifiedName}")
-    @Suppress("UNCHECKED_CAST")
-    return run {
-      JdbcParam<V>(value, encoder as Encoder<Connection, PreparedStatement, V>)
-    }
-  }
-}
-
+import kotlinx.serialization.serializer
 
 interface SqlFragment
 
+data class SqlBatchWithValues<A: Any>(val batch: SqlBatch<A>, val values: Sequence<A>) {
+  // Note that we don't actually care about the value of element of the batch anymore
+  // because the parameters have been prepared and it just needs to be excuted
+  // We only need type-data when there is a value returned
+  fun action(): BatchAction {
+    val sql = batch.parts.joinToString("?")
+    val paramSeq = values.map { batch.params(it) }
+    return BatchAction(sql, paramSeq)
+  }
+
+  inline fun <reified T> batchActionReturning(): BatchActionReturning<T> {
+    val sql = batch.parts.joinToString("?")
+    val paramSeq = values.map { batch.params(it) }
+    val resultMaker = serializer<T>()
+    return BatchActionReturning(sql, paramSeq, resultMaker)
+  }
+}
+
 data class SqlBatch<T: Any>(val parts: List<String>, val params: (T) -> List<Param<*, *, T>>) {
-  fun render(values: Sequence<T>) =
-    parts.joinToString("?") to values.map { params(it) }
+  fun values(values: Sequence<T>) = SqlBatchWithValues(this, values)
 
   /*
   ----- Optimization -----

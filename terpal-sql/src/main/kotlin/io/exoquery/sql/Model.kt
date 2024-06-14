@@ -36,7 +36,22 @@ data class Statement(val ir: IR.Splice): SqlFragment {
     val resultMaker = serializer<T>()
     return Query(sql, params, resultMaker)
   }
+
+  fun <T> action(): Action {
+    val (sql, params) = constructQuery(ir)
+    return Action(sql, params)
+  }
+
+  inline fun <reified T> actionReturning(): ActionReturning<T> {
+    val (sql, params) = constructQuery(ir)
+    val resultMaker = serializer<T>()
+    return ActionReturning(sql, params, resultMaker)
+  }
 }
 
 data class Query<T>(val sql: String, val params: List<Param<*, *, *>>, val resultMaker: KSerializer<T>)
-data class Action<T>(val sql: String, val params: List<Param<*, *, *>>)
+data class Action(val sql: String, val params: List<Param<*, *, *>>)
+data class ActionReturning<T>(val sql: String, val params: List<Param<*, *, *>>, val resultMaker: KSerializer<T>)
+
+data class BatchAction(val sql: String, val params: Sequence<List<Param<*, *, *>>>)
+data class BatchActionReturning<T>(val sql: String, val params: Sequence<List<Param<*, *, *>>>, val resultMaker: KSerializer<T>)
