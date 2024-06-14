@@ -149,8 +149,7 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
         if (allRowsNull) {
           decodeNull()
         } else {
-          val out = deserializer.deserialize(cloneSelf(rs, rowIndex, { childIndex -> this.rowIndex = childIndex }))
-          out
+          deserializer.deserialize(cloneSelf(rs, rowIndex, { childIndex -> this.rowIndex = childIndex }))
         }
       }
       SerialKind.CONTEXTUAL -> {
@@ -164,7 +163,7 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
         run { decodedValueRaw as T? }
       }
       else -> {
-        return when {
+        when {
           childDesc.kind is PrimitiveKind ->
             if (decoders.isNull(rowIndex, rs)) {
               // Advance to the next row (since we know the current one is null)
