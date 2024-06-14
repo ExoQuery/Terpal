@@ -4,7 +4,12 @@ import io.exoquery.sql.jdbc.CoroutineTransaction
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.experimental.ExperimentalTypeInference
 
 
 abstract class Context<Session, Database> {
@@ -23,11 +28,11 @@ abstract class Context<Session, Database> {
 
   protected suspend inline fun <T> withConnection(crossinline block: suspend CoroutineScope.() -> T): T {
     return if (coroutineContext.hasOpenConnection()) {
-      withContext(coroutineContext) { block() }
+      withContext(coroutineContext + Dispatchers.IO) { block() }
     } else {
       val session = newSession()
       try {
-        withContext(CoroutineSession(session)) { block() }
+        withContext(CoroutineSession(session) + Dispatchers.IO) { block() }
       } finally { closeSession(session) }
     }
   }
@@ -49,6 +54,19 @@ abstract class Context<Session, Database> {
         withContext(coroutineContext) { block() }
 
       else -> error("Attempted to start new transaction within: $existingTransaction")
+    }
+  }
+
+  protected suspend fun localConnection() =
+    coroutineContext.get(sessionKey)?.session ?: error("No connection detected in withConnection scope. This should be impossible.")
+
+  @OptIn(ExperimentalTypeInference::class)
+  protected suspend fun <T> flowWithConnection(@BuilderInference block: suspend FlowCollector<T>.() -> Unit): Flow<T> {
+    val flowInvoke = flow(block)
+    return if (coroutineContext.hasOpenConnection()) {
+      flowInvoke.flowOn(CoroutineSession(localConnection()) + Dispatchers.IO)
+    } else {
+      flowInvoke.flowOn(CoroutineSession(newSession()) + Dispatchers.IO)
     }
   }
 }

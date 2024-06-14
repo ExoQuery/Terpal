@@ -13,23 +13,6 @@ import java.sql.ResultSet
 import java.sql.ResultSetMetaData
 import kotlin.reflect.KClass
 
-// Maybe implement MappedResultDecoder<V, T>(mapper:V -> T) {
-
-class OffsetCollector {
-  private var curr: Int = 0
-  // So basically when there's an element-in-element we need to offset every element that the inner
-  // thing has above one so for example Person(id, Name(first, last), age) when we're on name it would be 2-1=1 so 1 would
-  // be the additional offset we would need to have when returning from serialization of the Name object back to the Person object
-  fun advance(value: Int) {
-    curr += value-1
-  }
-  fun curr() = curr
-  override fun toString(): String = "OffsetCollector(${curr})"
-}
-
-
-
-
 interface ColumnDecoder<Session, Row, T> {
   val cls: KClass<*>
   val decodeType: (Session, Row, Int) -> T
@@ -68,10 +51,11 @@ fun SerialDescriptor.verifyColumns(columns: List<ColumnInfo>): Unit {
 class JdbcRowDecoder(
   sess: Connection,
   rs: ResultSet,
-  offset: OffsetCollector,
+  initialRowIndex: Int,
   decoders: Decoders<Connection, ResultSet>,
-  columnInfos: List<ColumnInfo>
-): RowDecoder<Connection, ResultSet>(sess, rs, offset, decoders, columnInfos) {
+  columnInfos: List<ColumnInfo>,
+  endCallback: (Int) -> Unit
+): RowDecoder<Connection, ResultSet>(sess, rs, initialRowIndex, decoders, columnInfos, endCallback) {
 
   companion object {
     operator fun invoke(sess: Connection, rs: ResultSet, descriptor: SerialDescriptor): JdbcRowDecoder {
@@ -79,34 +63,40 @@ class JdbcRowDecoder(
         (1..meta.columnCount).map { ColumnInfo(meta.getColumnName(it), meta.getColumnTypeName(it)) }
       val metaColumns = metaColumnData(rs.metaData)
       descriptor.verifyColumns(metaColumns)
-      return JdbcRowDecoder(sess, rs, OffsetCollector(), JdbcDecodersWithTime(), metaColumns)
+      return JdbcRowDecoder(sess, rs, 1, JdbcDecodersWithTime(), metaColumns, {})
     }
   }
 
-  override fun cloneSelf(rs: ResultSet, offset: OffsetCollector): RowDecoder<Connection, ResultSet> =
-    JdbcRowDecoder(sess, rs, offset, decoders, columnInfos)
+  override fun cloneSelf(rs: ResultSet, initialRowIndex: Int, endCallback: (Int) -> Unit): RowDecoder<Connection, ResultSet> =
+    JdbcRowDecoder(sess, rs, initialRowIndex, decoders, columnInfos, endCallback)
 }
 
 @OptIn(ExperimentalSerializationApi::class)
-abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val offset: OffsetCollector, val decoders: Decoders<Session, Row>, val columnInfos: List<ColumnInfo>): Decoder, CompositeDecoder {
+abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val initialRowIndex: Int, val decoders: Decoders<Session, Row>, val columnInfos: List<ColumnInfo>, val endCallback: (Int) -> Unit): Decoder, CompositeDecoder {
 
-  abstract fun cloneSelf(rs: Row, offset: OffsetCollector): RowDecoder<Session, Row>
+  abstract fun cloneSelf(rs: Row, initialRowIndex: Int, endCallback: (Int) -> Unit): RowDecoder<Session, Row>
 
-  var fieldIndex: Int = 0
+  var rowIndex: Int = initialRowIndex
+  var classIndex: Int = 0
+
+  fun nextRowIndex(desc: SerialDescriptor): Int {
+    val curr = rowIndex
+    println("---- Get Row Index: ${curr} - ${desc}")
+    rowIndex += 1
+    return curr
+  }
 
   override val serializersModule: SerializersModule = EmptySerializersModule()
 
-  val Int.nx get() = this+1 + offset.curr()
-
-  override fun decodeBooleanElement(descriptor: SerialDescriptor, index: Int): Boolean = decoders.BooleanDecoder.decode(sess, rs, index.nx)
-  override fun decodeByteElement(descriptor: SerialDescriptor, index: Int): Byte = decoders.ByteDecoder.decode(sess, rs, index.nx)
-  override fun decodeCharElement(descriptor: SerialDescriptor, index: Int): Char = decoders.CharDecoder.decode(sess, rs, index.nx)
-  override fun decodeDoubleElement(descriptor: SerialDescriptor, index: Int): Double = decoders.DoubleDecoder.decode(sess, rs, index.nx)
-  override fun decodeFloatElement(descriptor: SerialDescriptor, index: Int): Float = decoders.FloatDecoder.decode(sess, rs, index.nx)
-  override fun decodeIntElement(descriptor: SerialDescriptor, index: Int): Int = decoders.IntDecoder.decode(sess, rs, index.nx)
-  override fun decodeLongElement(descriptor: SerialDescriptor, index: Int): Long = decoders.LongDecoder.decode(sess, rs, index.nx)
-  override fun decodeShortElement(descriptor: SerialDescriptor, index: Int): Short = decoders.ShortDecoder.decode(sess, rs, index.nx)
-  override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String = decoders.StringDecoder.decode(sess, rs, index.nx)
+  override fun decodeBooleanElement(descriptor: SerialDescriptor, index: Int): Boolean = decoders.BooleanDecoder.decode(sess, rs, nextRowIndex(descriptor))
+  override fun decodeByteElement(descriptor: SerialDescriptor, index: Int): Byte = decoders.ByteDecoder.decode(sess, rs, nextRowIndex(descriptor))
+  override fun decodeCharElement(descriptor: SerialDescriptor, index: Int): Char = decoders.CharDecoder.decode(sess, rs, nextRowIndex(descriptor))
+  override fun decodeDoubleElement(descriptor: SerialDescriptor, index: Int): Double = decoders.DoubleDecoder.decode(sess, rs, nextRowIndex(descriptor))
+  override fun decodeFloatElement(descriptor: SerialDescriptor, index: Int): Float = decoders.FloatDecoder.decode(sess, rs, nextRowIndex(descriptor))
+  override fun decodeIntElement(descriptor: SerialDescriptor, index: Int): Int = decoders.IntDecoder.decode(sess, rs, nextRowIndex(descriptor))
+  override fun decodeLongElement(descriptor: SerialDescriptor, index: Int): Long = decoders.LongDecoder.decode(sess, rs, nextRowIndex(descriptor))
+  override fun decodeShortElement(descriptor: SerialDescriptor, index: Int): Short = decoders.ShortDecoder.decode(sess, rs, nextRowIndex(descriptor))
+  override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String = decoders.StringDecoder.decode(sess, rs, nextRowIndex(descriptor))
 
   override fun decodeBoolean(): Boolean = decoders.BooleanDecoder.decode(sess, rs, 1)
   override fun decodeByte(): Byte = decoders.ByteDecoder.decode(sess, rs, 1)
@@ -126,26 +116,31 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val offs
   @OptIn(ExperimentalSerializationApi::class)
   override fun beginStructure(descriptor: SerialDescriptor): CompositeDecoder = this
   override fun endStructure(descriptor: SerialDescriptor) {
-    offset.advance(descriptor.elementsCount)
+    // Update the rowIndex of the parent
+    endCallback(rowIndex)
   }
 
   @ExperimentalSerializationApi
   override fun <T : Any> decodeNullableSerializableElement(descriptor: SerialDescriptor, index: Int, deserializer: DeserializationStrategy<T?>, previousValue: T?): T? {
-    return if (decoders.isNull(index.nx, rs)) null else deserializer.deserialize(this)
+    return if (decoders.isNull(rowIndex, rs)) {
+      rowIndex += 1
+      null
+    }
+    else deserializer.deserialize(this)
   }
 
   override fun decodeInlineElement(descriptor: SerialDescriptor, index: Int): Decoder = this
   @OptIn(ExperimentalSerializationApi::class)
   override fun decodeElementIndex(descriptor: SerialDescriptor): Int {
-    if (fieldIndex >= descriptor.elementsCount) return CompositeDecoder.DECODE_DONE
+    if (classIndex >= descriptor.elementsCount) return CompositeDecoder.DECODE_DONE
     //val childDesc = descriptor.elementDescriptors.toList()[fieldIndex]
 //    return when (childDesc.kind) {
 //      StructureKind.CLASS -> elementIndex
 //      else -> elementIndex++
 //    }
-    val currFieldIndex = fieldIndex
-    fieldIndex += 1
-    return currFieldIndex
+    val currClassIndex = classIndex
+    classIndex += 1
+    return currClassIndex
   }
 
   @OptIn(ExperimentalSerializationApi::class)
@@ -163,14 +158,15 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val offs
         TODO()
       }
       StructureKind.CLASS -> {
-        deserializer.deserialize(cloneSelf(rs, offset))
+        //deserializer.deserialize(cloneSelf(rs, offset))
+        deserializer.deserialize(cloneSelf(rs, rowIndex, { childIndex -> this.rowIndex = childIndex }))
       }
       SerialKind.CONTEXTUAL -> {
         val decoder = decoders.decoders.find { it.type == childDesc.capturedKClass }
         val columnName = try { columnInfos.get(index) } catch (e: Throwable) { "<UNKNOWN>" }
         val decodedValueRaw =
-          decoder?.decode(sess, rs, index.nx) ?:
-            throw IllegalArgumentException("Could not decode the contextual column ${columnName} (index: ${index.nx}) whose expected class was: ${childDesc.capturedKClass}")
+          decoder?.decode(sess, rs, nextRowIndex(descriptor)) ?:
+            throw IllegalArgumentException("Could not decode the contextual column ${columnName} (index: ${rowIndex}) whose expected class was: ${childDesc.capturedKClass}")
 
         decodedValueRaw as T
       }
@@ -187,7 +183,7 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val offs
 
   @ExperimentalSerializationApi
   override fun decodeNotNullMark(): Boolean {
-    return decoders.isNull(fieldIndex.nx, rs)
+    return decoders.isNull(rowIndex, rs)
   }
 
 

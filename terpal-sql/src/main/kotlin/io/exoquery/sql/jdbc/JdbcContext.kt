@@ -3,13 +3,13 @@ package io.exoquery.sql.jdbc
 import io.exoquery.sql.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.serialization.KSerializer
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import javax.sql.DataSource
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
-import kotlin.experimental.ExperimentalTypeInference
 
 sealed interface ReturnAction {
   // Used for Query and non-returning actions
@@ -22,6 +22,8 @@ sealed interface ReturnAction {
 open class JdbcContext(override val database: DataSource): Context<Connection, DataSource>() {
   object JdbcContextEncoders: JdbcEncodersWithTime()
   companion object Params: JdbcParams(JdbcContextEncoders)
+
+  protected open val batchReturnBehavior = ReturnAction.ReturnDefault
 
   override fun newSession(): Connection = database.connection
   override fun closeSession(session: Connection): Unit = session.close()
@@ -87,10 +89,6 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
     }
   }
 
-  protected suspend fun localConnection() =
-    coroutineContext.get(sessionKey)?.session ?: error("No connection detected in withConnection scope. This should be impossible.")
-
-
   private fun <T> runQueryScoped(conn: Connection, sql: String, params: List<Param<*, *, *>>, extract: (Connection, ResultSet) -> T): Flow<T> =
     flow {
       makeStmt(sql, conn).use { stmt ->
@@ -101,7 +99,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
       }
     }
 
-  private suspend fun <T> runUpdateReturningScoped(sql: String, params: List<Param<*, *, *>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+  private suspend fun <T> runActionReturningScoped(sql: String, params: List<Param<*, *, *>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
     flow {
       withConnection {
         val conn = localConnection()
@@ -113,12 +111,11 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
       }
     }
 
-  private suspend fun updateBatchScoped(sql: String, batches: List<() -> List<Param<*, *, *>>>): List<Int> =
+  private suspend fun runBatchActionScoped(sql: String, batches: Sequence<List<Param<*, *, *>>>): List<Int> =
     withConnection {
       val conn = localConnection()
       makeStmt(sql, conn).use { stmt ->
-        batches.forEach { makeBatch ->
-          val batch = makeBatch()
+        batches.forEach { batch ->
           prepare(stmt, conn, batch)
           stmt.addBatch()
         }
@@ -126,34 +123,32 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
       }
     }
 
-  private suspend fun <T> updateBatchReturningScoped(sql: String, batches: List<() -> List<Param<*, *, *>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
-    withConnection {
+  private suspend fun <T> runBatchActionReturningScoped(sql: String, batches: Sequence<List<Param<*, *, *>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+    flowWithConnection {
       val conn = localConnection()
-      flow {
-        makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
-          batches.forEach { makeBatch ->
-            val batch = makeBatch()
-            prepare(stmt, conn, batch)
-            stmt.addBatch()
-          }
-          stmt.executeBatch()
-          emitResultSet(conn, stmt.generatedKeys, extract)
+      makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
+        batches.forEach { batch ->
+          prepare(stmt, conn, batch)
+          stmt.addBatch()
         }
+        stmt.executeBatch()
+        emitResultSet(conn, stmt.generatedKeys, extract)
       }
     }
 
-  private suspend fun runUpdateScoped(sql: String, params: List<Param<*, *, *>>): Int =
+  private suspend fun runActionScoped(sql: String, params: List<Param<*, *, *>>): Int =
     withConnection {
       val conn = localConnection()
        makeStmt(sql, conn).use { stmt ->
+        prepare(stmt, conn, params)
         stmt.executeUpdate()
       }
     }
 
-  protected fun <T> Query<T>.makeExtractor() =
+  protected fun <T> KSerializer<T>.makeExtractor() =
     { conn: Connection, rs: ResultSet ->
-      val decoder = JdbcRowDecoder(conn, rs, this.resultMaker.descriptor)
-      this.resultMaker.deserialize(decoder)
+      val decoder = JdbcRowDecoder(conn, rs, descriptor)
+      deserialize(decoder)
     }
 
   suspend fun <T> stream(query: Query<T>): Flow<T> =
@@ -162,41 +157,29 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
       makeStmt(query.sql, conn).use { stmt ->
         prepare(stmt, conn, query.params)
         stmt.executeQuery().use { rs ->
-          emitResultSet(conn, rs, query.makeExtractor())
+          emitResultSet(conn, rs, query.resultMaker.makeExtractor())
         }
       }
     }
 
-//  suspend fun <T> run(query: Query<T>): List<T> =
-//    withContext(Dispatchers.IO) {
-//      withConnection {
-//        val conn = localConnection()
-//        runQueryScoped(conn, query.sql, query.params, query.makeExtractor()).toList()
-//      }
-//    }
-//
-//  // This will cause the former to run: flow.flowOn(CoroutineSession(localConnection()) + Dispatchers.IO)
-//  suspend fun <T> run2(query: Query<T>): List<T> {
-//    return withConnection {
-//      run3(query)
-//    }
-//  }
+  suspend fun <T> stream(query: BatchActionReturning<T>): Flow<T> =
+    runBatchActionReturningScoped(query.sql, query.params, batchReturnBehavior, query.resultMaker.makeExtractor())
+
+  suspend fun <T> stream(query: ActionReturning<T>): Flow<T> =
+    runActionReturningScoped(query.sql, query.params, batchReturnBehavior, query.resultMaker.makeExtractor())
 
   suspend fun <T> run(query: Query<T>): List<T> =
     stream(query).toList()
 
-  @OptIn(ExperimentalTypeInference::class)
-  suspend fun <T> flowWithConnection(@BuilderInference block: suspend FlowCollector<T>.() -> Unit): Flow<T> {
-    val flowInvoke = flow(block)
-    return if (coroutineContext.hasOpenConnection()) {
-      flowInvoke.flowOn(CoroutineSession(localConnection()) + Dispatchers.IO)
-    } else {
-      flowInvoke.flowOn(CoroutineSession(newSession()) + Dispatchers.IO)
-    }
-  }
-
   suspend fun run(query: Action): Int =
-    withContext(Dispatchers.IO) {
-      runUpdateScoped(query.sql, query.params)
-    }
+    runActionScoped(query.sql, query.params)
+
+  suspend fun run(query: BatchAction): List<Int> =
+    runBatchActionScoped(query.sql, query.params)
+
+  suspend fun <T> run(query: ActionReturning<T>): List<T> =
+    stream(query).toList()
+
+  suspend fun <T> run(query: BatchActionReturning<T>): List<T> =
+    stream(query).toList()
 }

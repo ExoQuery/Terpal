@@ -3,6 +3,7 @@ package io.exoquery.sql
 import io.exoquery.sql.jdbc.JdbcContext
 import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.jdbc.JdbcContext.Params.param
+import io.exoquery.sql.jdbc.SqlBatch
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import kotlinx.serialization.serializer
 import java.sql.Connection
@@ -43,15 +44,27 @@ suspend fun main() {
     //  println(p)
     //}
 
+    val ctx = JdbcContext(ds)
+
     val d = LocalDate.now()
     val par = param(d)
     // TODO figure out the serializersModule part with this
     //  AND lastUpdate = ${par}"
 
+    val batch =
+      SqlBatch { p: Person -> "INSERT INTO person (id, firstName, lastName, age) VALUES (${param(p.id)}, ${param(p.name.firstName)}, ${param(p.name.lastName)}, ${param(p.age)})" }.values(
+        Person(11, Name("Joe", "Bloggs"), 11, LocalDate.ofEpochDay(0)),
+        Person(22, Name("Jim", "Roogs"), 22, LocalDate.ofEpochDay(0))
+      ).action()
+    ctx.run(batch)
+
+
     val param = param("Joe") //
     val query = Sql("SELECT id, firstName, lastName, age, lastUpdated FROM person ${Sql("WHERE firstName = ${param}")} AND lastUpdated > ${d}").queryOf<Person>()
 
-    val ctx = JdbcContext(ds)
+
+
+
     val result = ctx.run(query)
     //val result = ctx.run(query)
 

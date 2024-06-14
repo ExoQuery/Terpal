@@ -2,11 +2,12 @@ package io.exoquery.sql
 
 import io.exoquery.terpal.InterpolatorBatchingWithWrapper
 import io.exoquery.terpal.InterpolatorWithWrapper
+import io.exoquery.terpal.interpolatorBody
 import kotlinx.serialization.serializer
 
 interface SqlFragment
 
-data class SqlBatchWithValues<A: Any>(val batch: SqlBatch<A>, val values: Sequence<A>) {
+data class SqlBatchCallWithValues<A: Any>(val batch: SqlBatchCall<A>, val values: Sequence<A>) {
   // Note that we don't actually care about the value of element of the batch anymore
   // because the parameters have been prepared and it just needs to be excuted
   // We only need type-data when there is a value returned
@@ -24,8 +25,9 @@ data class SqlBatchWithValues<A: Any>(val batch: SqlBatch<A>, val values: Sequen
   }
 }
 
-data class SqlBatch<T: Any>(val parts: List<String>, val params: (T) -> List<Param<*, *, T>>) {
-  fun values(values: Sequence<T>) = SqlBatchWithValues(this, values)
+data class SqlBatchCall<T: Any>(val parts: List<String>, val params: (T) -> List<Param<*, *, T>>) {
+  fun values(values: Sequence<T>) = SqlBatchCallWithValues(this, values)
+  fun values(vararg values: T) = SqlBatchCallWithValues(this, sequenceOf(*values))
 
   /*
   ----- Optimization -----
@@ -41,11 +43,11 @@ data class SqlBatch<T: Any>(val parts: List<String>, val params: (T) -> List<Par
    */
 }
 
-abstract class SqlBatchBase<Session, Stmt>: InterpolatorBatchingWithWrapper<Param<*, *, *>> {
-  override abstract fun <A : Any> invoke(create: (A) -> String): SqlBatch<A>
+abstract class SqlBatchBase: InterpolatorBatchingWithWrapper<Param<*, *, *>> {
+  override fun <A : Any> invoke(create: (A) -> String): SqlBatchCall<A> = interpolatorBody()
   @Suppress("UNCHECKED_CAST")
-  override fun <A : Any> interpolate(parts: () -> List<String>, params: (A) -> List<Param<*, *, *>>): SqlBatch<A> =
-    SqlBatch<A>(parts(), params as (A) -> List<Param<*, *, A>>)
+  override fun <A : Any> interpolate(parts: () -> List<String>, params: (A) -> List<Param<*, *, *>>): SqlBatchCall<A> =
+    SqlBatchCall<A>(parts(), params as (A) -> List<Param<*, *, A>>)
 }
 
 abstract class SqlBase: InterpolatorWithWrapper<SqlFragment, Statement> {
