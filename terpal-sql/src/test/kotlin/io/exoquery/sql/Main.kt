@@ -54,8 +54,6 @@ suspend fun main() {
     val result = ctx.run2(query)
     //val result = ctx.run(query)
 
-
-
     println(result)
 
 

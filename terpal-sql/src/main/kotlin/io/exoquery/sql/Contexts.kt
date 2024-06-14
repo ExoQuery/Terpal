@@ -1,6 +1,6 @@
-package io.exoquery.sql.jdbc
+package io.exoquery.sql
 
-import io.exoquery.sql.*
+import io.exoquery.sql.jdbc.CoroutineTransaction
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.*

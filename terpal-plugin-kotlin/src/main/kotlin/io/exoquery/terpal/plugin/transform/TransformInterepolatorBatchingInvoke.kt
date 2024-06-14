@@ -10,6 +10,8 @@ import io.exoquery.terpal.plugin.trees.isClassOf
 import io.exoquery.terpal.plugin.trees.isSubclassOf
 import io.exoquery.terpal.plugin.trees.simpleTypeArgs
 import io.exoquery.terpal.plugin.trees.superTypesRecursive
+import org.jetbrains.kotlin.codegen.Callable
+import org.jetbrains.kotlin.ir.builders.irFunctionReference
 import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.expressions.IrCall
@@ -17,7 +19,12 @@ import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.types.*
+import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
+import org.jetbrains.kotlin.ir.util.referenceFunction
+import org.jetbrains.kotlin.name.CallableId
+import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.name.StandardClassIds
 
 class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
   private val compileLogger = ctx.logger
@@ -28,6 +35,8 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
     }
 
   fun transform(expression: IrCall, superTransformer: VisitTransformExpressions): IrExpression {
+    //val funSymbol = ctx.pluginCtx.symbolTable.referenceSimpleFunction(IdSignature.LocalSignature("param", null, null))
+
     val (caller, compsRaw, funExpr) =
       with(compileLogger) {
         on(expression).match(

@@ -1,5 +1,6 @@
 package io.exoquery.sql.jdbc
 
+import io.exoquery.sql.ContextParams
 import io.exoquery.sql.Encoders
 import java.sql.*
 import java.time.*
