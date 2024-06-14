@@ -5,7 +5,7 @@ import kotlin.reflect.KClass
 
 interface Decoder<Session, Row, T: Any> {
   val type: KClass<T>
-  fun decode(session: Session, row: Row, index: Int): T
+  fun decode(session: Session, row: Row, index: Int): T?
 }
 
 interface Encoder<Session, Statement, T: Any> {

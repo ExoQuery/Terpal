@@ -10,6 +10,8 @@ class BasicQuerySpec : FreeSpec({
   beforeSpec {
     GlobalEmbeddedPostgres.run(
       """
+      DELETE FROM person;
+      DELETE FROM address;
       INSERT INTO person (id, firstName, lastName, age) VALUES (1, 'Joe', 'Bloggs', 111);
       INSERT INTO person (id, firstName, lastName, age) VALUES (2, 'Jim', 'Roogs', 222);
       INSERT INTO address (ownerId, street, zip) VALUES (1, '123 Main St', '12345');

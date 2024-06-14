@@ -9,7 +9,7 @@ import java.util.*
 
 abstract class JdbcDecoder<T: Any>: Decoder<Connection, ResultSet, T> {
   companion object {
-    inline fun <reified T: Any> fromFunction(crossinline f: (Connection, ResultSet, Int) -> T): JdbcDecoder<T> =
+    inline fun <reified T: Any> fromFunction(crossinline f: (Connection, ResultSet, Int) -> T?): JdbcDecoder<T> =
       object: JdbcDecoder<T>() {
         override val type = T::class
         override fun decode(session: Connection, row: ResultSet, index: Int) = f(session, row, index)
