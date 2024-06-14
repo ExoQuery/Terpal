@@ -9,6 +9,7 @@ import java.sql.ResultSet
 import javax.sql.DataSource
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
+import kotlin.experimental.ExperimentalTypeInference
 
 sealed interface ReturnAction {
   // Used for Query and non-returning actions
@@ -156,48 +157,45 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
     }
 
   suspend fun <T> stream(query: Query<T>): Flow<T> =
-    withContext(Dispatchers.IO) {
-      withConnection {
-        val conn = localConnection()
-        runQueryScoped(conn, query.sql, query.params, query.makeExtractor())
-      }
-    }
-
-  suspend fun <T> run(query: Query<T>): List<T> =
-    withContext(Dispatchers.IO) {
-      withConnection {
-        val conn = localConnection()
-        runQueryScoped(conn, query.sql, query.params, query.makeExtractor()).toList()
-      }
-    }
-
-  // This will cause the former to run: flow.flowOn(CoroutineSession(localConnection()) + Dispatchers.IO)
-  suspend fun <T> run2(query: Query<T>): List<T> {
-    return withConnection {
-      run3(query)
-    }
-  }
-
-  suspend fun <T> run3(query: Query<T>): List<T> {
-    val flow =
-      flow {
-        val conn = localConnection()
-        makeStmt(query.sql, conn).use { stmt ->
-          prepare(stmt, conn, query.params)
-          stmt.executeQuery().use { rs ->
-            emitResultSet(conn, rs, query.makeExtractor())
-          }
+    flowWithConnection {
+      val conn = localConnection()
+      makeStmt(query.sql, conn).use { stmt ->
+        prepare(stmt, conn, query.params)
+        stmt.executeQuery().use { rs ->
+          emitResultSet(conn, rs, query.makeExtractor())
         }
       }
-    val flowOn = if (coroutineContext.hasOpenConnection()) {
-      flow.flowOn(CoroutineSession(localConnection()) + Dispatchers.IO)
-    } else {
-      flow.flowOn(CoroutineSession(newSession()) + Dispatchers.IO)
     }
-    return flowOn.toList()
+
+//  suspend fun <T> run(query: Query<T>): List<T> =
+//    withContext(Dispatchers.IO) {
+//      withConnection {
+//        val conn = localConnection()
+//        runQueryScoped(conn, query.sql, query.params, query.makeExtractor()).toList()
+//      }
+//    }
+//
+//  // This will cause the former to run: flow.flowOn(CoroutineSession(localConnection()) + Dispatchers.IO)
+//  suspend fun <T> run2(query: Query<T>): List<T> {
+//    return withConnection {
+//      run3(query)
+//    }
+//  }
+
+  suspend fun <T> run(query: Query<T>): List<T> =
+    stream(query).toList()
+
+  @OptIn(ExperimentalTypeInference::class)
+  suspend fun <T> flowWithConnection(@BuilderInference block: suspend FlowCollector<T>.() -> Unit): Flow<T> {
+    val flowInvoke = flow(block)
+    return if (coroutineContext.hasOpenConnection()) {
+      flowInvoke.flowOn(CoroutineSession(localConnection()) + Dispatchers.IO)
+    } else {
+      flowInvoke.flowOn(CoroutineSession(newSession()) + Dispatchers.IO)
+    }
   }
 
-  suspend fun <T> run(query: Action<T>): Int =
+  suspend fun run(query: Action): Int =
     withContext(Dispatchers.IO) {
       runUpdateScoped(query.sql, query.params)
     }
