@@ -23,7 +23,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
   object JdbcContextEncoders: JdbcEncodersWithTime()
   companion object Params: JdbcParams(JdbcContextEncoders)
 
-  protected open val batchReturnBehavior = ReturnAction.ReturnDefault
+  protected open val batchReturnBehavior = ReturnAction.ReturnRecord
 
   override fun newSession(): Connection = database.connection
   override fun closeSession(session: Connection): Unit = session.close()

@@ -52,12 +52,13 @@ suspend fun main() {
     //  AND lastUpdate = ${par}"
 
     val batch =
-      SqlBatch { p: Person -> "INSERT INTO person (id, firstName, lastName, age) VALUES (${param(p.id)}, ${param(p.name.firstName)}, ${param(p.name.lastName)}, ${param(p.age)})" }.values(
-        Person(11, Name("Joe", "Bloggs"), 11, LocalDate.ofEpochDay(0)),
-        Person(22, Name("Jim", "Roogs"), 22, LocalDate.ofEpochDay(0))
-      ).action()
-    ctx.run(batch)
+      SqlBatch { p: Person -> "INSERT INTO person (id, firstName, lastName, age) VALUES (${param(p.id)}, ${param(p.name.firstName)}, ${param(p.name.lastName)}, ${param(p.age)}) RETURNING *" }.values(
+        Person(11, Name("Joe", "Bloggs"), 111, LocalDate.ofEpochDay(0)),
+        Person(22, Name("Jim", "Roogs"), 222, LocalDate.ofEpochDay(0))
+      ).batchActionReturning<Person>()
 
+    val ret = ctx.run(batch)
+    println("-------------- Inserted: ${ret}")
 
     val param = param("Joe") //
     val query = Sql("SELECT id, firstName, lastName, age, lastUpdated FROM person ${Sql("WHERE firstName = ${param}")} AND lastUpdated > ${d}").queryOf<Person>()
