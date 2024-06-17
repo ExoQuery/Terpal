@@ -37,7 +37,12 @@ data class Statement(val ir: IR.Splice): SqlFragment {
     return Query(sql, params, resultMaker)
   }
 
-  fun <T> action(): Action {
+  fun <T> queryOf(serializer: KSerializer<T>): Query<T> {
+    val (sql, params) = constructQuery(ir)
+    return Query(sql, params, serializer)
+  }
+
+  fun action(): Action {
     val (sql, params) = constructQuery(ir)
     return Action(sql, params)
   }

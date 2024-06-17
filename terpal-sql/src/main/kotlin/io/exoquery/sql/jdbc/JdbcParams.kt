@@ -1,12 +1,12 @@
 package io.exoquery.sql.jdbc
 
 import io.exoquery.sql.ContextParams
-import io.exoquery.sql.Encoders
+import io.exoquery.sql.SqlEncoders
 import java.sql.*
 import java.time.*
 
 
-abstract class JdbcParams(val encoders: Encoders<Connection, PreparedStatement>): ContextParams<Connection, PreparedStatement> {
+abstract class JdbcParams(val encoders: SqlEncoders<Connection, PreparedStatement>): ContextParams<Connection, PreparedStatement> {
   inline fun <reified T: Any> param(value: T, crossinline encoder: (Connection, PreparedStatement, T, Int) -> Unit): JdbcParam<T> = JdbcParam<T>(value, JdbcEncoder.fromFunction(encoder))
 
   override fun param(value: Boolean): JdbcParam<Boolean> = JdbcParam<Boolean>(value, encoders.BooleanEncoder)

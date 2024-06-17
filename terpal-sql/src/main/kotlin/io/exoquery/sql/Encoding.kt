@@ -3,40 +3,60 @@ package io.exoquery.sql
 import java.time.*
 import kotlin.reflect.KClass
 
-interface Decoder<Session, Row, T: Any> {
-  val type: KClass<T>
-  fun decode(session: Session, row: Row, index: Int): T?
+abstract class SqlDecoder<Session, Row, T: Any> {
+  abstract val type: KClass<T>
+  abstract fun decode(session: Session, row: Row, index: Int): T?
+
+  val id by lazy { Id(type) }
+  override fun hashCode(): Int = id.hashCode()
+  override fun equals(other: Any?): Boolean = other is SqlDecoder<*, *, *> && other.id == id
+
+  companion object {
+    data class Id(val type: KClass<*>)
+  }
 }
 
-interface Encoder<Session, Statement, T: Any> {
-  val type: KClass<T>
-  fun encode(session: Session, statement: Statement, value: T, index: Int): Unit
+abstract class SqlEncoder<Session, Statement, T: Any> {
+  abstract val type: KClass<T>
+  abstract fun encode(session: Session, statement: Statement, value: T, index: Int): Unit
+
+  // Id should only be based on the type so that SqlDecoders composition works
+  val id by lazy { Id(type) }
+  override fun hashCode(): Int = id.hashCode()
+  override fun equals(other: Any?): Boolean = other is SqlEncoder<*, *, *> && other.id == id
+
+  companion object {
+    data class Id(val type: KClass<*>)
+  }
 }
 
-abstract class Decoders<Session, Row> {
+abstract class SqlDecoders<Session, Row> {
   abstract fun isNull(index: Int, row: Row): Boolean
 
-  abstract val BooleanDecoder: Decoder<Session, Row, Boolean>
-  abstract val ByteDecoder: Decoder<Session, Row, Byte>
-  abstract val CharDecoder: Decoder<Session, Row, Char>
-  abstract val DoubleDecoder: Decoder<Session, Row, Double>
-  abstract val FloatDecoder: Decoder<Session, Row, Float>
-  abstract val IntDecoder: Decoder<Session, Row, Int>
-  abstract val LongDecoder: Decoder<Session, Row, Long>
-  abstract val ShortDecoder: Decoder<Session, Row, Short>
-  abstract val StringDecoder: Decoder<Session, Row, String>
+  abstract val BooleanDecoder: SqlDecoder<Session, Row, Boolean>
+  abstract val ByteDecoder: SqlDecoder<Session, Row, Byte>
+  abstract val CharDecoder: SqlDecoder<Session, Row, Char>
+  abstract val DoubleDecoder: SqlDecoder<Session, Row, Double>
+  abstract val FloatDecoder: SqlDecoder<Session, Row, Float>
+  abstract val IntDecoder: SqlDecoder<Session, Row, Int>
+  abstract val LongDecoder: SqlDecoder<Session, Row, Long>
+  abstract val ShortDecoder: SqlDecoder<Session, Row, Short>
+  abstract val StringDecoder: SqlDecoder<Session, Row, String>
 
-  abstract val LocalDateDecoder: Decoder<Session, Row, LocalDate>
-  abstract val LocalTimeDecoder: Decoder<Session, Row, LocalTime>
-  abstract val LocalDateTimeDecoder: Decoder<Session, Row, LocalDateTime>
-  abstract val ZonedDateTimeDecoder: Decoder<Session, Row, ZonedDateTime>
+  abstract val LocalDateDecoder: SqlDecoder<Session, Row, LocalDate>
+  abstract val LocalTimeDecoder: SqlDecoder<Session, Row, LocalTime>
+  abstract val LocalDateTimeDecoder: SqlDecoder<Session, Row, LocalDateTime>
+  abstract val ZonedDateTimeDecoder: SqlDecoder<Session, Row, ZonedDateTime>
 
-  abstract val InstantDecoder: Decoder<Session, Row, Instant>
-  abstract val OffsetTimeDecoder: Decoder<Session, Row, OffsetTime>
-  abstract val OffsetDateTimeDecoder: Decoder<Session, Row, OffsetDateTime>
+  abstract val InstantDecoder: SqlDecoder<Session, Row, Instant>
+  abstract val OffsetTimeDecoder: SqlDecoder<Session, Row, OffsetTime>
+  abstract val OffsetDateTimeDecoder: SqlDecoder<Session, Row, OffsetDateTime>
+
+  abstract operator fun plus(other: SqlDecoders<Session, Row>): SqlDecoders<Session, Row>
+  abstract operator fun plus(other: SqlDecoder<Session, Row, *>): SqlDecoders<Session, Row>
 
   open val decoders by lazy {
-    listOf(
+    setOf(
       BooleanDecoder,
       ByteDecoder,
       CharDecoder,
@@ -58,28 +78,31 @@ abstract class Decoders<Session, Row> {
 
 }
 
-abstract class Encoders<Session, Stmt> {
-  abstract val BooleanEncoder: Encoder<Session, Stmt, Boolean>
-  abstract val ByteEncoder: Encoder<Session, Stmt, Byte>
-  abstract val CharEncoder: Encoder<Session, Stmt, Char>
-  abstract val DoubleEncoder: Encoder<Session, Stmt, Double>
-  abstract val FloatEncoder: Encoder<Session, Stmt, Float>
-  abstract val IntEncoder: Encoder<Session, Stmt, Int>
-  abstract val LongEncoder: Encoder<Session, Stmt, Long>
-  abstract val ShortEncoder: Encoder<Session, Stmt, Short>
-  abstract val StringEncoder: Encoder<Session, Stmt, String>
+abstract class SqlEncoders<Session, Stmt> {
+  abstract val BooleanEncoder: SqlEncoder<Session, Stmt, Boolean>
+  abstract val ByteEncoder: SqlEncoder<Session, Stmt, Byte>
+  abstract val CharEncoder: SqlEncoder<Session, Stmt, Char>
+  abstract val DoubleEncoder: SqlEncoder<Session, Stmt, Double>
+  abstract val FloatEncoder: SqlEncoder<Session, Stmt, Float>
+  abstract val IntEncoder: SqlEncoder<Session, Stmt, Int>
+  abstract val LongEncoder: SqlEncoder<Session, Stmt, Long>
+  abstract val ShortEncoder: SqlEncoder<Session, Stmt, Short>
+  abstract val StringEncoder: SqlEncoder<Session, Stmt, String>
 
-  abstract val LocalDateEncoder: Encoder<Session, Stmt, LocalDate>
-  abstract val LocalTimeEncoder: Encoder<Session, Stmt, LocalTime>
-  abstract val LocalDateTimeEncoder: Encoder<Session, Stmt, LocalDateTime>
-  abstract val ZonedDateTimeEncoder: Encoder<Session, Stmt, ZonedDateTime>
+  abstract val LocalDateEncoder: SqlEncoder<Session, Stmt, LocalDate>
+  abstract val LocalTimeEncoder: SqlEncoder<Session, Stmt, LocalTime>
+  abstract val LocalDateTimeEncoder: SqlEncoder<Session, Stmt, LocalDateTime>
+  abstract val ZonedDateTimeEncoder: SqlEncoder<Session, Stmt, ZonedDateTime>
 
-  abstract val InstantEncoder: Encoder<Session, Stmt, Instant>
-  abstract val OffsetTimeEncoder: Encoder<Session, Stmt, OffsetTime>
-  abstract val OffsetDateTimeEncoder: Encoder<Session, Stmt, OffsetDateTime>
+  abstract val InstantEncoder: SqlEncoder<Session, Stmt, Instant>
+  abstract val OffsetTimeEncoder: SqlEncoder<Session, Stmt, OffsetTime>
+  abstract val OffsetDateTimeEncoder: SqlEncoder<Session, Stmt, OffsetDateTime>
 
-  val encoders by lazy {
-    listOf(
+  abstract operator fun plus(other: SqlEncoders<Session, Stmt>): SqlEncoders<Session, Stmt>
+  abstract operator fun plus(other: SqlEncoder<Session, Stmt, *>): SqlEncoders<Session, Stmt>
+
+  open val encoders by lazy {
+    setOf(
       BooleanEncoder,
       ByteEncoder,
       CharEncoder,

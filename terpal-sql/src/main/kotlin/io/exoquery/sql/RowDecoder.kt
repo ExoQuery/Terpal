@@ -11,16 +11,6 @@ import kotlinx.serialization.modules.SerializersModule
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.ResultSetMetaData
-import kotlin.reflect.KClass
-
-interface ColumnDecoder<Session, Row, T> {
-  val cls: KClass<*>
-  val decodeType: (Session, Row, Int) -> T
-}
-
-interface ContextDecoders {
-
-}
 
 data class ColumnInfo(val name: String, val type: String)
 
@@ -52,7 +42,7 @@ class JdbcRowDecoder(
   sess: Connection,
   rs: ResultSet,
   initialRowIndex: Int,
-  decoders: Decoders<Connection, ResultSet>,
+  decoders: SqlDecoders<Connection, ResultSet>,
   columnInfos: List<ColumnInfo>,
   endCallback: (Int) -> Unit
 ): RowDecoder<Connection, ResultSet>(sess, rs, initialRowIndex, decoders, columnInfos, endCallback) {
@@ -72,7 +62,7 @@ class JdbcRowDecoder(
 }
 
 @OptIn(ExperimentalSerializationApi::class)
-abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val initialRowIndex: Int, val decoders: Decoders<Session, Row>, val columnInfos: List<ColumnInfo>, val endCallback: (Int) -> Unit): Decoder, CompositeDecoder {
+abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val initialRowIndex: Int, val decoders: SqlDecoders<Session, Row>, val columnInfos: List<ColumnInfo>, val endCallback: (Int) -> Unit): Decoder, CompositeDecoder {
 
   abstract fun cloneSelf(rs: Row, initialRowIndex: Int, endCallback: (Int) -> Unit): RowDecoder<Session, Row>
 
@@ -96,9 +86,7 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
   override fun decodeIntElement(descriptor: SerialDescriptor, index: Int): Int = decoders.IntDecoder.decode(sess, rs, nextRowIndex(descriptor)) ?: error("Int Element ${index} in ${descriptor} cannot be null")
   override fun decodeLongElement(descriptor: SerialDescriptor, index: Int): Long = decoders.LongDecoder.decode(sess, rs, nextRowIndex(descriptor)) ?: error("Long Element ${index} in ${descriptor} cannot be null")
   override fun decodeShortElement(descriptor: SerialDescriptor, index: Int): Short = decoders.ShortDecoder.decode(sess, rs, nextRowIndex(descriptor)) ?: error("Short Element ${index} in ${descriptor} cannot be null")
-  override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String =
-    decoders.StringDecoder.decode(sess, rs, nextRowIndex(descriptor)) ?:
-    error("String Element ${index} in ${descriptor} cannot be null")
+  override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String = decoders.StringDecoder.decode(sess, rs, nextRowIndex(descriptor)) ?: error("String Element ${index} in ${descriptor} cannot be null")
 
   override fun decodeBoolean(): Boolean = decoders.BooleanDecoder.decode(sess, rs, 1) ?: error("Boolean Element cannot be null")
   override fun decodeByte(): Byte = decoders.ByteDecoder.decode(sess, rs, 1) ?: error("Byte Element cannot be null")

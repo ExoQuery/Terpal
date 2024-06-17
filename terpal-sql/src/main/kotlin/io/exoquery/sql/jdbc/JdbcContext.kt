@@ -179,8 +179,8 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
   suspend fun run(query: BatchAction): List<Int> =
     runBatchActionScoped(query.sql, query.params)
 
-  suspend fun <T> run(query: ActionReturning<T>): List<T> =
-    stream(query).toList()
+  suspend fun <T> run(query: ActionReturning<T>): T =
+    stream(query).first()
 
   suspend fun <T> run(query: BatchActionReturning<T>): List<T> =
     stream(query).toList()

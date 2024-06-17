@@ -27,3 +27,11 @@ object GlobalEmbeddedPostgres {
     return embeddedPostgres ?: EmbeddedPostgres.start().also { embeddedPostgres = it }
   }
 }
+
+fun EmbeddedPostgres.run(str: String) {
+  this.getPostgresDatabase()?.connection?.use { conn ->
+    conn.createStatement().use { stmt ->
+      stmt.execute(str)
+    }
+  }
+}
