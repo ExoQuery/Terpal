@@ -48,12 +48,12 @@ class JdbcRowDecoder(
 ): RowDecoder<Connection, ResultSet>(sess, rs, initialRowIndex, decoders, columnInfos, endCallback) {
 
   companion object {
-    operator fun invoke(sess: Connection, rs: ResultSet, descriptor: SerialDescriptor): JdbcRowDecoder {
+    operator fun invoke(sess: Connection, rs: ResultSet, decoders: SqlDecoders<Connection, ResultSet>, descriptor: SerialDescriptor): JdbcRowDecoder {
       fun metaColumnData(meta: ResultSetMetaData) =
         (1..meta.columnCount).map { ColumnInfo(meta.getColumnName(it), meta.getColumnTypeName(it)) }
       val metaColumns = metaColumnData(rs.metaData)
       descriptor.verifyColumns(metaColumns)
-      return JdbcRowDecoder(sess, rs, 1, JdbcDecodersWithTime(), metaColumns, {})
+      return JdbcRowDecoder(sess, rs, 1, decoders, metaColumns, {})
     }
   }
 

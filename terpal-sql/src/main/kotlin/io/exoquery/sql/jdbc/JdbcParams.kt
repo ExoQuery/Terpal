@@ -6,7 +6,7 @@ import java.sql.*
 import java.time.*
 
 
-abstract class JdbcParams(val encoders: SqlEncoders<Connection, PreparedStatement>): ContextParams<Connection, PreparedStatement> {
+open class JdbcParams(val encoders: SqlEncoders<Connection, PreparedStatement>): ContextParams<Connection, PreparedStatement> {
   inline fun <reified T: Any> param(value: T, crossinline encoder: (Connection, PreparedStatement, T, Int) -> Unit): JdbcParam<T> = JdbcParam<T>(value, JdbcEncoder.fromFunction(encoder))
 
   override fun param(value: Boolean): JdbcParam<Boolean> = JdbcParam<Boolean>(value, encoders.BooleanEncoder)

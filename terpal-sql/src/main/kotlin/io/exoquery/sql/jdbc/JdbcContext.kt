@@ -19,9 +19,21 @@ sealed interface ReturnAction {
 }
 
 
+class JdbcContextBuilder {
+  var encoders: SqlEncoders<Connection, PreparedStatement> = JdbcEncodersWithTime()
+  val decdoers: SqlDecoders<Connection, ResultSet> = JdbcDecodersWithTime()
+}
+
+
 open class JdbcContext(override val database: DataSource): Context<Connection, DataSource>() {
-  object JdbcContextEncoders: JdbcEncodersWithTime()
-  companion object Params: JdbcParams(JdbcContextEncoders)
+  companion object {
+    val Encoders = JdbcEncodersWithTime()
+    val Decoders = JdbcDecodersWithTime()
+  }
+  object Params: JdbcParams(Encoders)
+
+  protected open val encoders: SqlEncoders<Connection, PreparedStatement> = Encoders
+  protected open val decoders: SqlDecoders<Connection, ResultSet> = Decoders
 
   protected open val batchReturnBehavior = ReturnAction.ReturnRecord
 
@@ -86,7 +98,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
   suspend fun <T> FlowCollector<T>.emitResultSet(conn: Connection, rs: ResultSet, extract: (Connection, ResultSet) -> T) {
     while (rs.next()) {
       val meta = rs.metaData
-      println("--- Emit: ${(1..meta.columnCount).map { rs.getObject(it) }.joinToString(",")}")
+      //println("--- Emit: ${(1..meta.columnCount).map { rs.getObject(it) }.joinToString(",")}")
       emit(extract(conn, rs))
     }
   }
@@ -149,7 +161,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
 
   protected fun <T> KSerializer<T>.makeExtractor() =
     { conn: Connection, rs: ResultSet ->
-      val decoder = JdbcRowDecoder(conn, rs, descriptor)
+      val decoder = JdbcRowDecoder(conn, rs, JdbcContext.Decoders, descriptor)
       deserialize(decoder)
     }
 
