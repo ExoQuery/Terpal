@@ -25,7 +25,7 @@ data class SqlBatchCallWithValues<A: Any>(val batch: SqlBatchCall<A>, val values
   }
 }
 
-data class SqlBatchCall<T: Any>(val parts: List<String>, val params: (T) -> List<Param<*, *, T>>) {
+data class SqlBatchCall<T: Any>(val parts: List<String>, val params: (T) -> List<Param<T>>) {
   fun values(values: Sequence<T>) = SqlBatchCallWithValues(this, values)
   fun values(vararg values: T) = SqlBatchCallWithValues(this, sequenceOf(*values))
 
@@ -43,11 +43,11 @@ data class SqlBatchCall<T: Any>(val parts: List<String>, val params: (T) -> List
    */
 }
 
-abstract class SqlBatchBase: InterpolatorBatchingWithWrapper<Param<*, *, *>> {
+abstract class SqlBatchBase: InterpolatorBatchingWithWrapper<Param<*>> {
   override fun <A : Any> invoke(create: (A) -> String): SqlBatchCall<A> = interpolatorBody()
   @Suppress("UNCHECKED_CAST")
-  override fun <A : Any> interpolate(parts: () -> List<String>, params: (A) -> List<Param<*, *, *>>): SqlBatchCall<A> =
-    SqlBatchCall<A>(parts(), params as (A) -> List<Param<*, *, A>>)
+  override fun <A : Any> interpolate(parts: () -> List<String>, params: (A) -> List<Param<*>>): SqlBatchCall<A> =
+    SqlBatchCall<A>(parts(), params as (A) -> List<Param<A>>)
 }
 
 abstract class SqlBase: InterpolatorWithWrapper<SqlFragment, Statement> {
@@ -55,7 +55,7 @@ abstract class SqlBase: InterpolatorWithWrapper<SqlFragment, Statement> {
     val partsList = parts().map { IR.Part(it) }
     val paramsList = params().map {
       when (it) {
-        is Param<*, *, *> -> IR.Param(it)
+        is Param<*> -> IR.Param(it)
         // if it's a statement need to splice everything we've seen in that statement here
         // including the params that we saw in order
         is Statement -> it.ir

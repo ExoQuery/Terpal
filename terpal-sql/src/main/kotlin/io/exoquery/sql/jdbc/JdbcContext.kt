@@ -4,6 +4,7 @@ import io.exoquery.sql.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.encoding.Encoder
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -30,7 +31,6 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
     val Encoders = JdbcEncodersWithTime()
     val Decoders = JdbcDecodersWithTime()
   }
-  object Params: JdbcParams(Encoders)
 
   protected open val encoders: SqlEncoders<Connection, PreparedStatement> = Encoders
   protected open val decoders: SqlDecoders<Connection, ResultSet> = Decoders
@@ -74,8 +74,10 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
   }
 
   // Do it this way so we can avoid value casting in the runScoped function
-  fun <T: Any> JdbcParam<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit =
-    encoder.encode(conn, ps, value, index+1)
+  @Suppress("UNCHECKED_CAST")
+  fun <T: Any> Param<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit =
+    ((encoders.encoders.find { it.type == this.cls } ?: error("No encoder found for ${this.cls}")) as SqlEncoder<Connection, PreparedStatement, T>)
+      .encode(conn, ps, this.value, index+1)
 
   protected fun makeStmtReturning(sql: String, conn: Connection, returningBehavior: ReturnAction) =
     when(returningBehavior) {
@@ -87,12 +89,9 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
   protected fun makeStmt(sql: String, conn: Connection) =
     makeStmtReturning(sql, conn, ReturnAction.ReturnDefault)
 
-  protected fun prepare(stmt: PreparedStatement, conn: Connection, params: List<Param<*, *, *>>) =
+  protected fun prepare(stmt: PreparedStatement, conn: Connection, params: List<Param<*>>) =
     params.withIndex().forEach { (idx, param) ->
-      when (param) {
-        is JdbcParam<*> -> param.write(idx, conn, stmt)
-        else -> throw IllegalArgumentException("The parameter $param needs to be a JdbcParam type but it is ${param::class}.")
-      }
+      param.write(idx, conn, stmt)
     }
 
   suspend fun <T> FlowCollector<T>.emitResultSet(conn: Connection, rs: ResultSet, extract: (Connection, ResultSet) -> T) {
@@ -103,7 +102,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
     }
   }
 
-  private fun <T> runQueryScoped(conn: Connection, sql: String, params: List<Param<*, *, *>>, extract: (Connection, ResultSet) -> T): Flow<T> =
+  private fun <T> runQueryScoped(conn: Connection, sql: String, params: List<Param<*>>, extract: (Connection, ResultSet) -> T): Flow<T> =
     flow {
       makeStmt(sql, conn).use { stmt ->
         prepare(stmt, conn, params)
@@ -113,7 +112,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
       }
     }
 
-  private suspend fun <T> runActionReturningScoped(sql: String, params: List<Param<*, *, *>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+  private suspend fun <T> runActionReturningScoped(sql: String, params: List<Param<*>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
     flow {
       withConnection {
         val conn = localConnection()
@@ -125,7 +124,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
       }
     }
 
-  private suspend fun runBatchActionScoped(sql: String, batches: Sequence<List<Param<*, *, *>>>): List<Int> =
+  private suspend fun runBatchActionScoped(sql: String, batches: Sequence<List<Param<*>>>): List<Int> =
     withConnection {
       val conn = localConnection()
       makeStmt(sql, conn).use { stmt ->
@@ -137,7 +136,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
       }
     }
 
-  private suspend fun <T> runBatchActionReturningScoped(sql: String, batches: Sequence<List<Param<*, *, *>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+  private suspend fun <T> runBatchActionReturningScoped(sql: String, batches: Sequence<List<Param<*>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
     flowWithConnection {
       val conn = localConnection()
       makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
@@ -150,7 +149,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
       }
     }
 
-  private suspend fun runActionScoped(sql: String, params: List<Param<*, *, *>>): Int =
+  private suspend fun runActionScoped(sql: String, params: List<Param<*>>): Int =
     withConnection {
       val conn = localConnection()
        makeStmt(sql, conn).use { stmt ->

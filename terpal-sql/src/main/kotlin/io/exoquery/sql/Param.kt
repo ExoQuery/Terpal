@@ -1,7 +1,10 @@
 package io.exoquery.sql
 
+import kotlin.reflect.KClass
 
-interface Param<Session, Statement, T: Any>: SqlFragment {
-  val value: T
-  val encoder: SqlEncoder<Session, Statement, T>
+
+data class Param<T: Any>(val cls: KClass<T>, val value: T): SqlFragment {
+  companion object {
+    inline operator fun <reified T: Any> invoke(value: T): Param<T> = Param(T::class, value)
+  }
 }

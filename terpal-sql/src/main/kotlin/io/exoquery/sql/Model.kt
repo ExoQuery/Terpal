@@ -6,7 +6,7 @@ import kotlinx.serialization.serializer
 data class Statement(val ir: IR.Splice): SqlFragment {
   operator fun plus(other: Statement) = Statement(IR.Splice(listOf(IR.Part.Empty, IR.Part.Empty, IR.Part.Empty), listOf(this.ir, other.ir)))
 
-  data class QueryData(val sql: String, val params: List<Param<*, *, *>>)
+  data class QueryData(val sql: String, val params: List<Param<*>>)
 
   companion object {
     fun constructQuery(ir: IR.Splice): QueryData {
@@ -54,9 +54,9 @@ data class Statement(val ir: IR.Splice): SqlFragment {
   }
 }
 
-data class Query<T>(val sql: String, val params: List<Param<*, *, *>>, val resultMaker: KSerializer<T>)
-data class Action(val sql: String, val params: List<Param<*, *, *>>)
-data class ActionReturning<T>(val sql: String, val params: List<Param<*, *, *>>, val resultMaker: KSerializer<T>)
+data class Query<T>(val sql: String, val params: List<Param<*>>, val resultMaker: KSerializer<T>)
+data class Action(val sql: String, val params: List<Param<*>>)
+data class ActionReturning<T>(val sql: String, val params: List<Param<*>>, val resultMaker: KSerializer<T>)
 
-data class BatchAction(val sql: String, val params: Sequence<List<Param<*, *, *>>>)
-data class BatchActionReturning<T>(val sql: String, val params: Sequence<List<Param<*, *, *>>>, val resultMaker: KSerializer<T>)
+data class BatchAction(val sql: String, val params: Sequence<List<Param<*>>>)
+data class BatchActionReturning<T>(val sql: String, val params: Sequence<List<Param<*>>>, val resultMaker: KSerializer<T>)

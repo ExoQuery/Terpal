@@ -46,8 +46,9 @@ object ContextualColumnCustom {
 
   class MyContext(ds: DataSource): JdbcContext(ds) {
     companion object {
+      // TODO write a contramap function on the encoder
       val Decoders = JdbcDecodersWithTimeLegacy + ZonedDateTimeDecoder.map { zd -> MyDateTime(zd.year, zd.dayOfMonth, zd.monthValue, TimeZone.getTimeZone(zd.zone)) }
-      val Encoders = JdbcEncodersWithTimeLegacy()
+      val Encoders = JdbcEncodersWithTimeLegacy
     }
     override val decoders = Decoders
     override val encoders = Encoders

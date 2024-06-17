@@ -31,6 +31,8 @@ abstract class JdbcEncodersBasic: SqlEncoders<Connection, PreparedStatement>() {
 }
 
 open class JdbcEncodersWithTime: JdbcEncodersBasic(){
+  companion object : JdbcEncodersWithTime()
+
   val jdbcTypeOfLocalDate     = Types.DATE
   val jdbcTypeOfLocalTime     = Types.TIME
   val jdbcTypeOfLocalDateTime = Types.TIMESTAMP
@@ -58,7 +60,9 @@ open class JdbcEncodersWithTime: JdbcEncodersBasic(){
   override val encoders by lazy { super.encoders + setOf(SqlDateEncoder) }
 }
 
-class JdbcEncodersWithTimeLegacy: JdbcEncodersBasic() {
+open class JdbcEncodersWithTimeLegacy: JdbcEncodersBasic() {
+  companion object: JdbcEncodersWithTimeLegacy()
+
   override val LocalDateEncoder: JdbcEncoder<LocalDate> = JdbcEncoder.fromFunction { _, ps, v, i -> ps.setDate(i, java.sql.Date.valueOf(v)) }
   override val LocalTimeEncoder: JdbcEncoder<LocalTime> = JdbcEncoder.fromFunction { _, ps, v, i -> ps.setTime(i, java.sql.Time.valueOf(v)) }
   override val LocalDateTimeEncoder: JdbcEncoder<LocalDateTime> = JdbcEncoder.fromFunction { _, ps, v, i -> ps.setTimestamp(i, Timestamp.valueOf(v)) }

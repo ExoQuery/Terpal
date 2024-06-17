@@ -8,7 +8,7 @@ sealed interface IR {
   }
 
   sealed interface Var: IR
-  data class Param(val value: io.exoquery.sql.Param<*, *, *>): Var
+  data class Param(val value: io.exoquery.sql.Param<*>): Var
   data class Splice(val parts: List<Part>, val params: List<Var>): Var {
     fun flatten(): Splice {
       val partsAccum = mutableListOf<IR.Part>()
