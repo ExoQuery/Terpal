@@ -1,7 +1,6 @@
 package io.exoquery.sql.jdbc
 
 import io.exoquery.sql.*
-import io.exoquery.sql.jdbc.JdbcDecodersWithTime.Companion.decoders
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.KSerializer
@@ -9,6 +8,7 @@ import kotlinx.serialization.encoding.Encoder
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.util.*
 import javax.sql.DataSource
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
@@ -22,22 +22,28 @@ sealed interface ReturnAction {
 
 
 class JdbcContextBuilder {
-  var encoders: SqlEncoders<Connection, PreparedStatement> = JdbcEncodersWithTimeLegacy()
-  var decoders: SqlDecoders<Connection, ResultSet> = JdbcDecodersWithTimeLegacy()
+  var dateTimeZone: TimeZone = TimeZone.getDefault()
   var batchReturnBehavior = ReturnAction.ReturnRecord
+  var additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, *>>()
+  var additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, *>>()
 
   fun withNewEncoding() {
-    encoders = JdbcEncodersWithTime()
-    decoders = JdbcDecodersWithTime()
+    encoders = { JdbcEncodersWithTime(dateTimeZone, additionalEncoders) }
+    decoders = { JdbcDecodersWithTime(dateTimeZone, additionalDecoders) }
   }
+
+  /** The Sql Encoders to use, since this relies on other fields make sure to set it last */
+  var encoders: () -> SqlEncoders<Connection, PreparedStatement> = { JdbcEncodersWithTimeLegacy(dateTimeZone, additionalEncoders) }
+  /** The Sql Decoders to use, since this relies on other fields make sure to set it last */
+  var decoders: () -> SqlDecoders<Connection, ResultSet> = { JdbcDecodersWithTimeLegacy(dateTimeZone, additionalDecoders) }
 }
 
 
 open class JdbcContext(override val database: DataSource, val build: JdbcContextBuilder.() -> Unit = { JdbcContextBuilder() }): Context<Connection, DataSource>() {
   private val builder = JdbcContextBuilder().apply(build)
 
-  protected open val encoders: SqlEncoders<Connection, PreparedStatement> = builder.encoders
-  protected open val decoders: SqlDecoders<Connection, ResultSet> = builder.decoders
+  protected open val encoders: SqlEncoders<Connection, PreparedStatement> = builder.encoders()
+  protected open val decoders: SqlDecoders<Connection, ResultSet> = builder.decoders()
   protected open val batchReturnBehavior = builder.batchReturnBehavior
 
   override fun newSession(): Connection = database.connection

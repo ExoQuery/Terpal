@@ -1,5 +1,6 @@
 package io.exoquery.sql
 
+import java.math.BigDecimal
 import java.time.*
 import kotlin.reflect.KClass
 
@@ -42,6 +43,9 @@ abstract class SqlDecoders<Session, Row> {
   abstract val LongDecoder: SqlDecoder<Session, Row, Long>
   abstract val ShortDecoder: SqlDecoder<Session, Row, Short>
   abstract val StringDecoder: SqlDecoder<Session, Row, String>
+  abstract val BigDecimalDecoder: SqlDecoder<Session, Row, BigDecimal>
+  abstract val ByteArrayDecoder: SqlDecoder<Session, Row, ByteArray>
+  abstract val DateDecoder: SqlDecoder<Session, Row, java.util.Date>
 
   abstract val LocalDateDecoder: SqlDecoder<Session, Row, LocalDate>
   abstract val LocalTimeDecoder: SqlDecoder<Session, Row, LocalTime>
@@ -52,10 +56,7 @@ abstract class SqlDecoders<Session, Row> {
   abstract val OffsetTimeDecoder: SqlDecoder<Session, Row, OffsetTime>
   abstract val OffsetDateTimeDecoder: SqlDecoder<Session, Row, OffsetDateTime>
 
-  abstract operator fun plus(other: SqlDecoders<Session, Row>): SqlDecoders<Session, Row>
-  abstract operator fun plus(other: SqlDecoder<Session, Row, *>): SqlDecoders<Session, Row>
-
-  open val decoders by lazy {
+  open val decoders: Set<SqlDecoder<Session, Row, out Any>> by lazy {
     setOf(
       BooleanDecoder,
       ByteDecoder,
@@ -66,6 +67,9 @@ abstract class SqlDecoders<Session, Row> {
       LongDecoder,
       ShortDecoder,
       StringDecoder,
+      BigDecimalDecoder,
+      ByteArrayDecoder,
+      DateDecoder,
       LocalDateDecoder,
       LocalTimeDecoder,
       LocalDateTimeDecoder,
@@ -88,6 +92,9 @@ abstract class SqlEncoders<Session, Stmt> {
   abstract val LongEncoder: SqlEncoder<Session, Stmt, Long>
   abstract val ShortEncoder: SqlEncoder<Session, Stmt, Short>
   abstract val StringEncoder: SqlEncoder<Session, Stmt, String>
+  abstract val BigDecimalEncoder: SqlEncoder<Session, Stmt, BigDecimal>
+  abstract val ByteArrayEncoder: SqlEncoder<Session, Stmt, ByteArray>
+  abstract val DateEncoder: SqlEncoder<Session, Stmt, java.util.Date>
 
   abstract val LocalDateEncoder: SqlEncoder<Session, Stmt, LocalDate>
   abstract val LocalTimeEncoder: SqlEncoder<Session, Stmt, LocalTime>
@@ -98,10 +105,7 @@ abstract class SqlEncoders<Session, Stmt> {
   abstract val OffsetTimeEncoder: SqlEncoder<Session, Stmt, OffsetTime>
   abstract val OffsetDateTimeEncoder: SqlEncoder<Session, Stmt, OffsetDateTime>
 
-  abstract operator fun plus(other: SqlEncoders<Session, Stmt>): SqlEncoders<Session, Stmt>
-  abstract operator fun plus(other: SqlEncoder<Session, Stmt, *>): SqlEncoders<Session, Stmt>
-
-  open val encoders by lazy {
+  open val encoders: Set<SqlEncoder<Session, Stmt, out Any>> by lazy {
     setOf(
       BooleanEncoder,
       ByteEncoder,
@@ -112,6 +116,9 @@ abstract class SqlEncoders<Session, Stmt> {
       LongEncoder,
       ShortEncoder,
       StringEncoder,
+      BigDecimalEncoder,
+      ByteArrayEncoder,
+      DateEncoder,
       LocalDateEncoder,
       LocalTimeEncoder,
       LocalDateTimeEncoder,

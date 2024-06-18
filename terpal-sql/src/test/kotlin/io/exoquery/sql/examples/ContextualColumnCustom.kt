@@ -51,8 +51,8 @@ object ContextualColumnCustom {
     postgres.run("CREATE TABLE customers (id SERIAL PRIMARY KEY, first_name TEXT, last_name TEXT, created_at TIMESTAMP WITH TIME ZONE)")
 
     val ctx = JdbcContext(postgres.postgresDatabase) {
-      decoders = decoders + ZonedDateTimeDecoder.map { zd -> MyDateTime(zd.year, zd.dayOfMonth, zd.monthValue, TimeZone.getTimeZone(zd.zone)) }
-      encoders = encoders + ZonedDateTimeEncoder.contramap { md: MyDateTime -> ZonedDateTime.of(md.year, md.month, md.day, 0, 0, 0, 0, md.timeZone.toZoneId()) }
+      additionalDecoders = additionalDecoders + ZonedDateTimeDecoder.map { zd -> MyDateTime(zd.year, zd.dayOfMonth, zd.monthValue, TimeZone.getTimeZone(zd.zone)) }
+      additionalEncoders = additionalEncoders + ZonedDateTimeEncoder.contramap { md: MyDateTime -> ZonedDateTime.of(md.year, md.month, md.day, 0, 0, 0, 0, md.timeZone.toZoneId()) }
     }
 
     ctx.run(Sql("INSERT INTO customers (first_name, last_name, created_at) VALUES (${id("Alice")}, ${id("Smith")}, ${id(MyDateTime(2022, 1, 2, TimeZone.getTimeZone(ZoneOffset.UTC)))})").action())
