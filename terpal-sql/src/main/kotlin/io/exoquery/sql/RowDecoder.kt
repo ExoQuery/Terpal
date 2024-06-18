@@ -116,8 +116,11 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
   override fun <T : Any> decodeNullableSerializableElement(descriptor: SerialDescriptor, index: Int, deserializer: DeserializationStrategy<T?>, previousValue: T?): T? {
     val childDesc = descriptor.elementDescriptors.toList()[index]
 
-    fun decodeWithDecoder(decoder: SqlDecoder<Session, Row, T>): T? =
-      decoder.decode(sess, rs, nextRowIndex(descriptor, index))
+    fun decodeWithDecoder(decoder: SqlDecoder<Session, Row, T>): T? {
+      val rowIndex = nextRowIndex(descriptor, index)
+      val decoded = decoder.decode(sess, rs, rowIndex)
+      return decoded
+    }
 
     return when (childDesc.kind) {
       StructureKind.LIST -> {
@@ -173,8 +176,22 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
               // otherwise the next row lookup will think the element is still this one (i.e. null)
               rowIndex += 1
               null
-            } else
-              deserializer.deserialize(this)
+            } else {
+              // just doing deserializer.deserialize(this) at this point will just call the non-element decoders e.g. decodeString, decodeInt, etc... we
+              // want to call the decoders that have element information in them (e.g. decodeByteElement, decodeShortElement, etc...) so we need to do it manually
+              when (childDesc.kind) {
+                is PrimitiveKind.BYTE -> decodeByteElement(descriptor, index)
+                is PrimitiveKind.SHORT -> decodeShortElement(descriptor, index)
+                is PrimitiveKind.INT -> decodeIntElement(descriptor, index)
+                is PrimitiveKind.LONG -> decodeLongElement(descriptor, index)
+                is PrimitiveKind.FLOAT -> decodeFloatElement(descriptor, index)
+                is PrimitiveKind.DOUBLE -> decodeDoubleElement(descriptor, index)
+                is PrimitiveKind.BOOLEAN -> decodeBooleanElement(descriptor, index)
+                is PrimitiveKind.CHAR -> decodeCharElement(descriptor, index)
+                is PrimitiveKind.STRING -> decodeStringElement(descriptor, index)
+                else -> throw IllegalArgumentException("Unsupported primitive kind: ${childDesc.kind}")
+              } as T?
+            }
           else ->
             throw IllegalArgumentException("Unsupported kind: ${childDesc.kind}")
         }
