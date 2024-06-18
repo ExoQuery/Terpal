@@ -17,8 +17,8 @@ abstract class SqlDecoder<Session, Row, T: Any> {
   }
 }
 
-abstract class SqlEncoder<Session, Statement, T: Any> {
-  abstract val type: KClass<T>
+abstract class SqlEncoder<Session, Statement, T> {
+  abstract val type: KClass<*>
   abstract fun encode(session: Session, statement: Statement, value: T, index: Int): Unit
 
   // Id should only be based on the type so that SqlDecoders composition works

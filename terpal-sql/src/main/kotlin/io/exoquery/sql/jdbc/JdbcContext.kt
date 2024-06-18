@@ -123,7 +123,7 @@ open class JdbcContext(override val database: DataSource, val build: JdbcContext
 
   // Do it this way so we can avoid value casting in the runScoped function
   @Suppress("UNCHECKED_CAST")
-  fun <T: Any> Param<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit =
+  fun <T> Param<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit =
     ((encoders.encoders.find { it.type == this.cls } ?: error("No encoder found for ${this.cls}")) as SqlEncoder<Connection, PreparedStatement, T>)
       .encode(conn, ps, this.value, index+1)
 
