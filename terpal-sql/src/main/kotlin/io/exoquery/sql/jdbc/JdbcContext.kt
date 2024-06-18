@@ -20,16 +20,56 @@ sealed interface ReturnAction {
   data object ReturnRecord: ReturnAction
 }
 
+sealed interface Dialect {
+  data object Postgres: Dialect
+  data object MySQL: Dialect
+  data object SQLite: Dialect
+  data object Oracle: Dialect
+  data object SQLServer: Dialect
+}
 
 class JdbcContextBuilder {
   var dateTimeZone: TimeZone = TimeZone.getDefault()
   var batchReturnBehavior = ReturnAction.ReturnRecord
-  var additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, *>>()
-  var additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, *>>()
+  var additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, *>>(UUIDObjectEncoder)
+  var additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, *>>(UUIDObjectDecoder)
 
-  fun withNewEncoding() {
+  // Don't do it like this going to override JdbcContext for the others.
+  // Need to think about how to supply default-config for a dialect
+  // fun withDialect(dialect: Dialect) {
+  //   when(dialect) {
+  //     is Dialect.Postgres -> Unit
+  //     is Dialect.MySQL -> {
+  //       // TODO: Need to set encoders:
+  //       //  protected override def jdbcTypeOfZonedDateTime  = Types.TIMESTAMP
+  //       //  protected override def jdbcTypeOfInstant        = Types.TIMESTAMP
+  //       //  protected override def jdbcTypeOfOffsetTime     = Types.TIME
+  //       //  protected override def jdbcTypeOfOffsetDateTime = Types.TIMESTAMP
+  //       withUUIDStringEncoding()
+  //     }
+  //     is Dialect.SQLite -> {
+  //       // TODO ReturningColumn
+  //     }
+  //     is Dialect.Oracle -> {
+  //       withUUIDStringEncoding()
+  //     }
+  //     is Dialect.SQLServer -> {
+  //       withUUIDStringEncoding()
+  //     }
+  //   }
+  // }
+
+  fun withNewTimeEncoding() {
     encoders = { JdbcEncodersWithTime(dateTimeZone, additionalEncoders) }
     decoders = { JdbcDecodersWithTime(dateTimeZone, additionalDecoders) }
+  }
+
+  fun withUUIDStringEncoding() {
+    // Override any existing UUID Encoder. UUIDStringEncoder and UUIDObjectEncoder both have the same ID (i.e. hashcode/equals are same)
+    // so the behavior of setOf.+ is to keep the first one instance and ignore all others. Therefore we create a new set with the new encoder
+    // first and then add the others.
+    additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, *>>(UUIDStringEncoder) + additionalEncoders
+    additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, *>>(UUIDStringDecoder) + additionalDecoders
   }
 
   /** The Sql Encoders to use, since this relies on other fields make sure to set it last */

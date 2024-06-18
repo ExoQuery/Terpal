@@ -4,7 +4,7 @@ import kotlin.reflect.KClass
 
 
 interface InterpolatorBatchingWithWrapper<T>: InterpolatorBatching<T> {
-  fun <V: Any> wrap(value: V): T
+  fun <V: Any> wrap(value: V, cls: KClass<V>): T
 }
 
 // TODO in the macro need to make sure invoke and interpolate have same type signature

@@ -10,6 +10,7 @@ import io.exoquery.terpal.plugin.trees.isClassOf
 import io.exoquery.terpal.plugin.trees.isSubclassOf
 import io.exoquery.terpal.plugin.trees.simpleTypeArgs
 import io.exoquery.terpal.plugin.trees.superTypesRecursive
+import org.jetbrains.kotlin.backend.jvm.ir.kClassReference
 import org.jetbrains.kotlin.codegen.Callable
 import org.jetbrains.kotlin.ir.builders.irFunctionReference
 import org.jetbrains.kotlin.ir.builders.irGetObject
@@ -103,7 +104,10 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
             .find { it.isClassOf<InterpolatorWithWrapper<*, *>>() } != null
 
         if (isInterpolatorWithWrapper) {
-          { expr: IrExpression -> caller.callMethod("wrap")(expr) }
+          { expr: IrExpression ->
+            //ctx.logger.error("============ Calling Wrap ${expr.dumpKotlinLike()} with type: ${expr.type.dumpKotlinLike()}")
+            caller.callMethodTyped("wrap").invoke(expr.type).invoke(expr, builder.kClassReference(expr.type))
+          }
         } else
           null
       }

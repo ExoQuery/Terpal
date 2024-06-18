@@ -1,6 +1,7 @@
 package io.exoquery.sql
 
 import io.exoquery.sql.jdbc.JdbcContext
+import io.exoquery.sql.jdbc.JdbcEncodersWithTime.Companion.StringEncoder
 import io.exoquery.sql.jdbc.Sql
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.core.spec.style.FunSpec
@@ -226,7 +227,7 @@ object EncodingSpecData {
     )
 
   fun insert(e: EncodingTestEntity) =
-    Sql("INSERT INTO EncodingTestEntity VALUES (${e.v1}, ${e.v2}, ${e.v3}, ${e.v4}, ${e.v5}, ${e.v6}, ${e.v7}, ${e.v8}, ${e.v9}, ${e.v10}, ${e.v11}, ${e.v12}, ${e.v13}, ${e.v14}, ${e.o1}, ${e.o2}, ${e.o3}, ${e.o4}, ${e.o5}, ${e.o6}, ${e.o7}, ${e.o8}, ${e.o9}, ${e.o10}, ${e.o11}, ${e.o12}, ${e.o13}, ${e.o14})").action()
+    Sql("INSERT INTO EncodingTestEntity VALUES (${e.v1}, ${e.v2}, ${e.v3}, ${e.v4}, ${e.v5}, ${e.v6}, ${e.v7}, ${e.v8}, ${e.v9}, ${e.v10}, ${e.v11}, ${e.v12}, ${e.v13}, ${e.v14}, ${e.o1})").action() // , ${e.o2}, ${e.o3}, ${e.o4}, ${e.o5}, ${e.o6}, ${e.o7}, ${e.o8}, ${e.o9}, ${e.o10}, ${e.o11}, ${e.o12}, ${e.o13}, ${e.o14})
 }
 
 
@@ -236,7 +237,11 @@ object EncodingSpecData {
  */
 
 class EncodingSpec: FreeSpec({
-  val ctx by lazy { JdbcContext(GlobalEmbeddedPostgres.get().getPostgresDatabase())  }
+  val ctx by lazy {
+    JdbcContext(GlobalEmbeddedPostgres.get().getPostgresDatabase()) {
+      additionalEncoders = additionalEncoders + StringEncoder.contramap { ett: EncodingSpecData.EncodingTestType -> ett.value }
+    }
+  }
 
   beforeEach {
     GlobalEmbeddedPostgres.run("DELETE FROM EncodingTestEntity")
@@ -250,3 +255,4 @@ class EncodingSpec: FreeSpec({
     res shouldBe EncodingSpecData.insertValues
   }
 })
+

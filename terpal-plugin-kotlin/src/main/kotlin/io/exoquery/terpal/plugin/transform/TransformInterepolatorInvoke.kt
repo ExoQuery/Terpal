@@ -13,12 +13,14 @@ import io.exoquery.terpal.plugin.trees.isClassOf
 import io.exoquery.terpal.plugin.trees.isSubclassOf
 import io.exoquery.terpal.plugin.trees.simpleTypeArgs
 import io.exoquery.terpal.plugin.trees.superTypesRecursive
+import org.jetbrains.kotlin.backend.jvm.ir.kClassReference
 import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.impl.IrClassReferenceImpl
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 
@@ -100,7 +102,12 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
             .find { it.isClassOf<InterpolatorWithWrapper<*, *>>() } != null
 
         if (isInterpolatorWithWrapper) {
-          { expr: IrExpression -> caller.callMethod("wrap")(expr) }
+          { expr: IrExpression ->
+            val invokeCall = caller.callMethodTyped("wrap").invoke(expr.type).invoke(expr, builder.kClassReference(expr.type))
+            ctx.logger.warn("============ Calling Wrap ${expr.dumpKotlinLike()} with type: ${expr.type.dumpKotlinLike()} - ${invokeCall.dumpKotlinLike()}")
+            invokeCall
+          }
+
         } else
           null
       }

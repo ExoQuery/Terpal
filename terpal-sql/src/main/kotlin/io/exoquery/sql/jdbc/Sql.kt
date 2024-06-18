@@ -12,21 +12,19 @@ object SqlBatch: SqlJdbcBatchBase()
 
 // The Jdbc Specific Sql implemenation which will use the Jdbc wrapping functions to auto-wrap things
 abstract class SqlJdbcBase(): SqlBase() {
-  override fun <V: Any> wrap(value: V): SqlFragment {
-    val cls = value::class
+  override fun <V: Any> wrap(value: V, cls: KClass<V>): SqlFragment {
     // Very not idea. We want to be able to just compare KClass instances directly by getting the
     // IrClass/IrClassSymbol as a KClass when the splicing happened
-    return Param<V>(cls as KClass<V>, value)
+    return Param<V>(cls, value)
   }
 }
 
 abstract class SqlJdbcBatchBase(): SqlBatchBase() {
-  override fun <V: Any> wrap(value: V): Param<*> {
-    val cls = value::class
+  override fun <V: Any> wrap(value: V, cls: KClass<V>): Param<*> {
     // Very not idea. We want to be able to just compare KClass instances directly by getting the
     // IrClass/IrClassSymbol as a KClass when the splicing happened
     @Suppress("UNCHECKED_CAST")
-    return Param<V>(cls as KClass<V>, value)
+    return Param<V>(cls, value)
   }
 }
 

@@ -115,15 +115,34 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
   @ExperimentalSerializationApi
   override fun <T : Any> decodeNullableSerializableElement(descriptor: SerialDescriptor, index: Int, deserializer: DeserializationStrategy<T?>, previousValue: T?): T? {
     val childDesc = descriptor.elementDescriptors.toList()[index]
+
+    fun decodeWithDecoder(decoder: SqlDecoder<Session, Row, T>): T? =
+      decoder.decode(sess, rs, nextRowIndex(descriptor))
+
     return when (childDesc.kind) {
       StructureKind.LIST -> {
-        // val elementDescriptor = descriptor.elementDescriptors.first()
-        // Need to use this to summon the right mapper
-        // elementDescriptor.capturedKClass
+        val decoder =
+          when {
+            childDesc.capturedKClass != null ->
+              decoders.decoders.find { it.type == childDesc.capturedKClass }
+            childDesc.elementDescriptors.toList().size == 1 && childDesc.elementDescriptors.first().kind is PrimitiveKind.BYTE ->
+              decoders.decoders.find { it.type == ByteArray::class }
+            else -> null
+          }
+        // if there is a decoder for the specific array-type use that, otherwise
+        if (decoder != null) {
+          @Suppress("UNCHECKED_CAST")
+          run { decodeWithDecoder(decoder as SqlDecoder<Session, Row, T>) }
+        } else {
 
-        // Can't use element deserializer because it acts on a ResultSet. Need to implement mappers
-        //rs.getArray(index.nx) as T
-        TODO()
+          // val elementDescriptor = descriptor.elementDescriptors.first()
+          // Need to use this to summon the right mapper
+          // elementDescriptor.capturedKClass
+
+          // Can't use element deserializer because it acts on a ResultSet. Need to implement mappers
+          //rs.getArray(index.nx) as T
+          TODO("Generic collections not implemented yet (found the class: ${childDesc.capturedKClass})")
+        }
       }
       StructureKind.CLASS -> {
         // Only if all the columns are null (and the returned element can be null) can we assume that the decoded element should be null
@@ -142,13 +161,9 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
       }
       SerialKind.CONTEXTUAL -> {
         val decoder = decoders.decoders.find { it.type == childDesc.capturedKClass }
-        val columnName = try { columnInfos.get(index) } catch (e: Throwable) { "<UNKNOWN>" }
-        val decodedValueRaw =
-          decoder?.decode(sess, rs, nextRowIndex(descriptor)) ?:
-          throw IllegalArgumentException("Could not decode the contextual column ${columnName} (index: ${rowIndex}) whose expected class was: ${childDesc.capturedKClass}")
-
+        if (decoder == null) throw IllegalArgumentException("Could not find a decoder for the contextual type ${childDesc.capturedKClass}")
         @Suppress("UNCHECKED_CAST")
-        run { decodedValueRaw as T? }
+        run { decodeWithDecoder(decoder as SqlDecoder<Session, Row, T>) }
       }
       else -> {
         when {
