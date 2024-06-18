@@ -1,6 +1,7 @@
 package io.exoquery.sql.jdbc
 
 import io.exoquery.sql.*
+import io.exoquery.sql.jdbc.JdbcDecodersWithTime.Companion.decoders
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.KSerializer
@@ -21,21 +22,23 @@ sealed interface ReturnAction {
 
 
 class JdbcContextBuilder {
-  var encoders: SqlEncoders<Connection, PreparedStatement> = JdbcEncodersWithTime()
-  val decdoers: SqlDecoders<Connection, ResultSet> = JdbcDecodersWithTime()
+  var encoders: SqlEncoders<Connection, PreparedStatement> = JdbcEncodersWithTimeLegacy()
+  var decoders: SqlDecoders<Connection, ResultSet> = JdbcDecodersWithTimeLegacy()
+  var batchReturnBehavior = ReturnAction.ReturnRecord
+
+  fun withNewEncoding() {
+    encoders = JdbcEncodersWithTime()
+    decoders = JdbcDecodersWithTime()
+  }
 }
 
 
-open class JdbcContext(override val database: DataSource): Context<Connection, DataSource>() {
-  companion object {
-    val Encoders = JdbcEncodersWithTime()
-    val Decoders = JdbcDecodersWithTime()
-  }
+open class JdbcContext(override val database: DataSource, val build: JdbcContextBuilder.() -> Unit = { JdbcContextBuilder() }): Context<Connection, DataSource>() {
+  private val builder = JdbcContextBuilder().apply(build)
 
-  protected open val encoders: SqlEncoders<Connection, PreparedStatement> = Encoders
-  protected open val decoders: SqlDecoders<Connection, ResultSet> = Decoders
-
-  protected open val batchReturnBehavior = ReturnAction.ReturnRecord
+  protected open val encoders: SqlEncoders<Connection, PreparedStatement> = builder.encoders
+  protected open val decoders: SqlDecoders<Connection, ResultSet> = builder.decoders
+  protected open val batchReturnBehavior = builder.batchReturnBehavior
 
   override fun newSession(): Connection = database.connection
   override fun closeSession(session: Connection): Unit = session.close()
@@ -44,7 +47,6 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
   private val JdbcCoroutineContext = object: CoroutineContext.Key<CoroutineSession<Connection>> {}
   override val sessionKey: CoroutineContext.Key<CoroutineSession<Connection>> = JdbcCoroutineContext
 
-  // TODO override by inline despite the warning?
   override internal suspend fun <T> runTransactionally(block: suspend CoroutineScope.() -> T): T {
     val session = coroutineContext.get(sessionKey)?.session ?: error("No connection found")
     session.runWithManualCommit {
@@ -160,7 +162,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
 
   protected fun <T> KSerializer<T>.makeExtractor() =
     { conn: Connection, rs: ResultSet ->
-      val decoder = JdbcRowDecoder(conn, rs, JdbcContext.Decoders, descriptor)
+      val decoder = JdbcRowDecoder(conn, rs, decoders, descriptor)
       deserialize(decoder)
     }
 

@@ -2,6 +2,7 @@ package io.exoquery.sql.examples
 
 import io.exoquery.sql.jdbc.*
 import io.exoquery.sql.jdbc.JdbcDecodersWithTimeLegacy.Companion.ZonedDateTimeDecoder
+import io.exoquery.sql.jdbc.JdbcEncodersWithTimeLegacy.Companion.ZonedDateTimeEncoder
 import io.exoquery.sql.run
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import kotlinx.serialization.Contextual
@@ -44,21 +45,17 @@ object ContextualColumnCustom {
   @Serializable
   data class Customer(val id: Int, val firstName: String, val lastName: String, @Contextual val createdAt: MyDateTime)
 
-  class MyContext(ds: DataSource): JdbcContext(ds) {
-    companion object {
-      // TODO write a contramap function on the encoder
-      val Decoders = JdbcDecodersWithTimeLegacy + ZonedDateTimeDecoder.map { zd -> MyDateTime(zd.year, zd.dayOfMonth, zd.monthValue, TimeZone.getTimeZone(zd.zone)) }
-      val Encoders = JdbcEncodersWithTimeLegacy
-    }
-    override val decoders = Decoders
-    override val encoders = Encoders
-  }
 
   suspend fun main() {
     val postgres = EmbeddedPostgres.start()
     postgres.run("CREATE TABLE customers (id SERIAL PRIMARY KEY, first_name TEXT, last_name TEXT, created_at TIMESTAMP WITH TIME ZONE)")
-    val ctx = MyContext(postgres.postgresDatabase)
-    ctx.run(Sql("INSERT INTO customers (first_name, last_name, created_at) VALUES (${id("Alice")}, ${id("Smith")}, ${id(ZonedDateTime.of(2021, 1, 1, 1, 2, 3, 0, ZoneOffset.UTC))})").action())
+
+    val ctx = JdbcContext(postgres.postgresDatabase) {
+      decoders = decoders + ZonedDateTimeDecoder.map { zd -> MyDateTime(zd.year, zd.dayOfMonth, zd.monthValue, TimeZone.getTimeZone(zd.zone)) }
+      encoders = encoders + ZonedDateTimeEncoder.contramap { md: MyDateTime -> ZonedDateTime.of(md.year, md.month, md.day, 0, 0, 0, 0, md.timeZone.toZoneId()) }
+    }
+
+    ctx.run(Sql("INSERT INTO customers (first_name, last_name, created_at) VALUES (${id("Alice")}, ${id("Smith")}, ${id(MyDateTime(2022, 1, 2, TimeZone.getTimeZone(ZoneOffset.UTC)))})").action())
     val customers = ctx.run(Sql("SELECT * FROM customers").queryOf<Customer>())
     val module = SerializersModule { contextual(MyDateTime::class, MyDateTimeAsStringSerialzier) }
     val json = Json { serializersModule = module }

@@ -9,6 +9,13 @@ import java.sql.Types
 import java.time.*
 
 abstract class JdbcEncoder<T: Any>: SqlEncoder<Connection, PreparedStatement, T>() {
+  inline fun <reified R: Any> contramap(crossinline f: (R) -> T):JdbcEncoder<R> =
+    object: JdbcEncoder<R>() {
+      override val type = R::class
+      override fun encode(session: Connection, statement: PreparedStatement, value: R, index: Int) =
+        this@JdbcEncoder.encode(session, statement, f(value), index)
+    }
+
   companion object {
     inline fun <reified T: Any> fromFunction(crossinline f: (Connection, PreparedStatement, T, Int) -> Unit): JdbcEncoder<T> =
       object: JdbcEncoder<T>() {
