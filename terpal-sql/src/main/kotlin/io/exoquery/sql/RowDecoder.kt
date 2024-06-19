@@ -69,9 +69,9 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
   var rowIndex: Int = initialRowIndex
   var classIndex: Int = 0
 
-  fun nextRowIndex(desc: SerialDescriptor, descIndex: Int): Int {
+  fun nextRowIndex(desc: SerialDescriptor, descIndex: Int, note: String = ""): Int {
     val curr = rowIndex
-    println("---- Get Row ${columnInfos[rowIndex-1].name}, Index: ${curr} - (${descIndex}) ${desc.getElementDescriptor(descIndex)}")
+    println("---- Get Row ${columnInfos[rowIndex-1].name}, Index: ${curr} - (${descIndex}) ${desc.getElementDescriptor(descIndex)} - (Preview:${decoders.preview(rowIndex, rs)})" + (if (note != "") " - ${note}" else ""))
     rowIndex += 1
     return curr
   }
@@ -131,7 +131,10 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
             childDesc.elementDescriptors.toList().size == 1 && childDesc.elementDescriptors.first().kind is PrimitiveKind.BYTE ->
               decoders.decoders.find { it.type == ByteArray::class }
             else -> null
-          }
+          } // TODO perhaps only mark asNullable if the childDesc.isNullable is true
+            ?.asNullable()
+
+
         // if there is a decoder for the specific array-type use that, otherwise
         if (decoder != null) {
           @Suppress("UNCHECKED_CAST")
@@ -163,7 +166,8 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
         }
       }
       SerialKind.CONTEXTUAL -> {
-        val decoder = decoders.decoders.find { it.type == childDesc.capturedKClass }
+        // TODO perhaps only mark asNullable if the childDesc.isNullable is true
+        val decoder = decoders.decoders.find { it.type == childDesc.capturedKClass }?.asNullable()
         if (decoder == null) throw IllegalArgumentException("Could not find a decoder for the contextual type ${childDesc.capturedKClass}")
         @Suppress("UNCHECKED_CAST")
         run { decodeWithDecoder(decoder as SqlDecoder<Session, Row, T>) }
@@ -174,7 +178,9 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
             if (decoders.isNull(rowIndex, rs)) {
               // Advance to the next row (since we know the current one is null)
               // otherwise the next row lookup will think the element is still this one (i.e. null)
-              rowIndex += 1
+              //rowIndex += 1
+              // increment to the next index
+              nextRowIndex(descriptor, index, "Skipping Null Value")
               null
             } else {
               // just doing deserializer.deserialize(this) at this point will just call the non-element decoders e.g. decodeString, decodeInt, etc... we

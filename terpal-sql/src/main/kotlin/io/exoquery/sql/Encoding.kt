@@ -1,12 +1,15 @@
 package io.exoquery.sql
 
 import java.math.BigDecimal
+import java.sql.Connection
+import java.sql.PreparedStatement
 import java.time.*
 import kotlin.reflect.KClass
 
-abstract class SqlDecoder<Session, Row, T: Any> {
-  abstract val type: KClass<T>
-  abstract fun decode(session: Session, row: Row, index: Int): T?
+abstract class SqlDecoder<Session, Row, T> {
+  abstract val type: KClass<*> // Don't want to force T to be non-nullable so using KClass instead of KClass<T>
+  abstract fun decode(session: Session, row: Row, index: Int): T
+  abstract fun asNullable(): SqlDecoder<Connection, Row, T?>
 
   val id by lazy { Id(type) }
   override fun hashCode(): Int = id.hashCode()
@@ -20,6 +23,7 @@ abstract class SqlDecoder<Session, Row, T: Any> {
 abstract class SqlEncoder<Session, Statement, T> {
   abstract val type: KClass<*>
   abstract fun encode(session: Session, statement: Statement, value: T, index: Int): Unit
+  abstract fun asNullable(): SqlEncoder<Connection, PreparedStatement, T?>
 
   // Id should only be based on the type so that SqlDecoders composition works
   val id by lazy { Id(type) }
@@ -33,6 +37,7 @@ abstract class SqlEncoder<Session, Statement, T> {
 
 abstract class SqlDecoders<Session, Row> {
   abstract fun isNull(index: Int, row: Row): Boolean
+  abstract fun preview(index: Int, row: Row): String?
 
   abstract val BooleanDecoder: SqlDecoder<Session, Row, Boolean>
   abstract val ByteDecoder: SqlDecoder<Session, Row, Byte>

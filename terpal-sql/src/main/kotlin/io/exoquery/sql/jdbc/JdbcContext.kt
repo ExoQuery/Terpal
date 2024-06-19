@@ -31,8 +31,8 @@ sealed interface Dialect {
 class JdbcContextBuilder {
   var dateTimeZone: TimeZone = TimeZone.getDefault()
   var batchReturnBehavior = ReturnAction.ReturnRecord
-  var additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, *>>(UUIDObjectEncoder)
-  var additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, *>>(UUIDObjectDecoder)
+  var additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, out Any>>(UUIDObjectEncoding.UUIDObjectEncoder)
+  var additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, out Any>>(UUIDObjectEncoding.UUIDObjectDecoder)
 
   // Don't do it like this going to override JdbcContext for the others.
   // Need to think about how to supply default-config for a dialect
@@ -68,8 +68,8 @@ class JdbcContextBuilder {
     // Override any existing UUID Encoder. UUIDStringEncoder and UUIDObjectEncoder both have the same ID (i.e. hashcode/equals are same)
     // so the behavior of setOf.+ is to keep the first one instance and ignore all others. Therefore we create a new set with the new encoder
     // first and then add the others.
-    additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, *>>(UUIDStringEncoder) + additionalEncoders
-    additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, *>>(UUIDStringDecoder) + additionalDecoders
+    additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, out Any>>(UUIDStringEncoding.UUIDStringEncoder) + additionalEncoders
+    additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, out Any>>(UUIDStringEncoding.UUIDStringDecoder) + additionalDecoders
   }
 
   /** The Sql Encoders to use, since this relies on other fields make sure to set it last */
@@ -125,6 +125,7 @@ open class JdbcContext(override val database: DataSource, val build: JdbcContext
   @Suppress("UNCHECKED_CAST")
   fun <T> Param<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit =
     ((encoders.encoders.find { it.type == this.cls } ?: error("No encoder found for ${this.cls}")) as SqlEncoder<Connection, PreparedStatement, T>)
+      .asNullable()
       .encode(conn, ps, this.value, index+1)
 
   protected fun makeStmtReturning(sql: String, conn: Connection, returningBehavior: ReturnAction) =
@@ -145,7 +146,7 @@ open class JdbcContext(override val database: DataSource, val build: JdbcContext
   suspend fun <T> FlowCollector<T>.emitResultSet(conn: Connection, rs: ResultSet, extract: (Connection, ResultSet) -> T) {
     while (rs.next()) {
       val meta = rs.metaData
-      //println("--- Emit: ${(1..meta.columnCount).map { rs.getObject(it) }.joinToString(",")}")
+      println("--- Emit: ${(1..meta.columnCount).map { rs.getObject(it) }.joinToString(",")}")
       emit(extract(conn, rs))
     }
   }

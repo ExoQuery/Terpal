@@ -7,30 +7,16 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
-object UUIDStringEncoder: SqlEncoder<Connection, PreparedStatement, UUID>() {
-  override val type = UUID::class
-  override fun encode(conn: Connection, ps: PreparedStatement, value: UUID, index: Int) {
-    ps.setString(index, value.toString())
-  }
+object UUIDStringEncoding {
+  val UUIDStringEncoder: SqlEncoder<Connection, PreparedStatement, UUID> =
+    JdbcEncoder.fromFunction(java.sql.Types.VARCHAR) { _, ps, v, i -> ps.setString(i, v.toString()) }
+  val UUIDStringDecoder: SqlDecoder<Connection, ResultSet, UUID> =
+    JdbcDecoder.fromFunction { _, rs, i -> UUID.fromString(rs.getString(i)) }
 }
 
-object UUIDStringDecoder: SqlDecoder<Connection, ResultSet, UUID>() {
-  override val type = UUID::class
-  override fun decode(conn: Connection, rs: ResultSet, index: Int): UUID? {
-    return UUID.fromString(rs.getString(index))
-  }
-}
-
-object UUIDObjectEncoder: SqlEncoder<Connection, PreparedStatement, UUID>() {
-  override val type = UUID::class
-  override fun encode(conn: Connection, ps: PreparedStatement, value: UUID, index: Int) {
-    ps.setObject(index, value)
-  }
-}
-
-object UUIDObjectDecoder: SqlDecoder<Connection, ResultSet, UUID>() {
-  override val type = UUID::class
-  override fun decode(conn: Connection, rs: ResultSet, index: Int): UUID? {
-    return rs.getObject(index, UUID::class.java)
-  }
+object UUIDObjectEncoding {
+  val UUIDObjectEncoder: SqlEncoder<Connection, PreparedStatement, UUID> =
+    JdbcEncoder.fromFunction(java.sql.Types.OTHER) { _, ps, v, i -> ps.setObject(i, v) }
+  val UUIDObjectDecoder: SqlDecoder<Connection, ResultSet, UUID> =
+    JdbcDecoder.fromFunction { _, rs, i -> rs.getObject(i, UUID::class.java) }
 }
