@@ -122,6 +122,9 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
       return decoded
     }
 
+    // If the actual decoded element is supposed to be nullable then make the decoder for it nullable
+    fun SqlDecoder<Session, Row, out Any>.asNullableIfSpecified() = if (childDesc.isNullable) asNullable() else this
+
     return when (childDesc.kind) {
       StructureKind.LIST -> {
         val decoder =
@@ -131,8 +134,7 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
             childDesc.elementDescriptors.toList().size == 1 && childDesc.elementDescriptors.first().kind is PrimitiveKind.BYTE ->
               decoders.decoders.find { it.type == ByteArray::class }
             else -> null
-          } // TODO perhaps only mark asNullable if the childDesc.isNullable is true
-            ?.asNullable()
+          }?.asNullableIfSpecified()
 
 
         // if there is a decoder for the specific array-type use that, otherwise
@@ -166,8 +168,7 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
         }
       }
       SerialKind.CONTEXTUAL -> {
-        // TODO perhaps only mark asNullable if the childDesc.isNullable is true
-        val decoder = decoders.decoders.find { it.type == childDesc.capturedKClass }?.asNullable()
+        val decoder = decoders.decoders.find { it.type == childDesc.capturedKClass }?.asNullableIfSpecified()
         if (decoder == null) throw IllegalArgumentException("Could not find a decoder for the contextual type ${childDesc.capturedKClass}")
         @Suppress("UNCHECKED_CAST")
         run { decodeWithDecoder(decoder as SqlDecoder<Session, Row, T>) }

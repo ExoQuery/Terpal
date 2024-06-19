@@ -9,7 +9,7 @@ import kotlin.reflect.KClass
 abstract class SqlDecoder<Session, Row, T> {
   abstract val type: KClass<*> // Don't want to force T to be non-nullable so using KClass instead of KClass<T>
   abstract fun decode(session: Session, row: Row, index: Int): T
-  abstract fun asNullable(): SqlDecoder<Connection, Row, T?>
+  abstract fun asNullable(): SqlDecoder<Session, Row, T?>
 
   val id by lazy { Id(type) }
   override fun hashCode(): Int = id.hashCode()
