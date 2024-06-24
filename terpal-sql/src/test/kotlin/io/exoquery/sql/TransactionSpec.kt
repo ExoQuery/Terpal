@@ -81,5 +81,13 @@ class TransactionSpec: FreeSpec({
       }
       ctx.run(select()) shouldBe listOf(joe)
     }
+    "nested" {
+      ctx.transaction {
+        ctx.transaction {
+          ctx.run(insert(joe))
+        }
+      }
+      ctx.run(select()) shouldBe listOf(joe)
+    }
   }
 })

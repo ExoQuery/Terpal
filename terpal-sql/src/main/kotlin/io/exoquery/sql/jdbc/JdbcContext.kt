@@ -28,67 +28,44 @@ sealed interface Dialect {
   data object SQLServer: Dialect
 }
 
-class JdbcContextBuilder {
-  var dateTimeZone: TimeZone = TimeZone.getDefault()
-  var batchReturnBehavior = ReturnAction.ReturnRecord
-  var additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, out Any>>(UUIDObjectEncoding.UUIDObjectEncoder)
-  var additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, out Any>>(UUIDObjectEncoding.UUIDObjectDecoder)
 
-  // Don't do it like this going to override JdbcContext for the others.
-  // Need to think about how to supply default-config for a dialect
-  // fun withDialect(dialect: Dialect) {
-  //   when(dialect) {
-  //     is Dialect.Postgres -> Unit
-  //     is Dialect.MySQL -> {
-  //       // TODO: Need to set encoders:
-  //       //  protected override def jdbcTypeOfZonedDateTime  = Types.TIMESTAMP
-  //       //  protected override def jdbcTypeOfInstant        = Types.TIMESTAMP
-  //       //  protected override def jdbcTypeOfOffsetTime     = Types.TIME
-  //       //  protected override def jdbcTypeOfOffsetDateTime = Types.TIMESTAMP
-  //       withUUIDStringEncoding()
-  //     }
-  //     is Dialect.SQLite -> {
-  //       // TODO ReturningColumn
-  //     }
-  //     is Dialect.Oracle -> {
-  //       withUUIDStringEncoding()
-  //     }
-  //     is Dialect.SQLServer -> {
-  //       withUUIDStringEncoding()
-  //     }
-  //   }
-  // }
-
-  fun withNewTimeEncoding() {
-    encoders = { JdbcEncodersWithTime(dateTimeZone, additionalEncoders) }
-    decoders = { JdbcDecodersWithTime(dateTimeZone, additionalDecoders) }
-  }
-
-  fun withUUIDStringEncoding() {
-    // Override any existing UUID Encoder. UUIDStringEncoder and UUIDObjectEncoder both have the same ID (i.e. hashcode/equals are same)
-    // so the behavior of setOf.+ is to keep the first one instance and ignore all others. Therefore we create a new set with the new encoder
-    // first and then add the others.
-    additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, out Any>>(UUIDStringEncoding.UUIDStringEncoder) + additionalEncoders
-    additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, out Any>>(UUIDStringEncoding.UUIDStringDecoder) + additionalDecoders
-  }
-
-  /** The Sql Encoders to use, since this relies on other fields make sure to set it last */
-  var encoders: () -> SqlEncoders<Connection, PreparedStatement> = { JdbcEncodersWithTimeLegacy(dateTimeZone, additionalEncoders) }
-  /** The Sql Decoders to use, since this relies on other fields make sure to set it last */
-  var decoders: () -> SqlDecoders<Connection, ResultSet> = { JdbcDecodersWithTimeLegacy(dateTimeZone, additionalDecoders) }
+class PostgresJdbcContext(override val database: DataSource): JdbcContext(database) {
+  override val additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, out Any>>(UUIDObjectEncoding.UUIDObjectEncoder)
+  override val additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, out Any>>(UUIDObjectEncoding.UUIDObjectDecoder)
 }
 
 
-open class JdbcContext(override val database: DataSource, val build: JdbcContextBuilder.() -> Unit = { JdbcContextBuilder() }): Context<Connection, DataSource>() {
-  private val builder = JdbcContextBuilder().apply(build)
+open class JdbcContext(override val database: DataSource): Context<Connection, DataSource>() {
+  class JdbcEncodersWithTimeLegacyDefault(val additionalEncoders: Set<SqlEncoder<Connection, PreparedStatement, out Any>>): JdbcEncodersWithTimeLegacy {
+    override fun computeEncoders() = super.computeEncoders() + additionalEncoders
+    override val encoders = computeEncoders()
+  }
+  class JdbcEncodersWithTimeDefault(val additionalEncoders: Set<SqlEncoder<Connection, PreparedStatement, out Any>>): JdbcEncodersWithTime {
+    override fun computeEncoders() = super.computeEncoders() + additionalEncoders
+    override val encoders = computeEncoders()
+  }
+  class JdbcDecodersWithTimeLegacyDefault(val additionalDecoders: Set<SqlDecoder<Connection, ResultSet, out Any>>): JdbcDecodersWithTimeLegacy {
+    override fun computeDecoders() = super.computeDecoders() + additionalDecoders
+    override val decoders = computeDecoders()
+  }
+  class JdbcDecodersWithTimeDefault(val additionalDecoders: Set<SqlDecoder<Connection, ResultSet, out Any>>): JdbcDecodersWithTime {
+    override fun computeDecoders() = super.computeDecoders() + additionalDecoders
+    override val decoders = computeDecoders()
+  }
 
-  protected open val encoders: SqlEncoders<Connection, PreparedStatement> = builder.encoders()
-  protected open val decoders: SqlDecoders<Connection, ResultSet> = builder.decoders()
-  protected open val batchReturnBehavior = builder.batchReturnBehavior
+  // Need to do this first in iniitalization
+  protected open val additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, out Any>>()
+  protected open val additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, out Any>>()
+  protected open val timezone: TimeZone = TimeZone.getDefault()
+
+  protected open val encoders: SqlEncoders<Connection, PreparedStatement> by lazy { JdbcContext.JdbcEncodersWithTimeLegacyDefault(additionalEncoders) }
+  protected open val decoders: SqlDecoders<Connection, ResultSet> by lazy { JdbcContext.JdbcDecodersWithTimeLegacyDefault(additionalDecoders) }
+  protected open val batchReturnBehavior: ReturnAction = ReturnAction.ReturnRecord
 
   override fun newSession(): Connection = database.connection
   override fun closeSession(session: Connection): Unit = session.close()
   override fun isClosedSession(session: Connection): Boolean = session.isClosed
+  fun createEncodingContext(session: Connection, stmt: PreparedStatement) = EncodingContext(session, stmt, timezone)
 
   private val JdbcCoroutineContext = object: CoroutineContext.Key<CoroutineSession<Connection>> {}
   override val sessionKey: CoroutineContext.Key<CoroutineSession<Connection>> = JdbcCoroutineContext

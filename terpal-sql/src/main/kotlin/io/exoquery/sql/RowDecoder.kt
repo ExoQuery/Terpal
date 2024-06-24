@@ -64,7 +64,7 @@ class JdbcRowDecoder(
 @OptIn(ExperimentalSerializationApi::class)
 abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val initialRowIndex: Int, val decoders: SqlDecoders<Session, Row>, val columnInfos: List<ColumnInfo>, val endCallback: (Int) -> Unit): Decoder, CompositeDecoder {
 
-  abstract fun cloneSelf(rs: Row, initialRowIndex: Int, endCallback: (Int) -> Unit): RowDecoder<Session, Row>
+  abstract fun cloneSelf(ctx: DecodingContext<Session, Row>, initialRowIndex: Int, endCallback: (Int) -> Unit): RowDecoder<Session, Row>
 
   var rowIndex: Int = initialRowIndex
   var classIndex: Int = 0
@@ -78,25 +78,25 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
 
   override val serializersModule: SerializersModule = EmptySerializersModule()
 
-  override fun decodeBooleanElement(descriptor: SerialDescriptor, index: Int): Boolean = decoders.BooleanDecoder.decode(sess, rs, nextRowIndex(descriptor, index)) ?: error("Boolean Element ${index} in ${descriptor} cannot be null")
-  override fun decodeByteElement(descriptor: SerialDescriptor, index: Int): Byte = decoders.ByteDecoder.decode(sess, rs, nextRowIndex(descriptor, index)) ?: error("Byte Element ${index} in ${descriptor} cannot be null")
-  override fun decodeCharElement(descriptor: SerialDescriptor, index: Int): Char = decoders.CharDecoder.decode(sess, rs, nextRowIndex(descriptor, index)) ?: error("Char Element ${index} in ${descriptor} cannot be null")
-  override fun decodeDoubleElement(descriptor: SerialDescriptor, index: Int): Double = decoders.DoubleDecoder.decode(sess, rs, nextRowIndex(descriptor, index)) ?: error("Double Element ${index} in ${descriptor} cannot be null")
-  override fun decodeFloatElement(descriptor: SerialDescriptor, index: Int): Float = decoders.FloatDecoder.decode(sess, rs, nextRowIndex(descriptor, index)) ?: error("Float Element ${index} in ${descriptor} cannot be null")
-  override fun decodeIntElement(descriptor: SerialDescriptor, index: Int): Int = decoders.IntDecoder.decode(sess, rs, nextRowIndex(descriptor, index)) ?: error("Int Element ${index} in ${descriptor} cannot be null")
-  override fun decodeLongElement(descriptor: SerialDescriptor, index: Int): Long = decoders.LongDecoder.decode(sess, rs, nextRowIndex(descriptor, index)) ?: error("Long Element ${index} in ${descriptor} cannot be null")
-  override fun decodeShortElement(descriptor: SerialDescriptor, index: Int): Short = decoders.ShortDecoder.decode(sess, rs, nextRowIndex(descriptor, index)) ?: error("Short Element ${index} in ${descriptor} cannot be null")
-  override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String = decoders.StringDecoder.decode(sess, rs, nextRowIndex(descriptor, index)) ?: error("String Element ${index} in ${descriptor} cannot be null")
+  override fun decodeBooleanElement(descriptor: SerialDescriptor, index: Int): Boolean = decoders.BooleanDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Boolean Element ${index} in ${descriptor} cannot be null")
+  override fun decodeByteElement(descriptor: SerialDescriptor, index: Int): Byte = decoders.ByteDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Byte Element ${index} in ${descriptor} cannot be null")
+  override fun decodeCharElement(descriptor: SerialDescriptor, index: Int): Char = decoders.CharDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Char Element ${index} in ${descriptor} cannot be null")
+  override fun decodeDoubleElement(descriptor: SerialDescriptor, index: Int): Double = decoders.DoubleDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Double Element ${index} in ${descriptor} cannot be null")
+  override fun decodeFloatElement(descriptor: SerialDescriptor, index: Int): Float = decoders.FloatDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Float Element ${index} in ${descriptor} cannot be null")
+  override fun decodeIntElement(descriptor: SerialDescriptor, index: Int): Int = decoders.IntDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Int Element ${index} in ${descriptor} cannot be null")
+  override fun decodeLongElement(descriptor: SerialDescriptor, index: Int): Long = decoders.LongDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Long Element ${index} in ${descriptor} cannot be null")
+  override fun decodeShortElement(descriptor: SerialDescriptor, index: Int): Short = decoders.ShortDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Short Element ${index} in ${descriptor} cannot be null")
+  override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String = decoders.StringDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("String Element ${index} in ${descriptor} cannot be null")
 
-  override fun decodeBoolean(): Boolean = decoders.BooleanDecoder.decode(sess, rs, 1) ?: error("Boolean Element cannot be null")
-  override fun decodeByte(): Byte = decoders.ByteDecoder.decode(sess, rs, 1) ?: error("Byte Element cannot be null")
-  override fun decodeChar(): Char = decoders.CharDecoder.decode(sess, rs, 1) ?: error("Char Element cannot be null")
-  override fun decodeDouble(): Double = decoders.DoubleDecoder.decode(sess, rs, 1) ?: error("Double Element cannot be null")
-  override fun decodeFloat(): Float = decoders.FloatDecoder.decode(sess, rs, 1) ?: error("Float Element cannot be null")
-  override fun decodeShort(): Short = decoders.ShortDecoder.decode(sess, rs, 1) ?: error("Short Element cannot be null")
-  override fun decodeString(): String = decoders.StringDecoder.decode(sess, rs, 1) ?: error("String Element cannot be null")
-  override fun decodeInt(): Int = decoders.IntDecoder.decode(sess, rs, 1) ?: error("Int Element cannot be null")
-  override fun decodeLong(): Long = decoders.LongDecoder.decode(sess, rs, 1) ?: error("Long Element cannot be null")
+  override fun decodeBoolean(): Boolean = decoders.BooleanDecoder.decode(ctx, 1) ?: error("Boolean Element cannot be null")
+  override fun decodeByte(): Byte = decoders.ByteDecoder.decode(ctx, 1) ?: error("Byte Element cannot be null")
+  override fun decodeChar(): Char = decoders.CharDecoder.decode(ctx, 1) ?: error("Char Element cannot be null")
+  override fun decodeDouble(): Double = decoders.DoubleDecoder.decode(ctx, 1) ?: error("Double Element cannot be null")
+  override fun decodeFloat(): Float = decoders.FloatDecoder.decode(ctx, 1) ?: error("Float Element cannot be null")
+  override fun decodeShort(): Short = decoders.ShortDecoder.decode(ctx, 1) ?: error("Short Element cannot be null")
+  override fun decodeString(): String = decoders.StringDecoder.decode(ctx, 1) ?: error("String Element cannot be null")
+  override fun decodeInt(): Int = decoders.IntDecoder.decode(ctx, 1) ?: error("Int Element cannot be null")
+  override fun decodeLong(): Long = decoders.LongDecoder.decode(ctx, 1) ?: error("Long Element cannot be null")
 
 
   @ExperimentalSerializationApi
@@ -118,7 +118,7 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
 
     fun decodeWithDecoder(decoder: SqlDecoder<Session, Row, T>): T? {
       val rowIndex = nextRowIndex(descriptor, index)
-      val decoded = decoder.decode(sess, rs, rowIndex)
+      val decoded = decoder.decode(ctx, rowIndex)
       return decoded
     }
 
@@ -158,13 +158,13 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
         // so we need to check [street..<zip] indexes i.e. [3..<(3+2)] for nullity
         val allRowsNull =
           (rowIndex until (rowIndex + childDesc.elementsCount)).all {
-            decoders.isNull(it, rs)
+            decoders.isNull(it, ctx.row)
           }
 
         if (allRowsNull) {
           decodeNull()
         } else {
-          deserializer.deserialize(cloneSelf(rs, rowIndex, { childIndex -> this.rowIndex = childIndex }))
+          deserializer.deserialize(cloneSelf(ctx, rowIndex, { childIndex -> this.rowIndex = childIndex }))
         }
       }
       SerialKind.CONTEXTUAL -> {
@@ -176,7 +176,7 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
       else -> {
         when {
           childDesc.kind is PrimitiveKind ->
-            if (decoders.isNull(rowIndex, rs)) {
+            if (decoders.isNull(rowIndex, ctx.row)) {
               // Advance to the next row (since we know the current one is null)
               // otherwise the next row lookup will think the element is still this one (i.e. null)
               //rowIndex += 1

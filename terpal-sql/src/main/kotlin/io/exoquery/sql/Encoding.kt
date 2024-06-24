@@ -8,7 +8,7 @@ import kotlin.reflect.KClass
 
 abstract class SqlDecoder<Session, Row, T> {
   abstract val type: KClass<*> // Don't want to force T to be non-nullable so using KClass instead of KClass<T>
-  abstract fun decode(session: Session, row: Row, index: Int): T
+  abstract fun decode(ctx: DecodingContext<Session, Row>, index: Int): T
   abstract fun asNullable(): SqlDecoder<Session, Row, T?>
 
   val id by lazy { Id(type) }
@@ -22,7 +22,7 @@ abstract class SqlDecoder<Session, Row, T> {
 
 abstract class SqlEncoder<Session, Statement, T> {
   abstract val type: KClass<*>
-  abstract fun encode(session: Session, statement: Statement, value: T, index: Int): Unit
+  abstract fun encode(ctx: EncodingContext<Session, Statement>, value: T, index: Int): Unit
   abstract fun asNullable(): SqlEncoder<Connection, PreparedStatement, T?>
 
   // Id should only be based on the type so that SqlDecoders composition works
@@ -35,7 +35,7 @@ abstract class SqlEncoder<Session, Statement, T> {
   }
 }
 
-abstract class SqlDecoders<Session, Row> {
+interface SqlDecoders<Session, Row> {
   abstract fun isNull(index: Int, row: Row): Boolean
   abstract fun preview(index: Int, row: Row): String?
 
@@ -61,7 +61,7 @@ abstract class SqlDecoders<Session, Row> {
   abstract val OffsetTimeDecoder: SqlDecoder<Session, Row, OffsetTime>
   abstract val OffsetDateTimeDecoder: SqlDecoder<Session, Row, OffsetDateTime>
 
-  open val decoders: Set<SqlDecoder<Session, Row, out Any>> by lazy {
+  fun computeDecoders(): Set<SqlDecoder<Session, Row, out Any>> =
     setOf(
       BooleanDecoder,
       ByteDecoder,
@@ -83,11 +83,12 @@ abstract class SqlDecoders<Session, Row> {
       OffsetTimeDecoder,
       OffsetDateTimeDecoder
     )
-  }
 
+  /** Implement this in the final class/object using computeDecoders() to have a stable list of them */
+  val decoders: Set<SqlDecoder<Session, Row, out Any>>
 }
 
-abstract class SqlEncoders<Session, Stmt> {
+interface SqlEncoders<Session, Stmt> {
   abstract val BooleanEncoder: SqlEncoder<Session, Stmt, Boolean>
   abstract val ByteEncoder: SqlEncoder<Session, Stmt, Byte>
   abstract val CharEncoder: SqlEncoder<Session, Stmt, Char>
@@ -110,7 +111,7 @@ abstract class SqlEncoders<Session, Stmt> {
   abstract val OffsetTimeEncoder: SqlEncoder<Session, Stmt, OffsetTime>
   abstract val OffsetDateTimeEncoder: SqlEncoder<Session, Stmt, OffsetDateTime>
 
-  open val encoders: Set<SqlEncoder<Session, Stmt, out Any>> by lazy {
+  fun computeEncoders(): Set<SqlEncoder<Session, Stmt, out Any>> =
     setOf(
       BooleanEncoder,
       ByteEncoder,
@@ -132,5 +133,7 @@ abstract class SqlEncoders<Session, Stmt> {
       OffsetTimeEncoder,
       OffsetDateTimeEncoder
     )
-  }
+
+  /** Implement this in the final class/object using computeEncoders() to have a stable list of them */
+  val encoders: Set<SqlEncoder<Session, Stmt, out Any>>
 }

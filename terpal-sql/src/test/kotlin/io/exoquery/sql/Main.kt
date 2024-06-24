@@ -51,6 +51,9 @@ suspend fun main() {
 
     val d = LocalDate.now()
     val par = Param(d)
+
+    val ser = serializer<LocalDate>()
+
     // TODO figure out the serializersModule part with this
     //  AND lastUpdate = ${par}"
 
@@ -59,6 +62,8 @@ suspend fun main() {
 
     @Serializable
     data class Person(val id: Int, val name: Name, val age: Int, @Contextual val lastUpdated: LocalDate)
+
+
 
     val batch =
       SqlBatch { p: Person -> "INSERT INTO person (id, firstName, lastName, age) VALUES (${Param(p.id)}, ${Param(p.name.firstName)}, ${Param(p.name.lastName)}, ${Param(p.age)}) RETURNING *" }.values(
