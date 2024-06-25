@@ -7,7 +7,10 @@ import io.exoquery.terpal.UnzipPartsParams
 import io.exoquery.terpal.Interpolator
 import io.exoquery.terpal.InterpolatorWithWrapper
 import io.exoquery.terpal.parseError
+import io.exoquery.terpal.plugin.findMethodOrFail
+import io.exoquery.terpal.plugin.isValidWrapFunction
 import io.exoquery.terpal.plugin.printing.dumpSimple
+import io.exoquery.terpal.plugin.safeName
 import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
 import io.exoquery.terpal.plugin.trees.isClassOf
 import io.exoquery.terpal.plugin.trees.isSubclassOf
@@ -21,8 +24,11 @@ import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrClassReferenceImpl
+import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
+import org.jetbrains.kotlin.ir.util.functions
+import org.jetbrains.kotlin.js.parser.parse
 
 class TransformInterepolatorInvoke(val ctx: BuilderContext) {
   private val compileLogger = ctx.logger
@@ -103,7 +109,11 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
 
         if (isInterpolatorWithWrapper) {
           { expr: IrExpression ->
-            val invokeCall = caller.callMethodTyped("wrap").invoke(expr.type).invoke(expr, builder.kClassReference(expr.type))
+            val invokeFunction =
+              caller.type.classOrFail.functions.find { it.isValidWrapFunction(interpolateType) && it.owner.valueParameters.first().type.isSubtypeOfClass(expr.type.classOrFail) }
+                ?: Messages.errorFailedToFindWrapper(ctx, caller, expr, interpolateType)
+
+            val invokeCall = caller.callMethodTyped(invokeFunction).invoke().invoke(expr)
             ctx.logger.warn("============ Calling Wrap ${expr.dumpKotlinLike()} with type: ${expr.type.dumpKotlinLike()} - ${invokeCall.dumpKotlinLike()}")
             invokeCall
           }

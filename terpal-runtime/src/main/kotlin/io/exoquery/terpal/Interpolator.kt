@@ -5,7 +5,14 @@ import kotlin.reflect.KClass
 fun interpolatorBody(): Nothing = throw IllegalStateException(Messages.PluginWasNotExecuted)
 
 interface InterpolatorWithWrapper<T, R>: Interpolator<T, R> {
-  fun <V> wrap(value: V, cls: KClass<*>): T
+  fun wrap(value: String?): T
+  fun wrap(value: Int?): T
+  fun wrap(value: Long?): T
+  fun wrap(value: Short?): T
+  fun wrap(value: Byte?): T
+  fun wrap(value: Float?): T
+  fun wrap(value: Double?): T
+  fun wrap(value: Boolean?): T
 }
 
 interface Interpolator<T, R> {

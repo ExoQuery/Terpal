@@ -1,6 +1,7 @@
 package io.exoquery.sql
 
 import io.exoquery.sql.jdbc.JdbcContext
+import io.exoquery.sql.jdbc.PostgresJdbcContext
 import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.jdbc.SqlBatch
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
@@ -47,7 +48,7 @@ suspend fun main() {
     //  println(p)
     //}
 
-    val ctx = JdbcContext(ds)
+    val ctx = PostgresJdbcContext(ds)
 
     val d = LocalDate.now()
     val par = Param(d)

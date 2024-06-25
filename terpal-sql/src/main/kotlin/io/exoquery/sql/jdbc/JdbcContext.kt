@@ -19,22 +19,14 @@ sealed interface ReturnAction {
   data object ReturnRecord: ReturnAction
 }
 
-sealed interface Dialect {
-  data object Postgres: Dialect
-  data object MySQL: Dialect
-  data object SQLite: Dialect
-  data object Oracle: Dialect
-  data object SQLServer: Dialect
-}
 
-
-class PostgresJdbcContext(override val database: DataSource): JdbcContext(database) {
+open class PostgresJdbcContext(override val database: DataSource): JdbcContext(database) {
   override val additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, out Any>>(UUIDObjectEncoding.UUIDObjectEncoder)
   override val additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, out Any>>(UUIDObjectEncoding.UUIDObjectDecoder)
 }
 
 
-open class JdbcContext(override val database: DataSource): Context<Connection, DataSource>() {
+abstract class JdbcContext(override val database: DataSource): Context<Connection, DataSource>() {
   class JdbcEncodersWithTimeLegacyDefault(val additionalEncoders: Set<SqlEncoder<Connection, PreparedStatement, out Any>>): JdbcEncodersWithTimeLegacy() {
     override fun computeEncoders() = super.computeEncoders() + additionalEncoders
     override val encoders = computeEncoders()
@@ -102,7 +94,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
   // Do it this way so we can avoid value casting in the runScoped function
   @Suppress("UNCHECKED_CAST")
   fun <T> Param<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit =
-    PreparedStatementElementEncoder(createEncodingContext(conn, ps), index+1, encoders).encodeSerializableValue(serializer, value)
+    PreparedStatementElementEncoder(createEncodingContext(conn, ps), index+1, encoders).encodeNullableSerializableValue(serializer, value)
 
   protected fun makeStmtReturning(sql: String, conn: Connection, returningBehavior: ReturnAction) =
     when(returningBehavior) {

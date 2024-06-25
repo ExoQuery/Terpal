@@ -47,15 +47,15 @@ class VisitTransformExpressions(
       // 1st that that runs here because printed stuff should not be transformed
       // (and this does not recursively transform stuff inside)
       transformPrint.matches(expression) -> {
-        transformPrint.transform(expression)
+        try { transformPrint.transform(expression) } catch (e: AbortTransform) { expression }
       }
 
       transformInterpolations.matches(expression) -> {
-        transformInterpolations.transform(expression, this)
+        try { transformInterpolations.transform(expression, this) } catch (e: AbortTransform) { expression }
       }
 
       transformInterpolationsBatching.matches(expression) -> {
-        transformInterpolationsBatching.transform(expression, this)
+          try { transformInterpolationsBatching.transform(expression, this) } catch (e: AbortTransform) { expression }
       }
 
       else ->

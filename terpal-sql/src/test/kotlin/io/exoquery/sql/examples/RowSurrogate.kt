@@ -1,6 +1,7 @@
 package io.exoquery.sql.examples
 
 import io.exoquery.sql.jdbc.JdbcContext
+import io.exoquery.sql.jdbc.PostgresJdbcContext
 import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.run
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
@@ -56,7 +57,7 @@ object RowSurrogate {
   suspend fun main() {
     val postgres = EmbeddedPostgres.start()
     postgres.run("CREATE TABLE customers (id SERIAL PRIMARY KEY, first_name TEXT, last_name TEXT, created_at DATE)")
-    val ctx = JdbcContext(postgres.postgresDatabase)
+    val ctx = PostgresJdbcContext(postgres.postgresDatabase)
     ctx.run(Sql("INSERT INTO customers (first_name, last_name, created_at) VALUES (${id("Alice")}, ${id("Smith")}, ${id(LocalDate.of(2021, 1, 1))})").action())
     val customers = ctx.run(Sql("SELECT * FROM customers").queryOf<Customer>(CustomerSurrogateSerializer))
     println(Json.encodeToString(ListSerializer(Customer.serializer()), customers))

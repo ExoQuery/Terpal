@@ -1,7 +1,6 @@
 package io.exoquery.terpal.plugin
 
 import io.decomat.fail.fail
-import io.exoquery.terpal.plugin.transform.BuilderContext
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocationWithRange
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
 import org.jetbrains.kotlin.ir.IrElement
@@ -11,6 +10,7 @@ import org.jetbrains.kotlin.ir.declarations.IrDeclarationWithName
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.isPropertyAccessor
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
+import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classOrNull
@@ -64,3 +64,6 @@ fun IrElement.location(fileEntry: IrFileEntry): CompilerMessageSourceLocation {
   )!!
   return messageWithRange
 }
+
+fun IrSimpleFunctionSymbol.isValidWrapFunction(interpolateOutputType: IrType) =
+  this.safeName == "wrap" && this.owner.valueParameters.size == 1 && this.owner.returnType == interpolateOutputType

@@ -2,6 +2,7 @@ package io.exoquery.sql
 
 import io.exoquery.sql.examples.id
 import io.exoquery.sql.jdbc.JdbcContext
+import io.exoquery.sql.jdbc.PostgresJdbcContext
 import io.exoquery.sql.jdbc.Sql
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FreeSpec
@@ -49,7 +50,7 @@ class TransactionSpec: FreeSpec({
     }
    */
 
-  val ctx by lazy { JdbcContext(GlobalEmbeddedPostgres.get().getPostgresDatabase())  }
+  val ctx by lazy { PostgresJdbcContext(GlobalEmbeddedPostgres.get().getPostgresDatabase())  }
 
   @Serializable
   data class Person(val id: Int, val firstName: String, val lastName: String, val age: Int)

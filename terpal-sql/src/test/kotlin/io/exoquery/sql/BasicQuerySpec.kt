@@ -1,6 +1,7 @@
 package io.exoquery.sql
 
 import io.exoquery.sql.jdbc.JdbcContext
+import io.exoquery.sql.jdbc.PostgresJdbcContext
 import io.exoquery.sql.jdbc.Sql
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
@@ -19,7 +20,7 @@ class BasicQuerySpec : FreeSpec({
     )
   }
 
-  val ctx by lazy { JdbcContext(GlobalEmbeddedPostgres.get().getPostgresDatabase())  }
+  val ctx by lazy { PostgresJdbcContext(GlobalEmbeddedPostgres.get().getPostgresDatabase())  }
 
   "SELECT person - simple" {
     @Serializable

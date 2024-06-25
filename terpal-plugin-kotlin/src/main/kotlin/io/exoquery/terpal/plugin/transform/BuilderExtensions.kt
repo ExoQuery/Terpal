@@ -1,7 +1,6 @@
 package io.exoquery.terpal.plugin.transform
 
 import io.exoquery.terpal.plugin.findMethodOrFail
-import io.exoquery.terpal.plugin.trees.simpleTypeArgs
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
@@ -10,18 +9,16 @@ import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.builders.irCall
-import org.jetbrains.kotlin.ir.builders.irGet
 import org.jetbrains.kotlin.ir.builders.irReturn
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionExpressionImpl
+import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.types.IrType
-import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.types.typeWith
-import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.name.SpecialNames
 
 class CallMethod(private val host: IrExpression, private val funName: String, private val tpe: IrType?) {
@@ -43,16 +40,25 @@ fun IrExpression.callMethod(name: String) = CallMethod(this, name, null)
 fun IrExpression.callMethodWithType(name: String, tpe: IrType) = CallMethod(this, name, tpe)
 
 
-class CallMethodTypedArgs(private val host: IrExpression, private val funName: String, private val tpe: IrType?) {
+class CallMethodTypedArgs(private val host: IrExpression, private val function: IrSimpleFunctionSymbol, private val tpe: IrType?) {
+  companion object {
+    operator fun invoke(host: IrExpression, functionName: String, tpe: IrType?): CallMethodTypedArgs =
+      CallMethodTypedArgs(host, host.type.findMethodOrFail(functionName), tpe)
+  }
+
   operator fun invoke(vararg types: IrType): CallMethodTyped =
-    CallMethodTyped(host, funName, types.toList(), tpe)
+    CallMethodTyped(host, function, types.toList(), tpe)
 }
 
-class CallMethodTyped(private val host: IrExpression, private val funName: String, private val types: List<IrType>, private val tpe: IrType?) {
+class CallMethodTyped(private val host: IrExpression, private val function: IrSimpleFunctionSymbol, private val types: List<IrType>, private val tpe: IrType?) {
+  companion object {
+    operator fun invoke(host: IrExpression, functionName: String, types: List<IrType>, tpe: IrType?): CallMethodTyped =
+      CallMethodTyped(host, host.type.findMethodOrFail(functionName), types, tpe)
+  }
+
   context(BuilderContext) operator fun invoke(vararg args: IrExpression): IrExpression {
-    val lambdaInvoke = host.type.findMethodOrFail(funName)
     return with (builder) {
-      val invocation = if (tpe != null) irCall(lambdaInvoke, tpe) else irCall(lambdaInvoke)
+      val invocation = if (tpe != null) irCall(function, tpe) else irCall(function)
       invocation.apply {
         dispatchReceiver = host
         for ((index, tpe) in types.withIndex()) {
@@ -66,7 +72,9 @@ class CallMethodTyped(private val host: IrExpression, private val funName: Strin
   }
 }
 
+
 fun IrExpression.callMethodTyped(name: String): CallMethodTypedArgs = CallMethodTypedArgs(this, name, null)
+fun IrExpression.callMethodTyped(function: IrSimpleFunctionSymbol): CallMethodTypedArgs = CallMethodTypedArgs(this, function, null)
 fun IrExpression.callMethodTypedWithType(name: String, tpe: IrType): CallMethodTypedArgs = CallMethodTypedArgs(this, name, tpe)
 
 context (BuilderContext) fun createLambda0(functionBody: IrExpression, functionParent: IrDeclarationParent): IrFunctionExpression =

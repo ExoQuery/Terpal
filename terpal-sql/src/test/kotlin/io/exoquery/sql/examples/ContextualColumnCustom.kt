@@ -1,5 +1,6 @@
 package io.exoquery.sql.examples
 
+import io.exoquery.sql.Param
 import io.exoquery.sql.jdbc.*
 import io.exoquery.sql.jdbc.JdbcDecodersWithTimeLegacy.Companion.ZonedDateTimeDecoder
 import io.exoquery.sql.jdbc.JdbcEncodersWithTimeLegacy.Companion.ZonedDateTimeEncoder
@@ -55,7 +56,7 @@ object ContextualColumnCustom {
       override val additionalEncoders = super.additionalEncoders + ZonedDateTimeEncoder.contramap { md: MyDateTime -> ZonedDateTime.of(md.year, md.month, md.day, 0, 0, 0, 0, md.timeZone.toZoneId()) }
     }
 
-    ctx.run(Sql("INSERT INTO customers (first_name, last_name, created_at) VALUES (${id("Alice")}, ${id("Smith")}, ${id(MyDateTime(2022, 1, 2, TimeZone.getTimeZone(ZoneOffset.UTC)))})").action())
+    ctx.run(Sql("INSERT INTO customers (first_name, last_name, created_at) VALUES (${id("Alice")}, ${id("Smith")}, ${Param.ctx(MyDateTime(2022, 1, 2, TimeZone.getTimeZone(ZoneOffset.UTC)))})").action())
     val customers = ctx.run(Sql("SELECT * FROM customers").queryOf<Customer>())
     val module = SerializersModule { contextual(MyDateTime::class, MyDateTimeAsStringSerialzier) }
     val json = Json { serializersModule = module }

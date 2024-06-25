@@ -4,6 +4,7 @@ import io.exoquery.sql.jdbc.JdbcDecodersWithTime
 import io.exoquery.sql.jdbc.JdbcDecodingContext
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.CompositeDecoder
 import kotlinx.serialization.encoding.Decoder
@@ -76,27 +77,36 @@ abstract class RowDecoder<Session, Row>(val ctx: DecodingContext<Session, Row>, 
     return curr
   }
 
+  fun nextRowIndex(note: String = ""): Int {
+    val curr = rowIndex
+    println("---- Get Row ${columnInfos[rowIndex-1].name} - (Preview:${decoders.preview(rowIndex, ctx.row)})" + (if (note != "") " - ${note}" else ""))
+    rowIndex += 1
+    return curr
+  }
+
   override val serializersModule: SerializersModule = EmptySerializersModule()
 
-  override fun decodeBooleanElement(descriptor: SerialDescriptor, index: Int): Boolean = decoders.BooleanDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Boolean Element ${index} in ${descriptor} cannot be null")
-  override fun decodeByteElement(descriptor: SerialDescriptor, index: Int): Byte = decoders.ByteDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Byte Element ${index} in ${descriptor} cannot be null")
-  override fun decodeCharElement(descriptor: SerialDescriptor, index: Int): Char = decoders.CharDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Char Element ${index} in ${descriptor} cannot be null")
-  override fun decodeDoubleElement(descriptor: SerialDescriptor, index: Int): Double = decoders.DoubleDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Double Element ${index} in ${descriptor} cannot be null")
-  override fun decodeFloatElement(descriptor: SerialDescriptor, index: Int): Float = decoders.FloatDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Float Element ${index} in ${descriptor} cannot be null")
-  override fun decodeIntElement(descriptor: SerialDescriptor, index: Int): Int = decoders.IntDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Int Element ${index} in ${descriptor} cannot be null")
-  override fun decodeLongElement(descriptor: SerialDescriptor, index: Int): Long = decoders.LongDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Long Element ${index} in ${descriptor} cannot be null")
-  override fun decodeShortElement(descriptor: SerialDescriptor, index: Int): Short = decoders.ShortDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("Short Element ${index} in ${descriptor} cannot be null")
-  override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String = decoders.StringDecoder.decode(ctx, nextRowIndex(descriptor, index)) ?: error("String Element ${index} in ${descriptor} cannot be null")
+  override fun decodeBooleanElement(descriptor: SerialDescriptor, index: Int): Boolean = decoders.BooleanDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeByteElement(descriptor: SerialDescriptor, index: Int): Byte = decoders.ByteDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeCharElement(descriptor: SerialDescriptor, index: Int): Char = decoders.CharDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeDoubleElement(descriptor: SerialDescriptor, index: Int): Double = decoders.DoubleDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeFloatElement(descriptor: SerialDescriptor, index: Int): Float = decoders.FloatDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeIntElement(descriptor: SerialDescriptor, index: Int): Int = decoders.IntDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeLongElement(descriptor: SerialDescriptor, index: Int): Long = decoders.LongDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeShortElement(descriptor: SerialDescriptor, index: Int): Short = decoders.ShortDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String = decoders.StringDecoder.decode(ctx, nextRowIndex(descriptor, index))
 
-  override fun decodeBoolean(): Boolean = decoders.BooleanDecoder.decode(ctx, 1) ?: error("Boolean Element cannot be null")
-  override fun decodeByte(): Byte = decoders.ByteDecoder.decode(ctx, 1) ?: error("Byte Element cannot be null")
-  override fun decodeChar(): Char = decoders.CharDecoder.decode(ctx, 1) ?: error("Char Element cannot be null")
-  override fun decodeDouble(): Double = decoders.DoubleDecoder.decode(ctx, 1) ?: error("Double Element cannot be null")
-  override fun decodeFloat(): Float = decoders.FloatDecoder.decode(ctx, 1) ?: error("Float Element cannot be null")
-  override fun decodeShort(): Short = decoders.ShortDecoder.decode(ctx, 1) ?: error("Short Element cannot be null")
-  override fun decodeString(): String = decoders.StringDecoder.decode(ctx, 1) ?: error("String Element cannot be null")
-  override fun decodeInt(): Int = decoders.IntDecoder.decode(ctx, 1) ?: error("Int Element cannot be null")
-  override fun decodeLong(): Long = decoders.LongDecoder.decode(ctx, 1) ?: error("Long Element cannot be null")
+  // These are primarily used when there is some kind of encoder delegation used e.g. if it is a new-type or wrapped-type e.g. DateToLongSerializer
+  // they will be invoked from `deserializer.deserialize(this)` in decodeNullableSerializableElement in the last clause.
+  override fun decodeBoolean(): Boolean = decoders.BooleanDecoder.decode(ctx, nextRowIndex())
+  override fun decodeByte(): Byte = decoders.ByteDecoder.decode(ctx, nextRowIndex())
+  override fun decodeChar(): Char = decoders.CharDecoder.decode(ctx, nextRowIndex())
+  override fun decodeDouble(): Double = decoders.DoubleDecoder.decode(ctx, nextRowIndex())
+  override fun decodeFloat(): Float = decoders.FloatDecoder.decode(ctx, nextRowIndex())
+  override fun decodeShort(): Short = decoders.ShortDecoder.decode(ctx, nextRowIndex())
+  override fun decodeString(): String = decoders.StringDecoder.decode(ctx, nextRowIndex())
+  override fun decodeInt(): Int = decoders.IntDecoder.decode(ctx, nextRowIndex())
+  override fun decodeLong(): Long = decoders.LongDecoder.decode(ctx, nextRowIndex())
 
 
   @ExperimentalSerializationApi
@@ -129,28 +139,22 @@ abstract class RowDecoder<Session, Row>(val ctx: DecodingContext<Session, Row>, 
       StructureKind.LIST -> {
         val decoder =
           when {
+            // When its contextual, get the decoder for that base on the capturedKClass
             childDesc.capturedKClass != null ->
               decoders.decoders.find { it.type == childDesc.capturedKClass }
-            childDesc.elementDescriptors.toList().size == 1 && childDesc.elementDescriptors.first().kind is PrimitiveKind.BYTE ->
-              decoders.decoders.find { it.type == ByteArray::class }
-            else -> null
-          }?.asNullableIfSpecified()
+                ?: throw IllegalArgumentException("Could not find a decoder for the (contextual) structural list type ${childDesc.capturedKClass} with the descriptor: ${childDesc} because not decoder for ${childDesc.capturedKClass} was found")
 
+            childDesc.elementDescriptors.toList().size == 1 && childDesc.elementDescriptors.first().kind is PrimitiveKind.BYTE ->
+              // When its not contextual there wont be a captured class, in that case get the first type-parameter from the List descriptor and decode some known types based on that
+              decoders.decoders.find { it.type == ByteArray::class }
+                ?: throw IllegalArgumentException("Could not find a byte array decoder in the database-context for the list type ${childDesc.capturedKClass}")
+
+            else ->
+              throw IllegalArgumentException("Could not find a decoder for the structural list type ${childDesc.capturedKClass} with the descriptor: ${childDesc}. It had an invalid form.")
+          }.asNullableIfSpecified()
 
         // if there is a decoder for the specific array-type use that, otherwise
-        if (decoder != null) {
-          @Suppress("UNCHECKED_CAST")
-          run { decodeWithDecoder(decoder as SqlDecoder<Session, Row, T>) }
-        } else {
-
-          // val elementDescriptor = descriptor.elementDescriptors.first()
-          // Need to use this to summon the right mapper
-          // elementDescriptor.capturedKClass
-
-          // Can't use element deserializer because it acts on a ResultSet. Need to implement mappers
-          //rs.getArray(index.nx) as T
-          TODO("Generic collections not implemented yet (found the class: ${childDesc.capturedKClass})")
-        }
+        run { decodeWithDecoder(decoder as SqlDecoder<Session, Row, T>) }
       }
       StructureKind.CLASS -> {
         // Only if all the columns are null (and the returned element can be null) can we assume that the decoded element should be null
@@ -184,19 +188,25 @@ abstract class RowDecoder<Session, Row>(val ctx: DecodingContext<Session, Row>, 
               nextRowIndex(descriptor, index, "Skipping Null Value")
               null
             } else {
+              val descKind = childDesc.kind
+              val serialName = childDesc.serialName
               // just doing deserializer.deserialize(this) at this point will just call the non-element decoders e.g. decodeString, decodeInt, etc... we
-              // want to call the decoders that have element information in them (e.g. decodeByteElement, decodeShortElement, etc...) so we need to do it manually
-              when (childDesc.kind) {
-                is PrimitiveKind.BYTE -> decodeByteElement(descriptor, index)
-                is PrimitiveKind.SHORT -> decodeShortElement(descriptor, index)
-                is PrimitiveKind.INT -> decodeIntElement(descriptor, index)
-                is PrimitiveKind.LONG -> decodeLongElement(descriptor, index)
-                is PrimitiveKind.FLOAT -> decodeFloatElement(descriptor, index)
-                is PrimitiveKind.DOUBLE -> decodeDoubleElement(descriptor, index)
-                is PrimitiveKind.BOOLEAN -> decodeBooleanElement(descriptor, index)
-                is PrimitiveKind.CHAR -> decodeCharElement(descriptor, index)
-                is PrimitiveKind.STRING -> decodeStringElement(descriptor, index)
-                else -> throw IllegalArgumentException("Unsupported primitive kind: ${childDesc.kind}")
+              // want to call the decoders that have element information in them (e.g. decodeByteElement, decodeShortElement, etc...) if this is possible
+              when {
+                 descKind is PrimitiveKind.BYTE  && serialName == "kotlin.Byte" -> decodeByteElement(descriptor, index)
+                 descKind is PrimitiveKind.SHORT  && serialName == "kotlin.Short" -> decodeShortElement(descriptor, index)
+                 descKind is PrimitiveKind.INT  && serialName == "kotlin.Int" -> decodeIntElement(descriptor, index)
+                 descKind is PrimitiveKind.LONG  && serialName == "kotlin.Long" -> decodeLongElement(descriptor, index)
+                 descKind is PrimitiveKind.FLOAT  && serialName == "kotlin.Float" -> decodeFloatElement(descriptor, index)
+                 descKind is PrimitiveKind.DOUBLE  && serialName == "kotlin.Double" -> decodeDoubleElement(descriptor, index)
+                 descKind is PrimitiveKind.BOOLEAN  && serialName == "kotlin.Boolean"  -> decodeBooleanElement(descriptor, index)
+                 descKind is PrimitiveKind.CHAR && serialName == "kotlin.Char" -> decodeCharElement(descriptor, index)
+                 descKind is PrimitiveKind.STRING && serialName == "kotlin.String" -> decodeStringElement(descriptor, index)
+                else -> {
+                  //if it is a primitive type wrapped into a non-primitive type (e.g. DateToLongSerializer) then use the encoder defined in the serialization. Note that
+                  //also known as a new-type (e.g. NewTypeInt(value: Int) then this serializer will be the wrapped one
+                  deserializer.deserialize(this)
+                }
               } as T?
             }
           else ->

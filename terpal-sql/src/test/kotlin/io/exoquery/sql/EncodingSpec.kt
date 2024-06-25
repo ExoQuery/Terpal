@@ -4,14 +4,19 @@ import io.exoquery.sql.jdbc.JdbcContext
 import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.EncodingSpecData.insert
 import io.exoquery.sql.jdbc.JdbcEncodersWithTimeLegacy.Companion.StringEncoder
+import io.exoquery.sql.jdbc.PostgresJdbcContext
 import io.kotest.core.spec.style.FreeSpec
-import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.bigdecimal.shouldBeEqualIgnoringScale
 import io.kotest.matchers.equals.shouldBeEqual
-import io.kotest.matchers.shouldBe
 import kotlinx.serialization.Contextual
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import java.math.BigDecimal
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -52,8 +57,14 @@ import kotlin.test.assertEquals
  */
 
 object EncodingSpecData {
-  @Serializable
-  data class EncodingTestType(val value: String)
+  object TestTypeSerialzier: KSerializer<SerializeableTestType> {
+    override val descriptor = PrimitiveSerialDescriptor("SerializeableTestType", PrimitiveKind.STRING)
+    override fun serialize(encoder: Encoder, value: SerializeableTestType) = encoder.encodeString(value.value)
+    override fun deserialize(decoder: Decoder): SerializeableTestType = SerializeableTestType(decoder.decodeString())
+  }
+
+  @Serializable(with = TestTypeSerialzier::class)
+  data class SerializeableTestType(val value: String)
 
   @Serializable
   data class EncodingTestEntity(
@@ -68,7 +79,7 @@ object EncodingSpecData {
     val v9: Double,
     val v10: ByteArray,
     @Contextual val v11: java.util.Date,
-    val v12: EncodingTestType,
+    val v12: SerializeableTestType,
     @Contextual val v13: java.time.LocalDate,
     @Contextual val v14: java.util.UUID,
     val o1: String?,
@@ -82,7 +93,7 @@ object EncodingSpecData {
     val o9: Double?,
     val o10: ByteArray?,
     @Contextual val o11: java.util.Date?,
-    val o12: EncodingTestType?,
+    val o12: SerializeableTestType?,
     @Contextual val o13: java.time.LocalDate?,
     @Contextual val o14: java.util.UUID?
   )
@@ -179,7 +190,7 @@ object EncodingSpecData {
       42.0,
       byteArrayOf(1.toByte(), 2.toByte()),
       java.sql.Date.from(LocalDateTime.of(2013, 11, 23, 0, 0, 0, 0).toInstant(ZoneOffset.UTC)),
-      EncodingTestType("s"),
+      SerializeableTestType("s"),
       LocalDate.of(2013, 11, 23),
       java.util.UUID.randomUUID(),
       "s",
@@ -193,7 +204,7 @@ object EncodingSpecData {
       42.0,
       byteArrayOf(1.toByte(), 2.toByte()),
       java.sql.Date.from(LocalDateTime.of(2013, 11, 23, 0, 0, 0, 0).toInstant(ZoneOffset.UTC)),
-      EncodingTestType("s"),
+      SerializeableTestType("s"),
       LocalDate.of(2013, 11, 23),
       java.util.UUID.randomUUID()
     )
@@ -211,7 +222,7 @@ object EncodingSpecData {
       0.0,
       byteArrayOf(),
       java.sql.Date(0),
-      EncodingTestType(""),
+      SerializeableTestType(""),
       LocalDate.ofEpochDay(0),
       java.util.UUID(0, 0),
       null,
@@ -230,8 +241,13 @@ object EncodingSpecData {
       null
     )
 
-  fun insert(e: EncodingTestEntity) =
-    Sql("INSERT INTO EncodingTestEntity VALUES (${e.v1}, ${e.v2}, ${e.v3}, ${e.v4}, ${e.v5}, ${e.v6}, ${e.v7}, ${e.v8}, ${e.v9}, ${e.v10}, ${e.v11}, ${e.v12}, ${e.v13}, ${e.v14}, ${e.o1}, ${e.o2}, ${e.o3}, ${e.o4}, ${e.o5}, ${e.o6}, ${e.o7}, ${e.o8}, ${e.o9}, ${e.o10}, ${e.o11}, ${e.o12}, ${e.o13}, ${e.o14})").action()
+  fun insert(e: EncodingTestEntity): Action {
+    val v12 = Param.withSer(e.v12, SerializeableTestType.serializer())
+    val v14 = Param.ctx(e.v14)
+    val o12 = Param.withSer(e.o12, SerializeableTestType.serializer())
+    val o14 = Param.ctx(e.o14)
+    return Sql("INSERT INTO EncodingTestEntity VALUES (${e.v1}, ${e.v2}, ${e.v3}, ${e.v4}, ${e.v5}, ${e.v6}, ${e.v7}, ${e.v8}, ${e.v9}, ${e.v10}, ${e.v11}, ${v12}, ${e.v13}, ${v14}, ${e.o1}, ${e.o2}, ${e.o3}, ${e.o4}, ${e.o5}, ${e.o6}, ${e.o7}, ${e.o8}, ${e.o9}, ${e.o10}, ${e.o11}, ${o12}, ${e.o13}, ${o14})").action()
+  }
 
   fun verify(e1: EncodingTestEntity, e2: EncodingTestEntity) {
     e1.v1 shouldBeEqual e2.v1
@@ -283,8 +299,8 @@ object EncodingSpecData {
 
 class EncodingSpec: FreeSpec({
   val ctx by lazy {
-    object: JdbcContext(GlobalEmbeddedPostgres.get().getPostgresDatabase()) {
-      override val additionalEncoders = super.additionalEncoders + StringEncoder.contramap { ett: EncodingSpecData.EncodingTestType -> ett.value }
+    object: PostgresJdbcContext(GlobalEmbeddedPostgres.get().getPostgresDatabase()) {
+      override val additionalEncoders = super.additionalEncoders + StringEncoder.contramap { ett: EncodingSpecData.SerializeableTestType -> ett.value }
     }
   }
 
