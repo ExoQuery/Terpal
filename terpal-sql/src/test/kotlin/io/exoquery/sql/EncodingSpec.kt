@@ -1,9 +1,9 @@
 package io.exoquery.sql
 
 import io.exoquery.sql.jdbc.JdbcContext
-import io.exoquery.sql.jdbc.JdbcEncodersWithTime.Companion.StringEncoder
 import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.EncodingSpecData.insert
+import io.exoquery.sql.jdbc.JdbcEncodersWithTimeLegacy.Companion.StringEncoder
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.bigdecimal.shouldBeEqualIgnoringScale
@@ -283,8 +283,8 @@ object EncodingSpecData {
 
 class EncodingSpec: FreeSpec({
   val ctx by lazy {
-    JdbcContext(GlobalEmbeddedPostgres.get().getPostgresDatabase()) {
-      additionalEncoders = additionalEncoders + StringEncoder.contramap { ett: EncodingSpecData.EncodingTestType -> ett.value }
+    object: JdbcContext(GlobalEmbeddedPostgres.get().getPostgresDatabase()) {
+      override val additionalEncoders = super.additionalEncoders + StringEncoder.contramap { ett: EncodingSpecData.EncodingTestType -> ett.value }
     }
   }
 

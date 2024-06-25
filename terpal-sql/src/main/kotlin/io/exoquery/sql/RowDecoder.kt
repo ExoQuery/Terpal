@@ -1,6 +1,7 @@
 package io.exoquery.sql
 
 import io.exoquery.sql.jdbc.JdbcDecodersWithTime
+import io.exoquery.sql.jdbc.JdbcDecodingContext
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.descriptors.*
@@ -39,30 +40,29 @@ fun SerialDescriptor.verifyColumns(columns: List<ColumnInfo>): Unit {
 }
 
 class JdbcRowDecoder(
-  sess: Connection,
-  rs: ResultSet,
+  ctx: JdbcDecodingContext,
   initialRowIndex: Int,
   decoders: SqlDecoders<Connection, ResultSet>,
   columnInfos: List<ColumnInfo>,
   endCallback: (Int) -> Unit
-): RowDecoder<Connection, ResultSet>(sess, rs, initialRowIndex, decoders, columnInfos, endCallback) {
+): RowDecoder<Connection, ResultSet>(ctx, initialRowIndex, decoders, columnInfos, endCallback) {
 
   companion object {
-    operator fun invoke(sess: Connection, rs: ResultSet, decoders: SqlDecoders<Connection, ResultSet>, descriptor: SerialDescriptor): JdbcRowDecoder {
+    operator fun invoke(ctx: JdbcDecodingContext, decoders: SqlDecoders<Connection, ResultSet>, descriptor: SerialDescriptor): JdbcRowDecoder {
       fun metaColumnData(meta: ResultSetMetaData) =
         (1..meta.columnCount).map { ColumnInfo(meta.getColumnName(it), meta.getColumnTypeName(it)) }
-      val metaColumns = metaColumnData(rs.metaData)
+      val metaColumns = metaColumnData(ctx.row.metaData)
       descriptor.verifyColumns(metaColumns)
-      return JdbcRowDecoder(sess, rs, 1, decoders, metaColumns, {})
+      return JdbcRowDecoder(ctx, 1, decoders, metaColumns, {})
     }
   }
 
-  override fun cloneSelf(rs: ResultSet, initialRowIndex: Int, endCallback: (Int) -> Unit): RowDecoder<Connection, ResultSet> =
-    JdbcRowDecoder(sess, rs, initialRowIndex, decoders, columnInfos, endCallback)
+  override fun cloneSelf(ctx: JdbcDecodingContext, initialRowIndex: Int, endCallback: (Int) -> Unit): RowDecoder<Connection, ResultSet> =
+    JdbcRowDecoder(ctx, initialRowIndex, decoders, columnInfos, endCallback)
 }
 
 @OptIn(ExperimentalSerializationApi::class)
-abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val initialRowIndex: Int, val decoders: SqlDecoders<Session, Row>, val columnInfos: List<ColumnInfo>, val endCallback: (Int) -> Unit): Decoder, CompositeDecoder {
+abstract class RowDecoder<Session, Row>(val ctx: DecodingContext<Session, Row>, val initialRowIndex: Int, val decoders: SqlDecoders<Session, Row>, val columnInfos: List<ColumnInfo>, val endCallback: (Int) -> Unit): Decoder, CompositeDecoder {
 
   abstract fun cloneSelf(ctx: DecodingContext<Session, Row>, initialRowIndex: Int, endCallback: (Int) -> Unit): RowDecoder<Session, Row>
 
@@ -71,7 +71,7 @@ abstract class RowDecoder<Session, Row>(val sess: Session, val rs: Row, val init
 
   fun nextRowIndex(desc: SerialDescriptor, descIndex: Int, note: String = ""): Int {
     val curr = rowIndex
-    println("---- Get Row ${columnInfos[rowIndex-1].name}, Index: ${curr} - (${descIndex}) ${desc.getElementDescriptor(descIndex)} - (Preview:${decoders.preview(rowIndex, rs)})" + (if (note != "") " - ${note}" else ""))
+    println("---- Get Row ${columnInfos[rowIndex-1].name}, Index: ${curr} - (${descIndex}) ${desc.getElementDescriptor(descIndex)} - (Preview:${decoders.preview(rowIndex, ctx.row)})" + (if (note != "") " - ${note}" else ""))
     rowIndex += 1
     return curr
   }

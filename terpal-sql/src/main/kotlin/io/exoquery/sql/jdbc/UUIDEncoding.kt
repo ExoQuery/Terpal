@@ -9,14 +9,14 @@ import java.util.*
 
 object UUIDStringEncoding {
   val UUIDStringEncoder: SqlEncoder<Connection, PreparedStatement, UUID> =
-    JdbcEncoder.fromFunction(java.sql.Types.VARCHAR) { _, ps, v, i -> ps.setString(i, v.toString()) }
+    JdbcEncoderAny.fromFunction(java.sql.Types.VARCHAR) { ctx, v, i -> ctx.stmt.setString(i, v.toString()) }
   val UUIDStringDecoder: SqlDecoder<Connection, ResultSet, UUID> =
-    JdbcDecoder.fromFunction { _, rs, i -> UUID.fromString(rs.getString(i)) }
+    JdbcDecoderAny.fromFunction { ctx, i -> UUID.fromString(ctx.row.getString(i)) }
 }
 
 object UUIDObjectEncoding {
   val UUIDObjectEncoder: SqlEncoder<Connection, PreparedStatement, UUID> =
-    JdbcEncoder.fromFunction(java.sql.Types.OTHER) { _, ps, v, i -> ps.setObject(i, v) }
+    JdbcEncoderAny.fromFunction(java.sql.Types.OTHER) { ctx, v, i -> ctx.stmt.setObject(i, v) }
   val UUIDObjectDecoder: SqlDecoder<Connection, ResultSet, UUID> =
-    JdbcDecoder.fromFunction { _, rs, i -> rs.getObject(i, UUID::class.java) }
+    JdbcDecoderAny.fromFunction { ctx, i -> ctx.row.getObject(i, UUID::class.java) }
 }

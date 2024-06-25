@@ -52,8 +52,6 @@ suspend fun main() {
     val d = LocalDate.now()
     val par = Param(d)
 
-    val ser = serializer<LocalDate>()
-
     // TODO figure out the serializersModule part with this
     //  AND lastUpdate = ${par}"
 
@@ -75,7 +73,7 @@ suspend fun main() {
     println("-------------- Inserted: ${ret}")
 
     val param = Param("Joe") //
-    val query = Sql("SELECT id, firstName, lastName, age, lastUpdated FROM person ${Sql("WHERE firstName = ${param}")} AND lastUpdated > ${d}").queryOf<Person>()
+    val query = Sql("SELECT id, firstName, lastName, age, lastUpdated FROM person ${Sql("WHERE firstName = ${param}")} AND lastUpdated > ${Param(d)}").queryOf<Person>()
 
 
 

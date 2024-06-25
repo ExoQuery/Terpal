@@ -23,7 +23,7 @@ abstract class SqlDecoder<Session, Row, T> {
 abstract class SqlEncoder<Session, Statement, T> {
   abstract val type: KClass<*>
   abstract fun encode(ctx: EncodingContext<Session, Statement>, value: T, index: Int): Unit
-  abstract fun asNullable(): SqlEncoder<Connection, PreparedStatement, T?>
+  abstract fun asNullable(): SqlEncoder<Session, Statement, T?>
 
   // Id should only be based on the type so that SqlDecoders composition works
   val id by lazy { Id(type) }

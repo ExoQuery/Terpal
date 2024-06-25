@@ -4,7 +4,6 @@ import io.exoquery.sql.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.encoding.Encoder
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -36,19 +35,19 @@ class PostgresJdbcContext(override val database: DataSource): JdbcContext(databa
 
 
 open class JdbcContext(override val database: DataSource): Context<Connection, DataSource>() {
-  class JdbcEncodersWithTimeLegacyDefault(val additionalEncoders: Set<SqlEncoder<Connection, PreparedStatement, out Any>>): JdbcEncodersWithTimeLegacy {
+  class JdbcEncodersWithTimeLegacyDefault(val additionalEncoders: Set<SqlEncoder<Connection, PreparedStatement, out Any>>): JdbcEncodersWithTimeLegacy() {
     override fun computeEncoders() = super.computeEncoders() + additionalEncoders
     override val encoders = computeEncoders()
   }
-  class JdbcEncodersWithTimeDefault(val additionalEncoders: Set<SqlEncoder<Connection, PreparedStatement, out Any>>): JdbcEncodersWithTime {
+  class JdbcEncodersWithTimeDefault(val additionalEncoders: Set<SqlEncoder<Connection, PreparedStatement, out Any>>): JdbcEncodersWithTime() {
     override fun computeEncoders() = super.computeEncoders() + additionalEncoders
     override val encoders = computeEncoders()
   }
-  class JdbcDecodersWithTimeLegacyDefault(val additionalDecoders: Set<SqlDecoder<Connection, ResultSet, out Any>>): JdbcDecodersWithTimeLegacy {
+  class JdbcDecodersWithTimeLegacyDefault(val additionalDecoders: Set<SqlDecoder<Connection, ResultSet, out Any>>): JdbcDecodersWithTimeLegacy() {
     override fun computeDecoders() = super.computeDecoders() + additionalDecoders
     override val decoders = computeDecoders()
   }
-  class JdbcDecodersWithTimeDefault(val additionalDecoders: Set<SqlDecoder<Connection, ResultSet, out Any>>): JdbcDecodersWithTime {
+  class JdbcDecodersWithTimeDefault(val additionalDecoders: Set<SqlDecoder<Connection, ResultSet, out Any>>): JdbcDecodersWithTime() {
     override fun computeDecoders() = super.computeDecoders() + additionalDecoders
     override val decoders = computeDecoders()
   }
@@ -65,7 +64,9 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
   override fun newSession(): Connection = database.connection
   override fun closeSession(session: Connection): Unit = session.close()
   override fun isClosedSession(session: Connection): Boolean = session.isClosed
-  fun createEncodingContext(session: Connection, stmt: PreparedStatement) = EncodingContext(session, stmt, timezone)
+
+  protected fun createEncodingContext(session: Connection, stmt: PreparedStatement) = EncodingContext(session, stmt, timezone)
+  protected fun createDecodingContext(session: Connection, row: ResultSet) = DecodingContext(session, row, timezone)
 
   private val JdbcCoroutineContext = object: CoroutineContext.Key<CoroutineSession<Connection>> {}
   override val sessionKey: CoroutineContext.Key<CoroutineSession<Connection>> = JdbcCoroutineContext
@@ -101,9 +102,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
   // Do it this way so we can avoid value casting in the runScoped function
   @Suppress("UNCHECKED_CAST")
   fun <T> Param<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit =
-    ((encoders.encoders.find { it.type == this.cls } ?: error("No encoder found for ${this.cls}")) as SqlEncoder<Connection, PreparedStatement, T>)
-      .asNullable()
-      .encode(conn, ps, this.value, index+1)
+    PreparedStatementElementEncoder(createEncodingContext(conn, ps), index+1, encoders).encodeSerializableValue(serializer, value)
 
   protected fun makeStmtReturning(sql: String, conn: Connection, returningBehavior: ReturnAction) =
     when(returningBehavior) {
@@ -186,7 +185,7 @@ open class JdbcContext(override val database: DataSource): Context<Connection, D
 
   protected fun <T> KSerializer<T>.makeExtractor() =
     { conn: Connection, rs: ResultSet ->
-      val decoder = JdbcRowDecoder(conn, rs, decoders, descriptor)
+      val decoder = JdbcRowDecoder(createDecodingContext(conn, rs), decoders, descriptor)
       deserialize(decoder)
     }
 
