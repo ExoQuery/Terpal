@@ -294,7 +294,7 @@ object EncodingSpecData {
 }
 
 class EncodingSpec: FreeSpec({
-  val ds = installPostgres()
+  val ds = KotestProjectConfig.postgres
   val ctx by lazy {
     object: PostgresJdbcContext(ds) {
       override val additionalEncoders = super.additionalEncoders + StringEncoder.contramap { ett: EncodingSpecData.SerializeableTestType -> ett.value }
@@ -302,9 +302,7 @@ class EncodingSpec: FreeSpec({
   }
 
   beforeEach {
-    ds.getConnection().use { conn -> conn.createStatement().use { stmt ->
-      stmt.execute("DELETE FROM EncodingTestEntity")
-    } }
+    ds.run("DELETE FROM EncodingTestEntity")
   }
 
   "encodes and decodes nullables - not nulls" {
@@ -318,5 +316,6 @@ class EncodingSpec: FreeSpec({
     val res = ctx.run(Sql("SELECT * FROM EncodingTestEntity").queryOf<EncodingSpecData.EncodingTestEntity>())
     EncodingSpecData.verify(res.first(), EncodingSpecData.nullEntity)
   }
-})
 
+
+})

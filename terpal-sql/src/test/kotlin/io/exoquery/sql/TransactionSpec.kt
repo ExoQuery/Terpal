@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
 
 class TransactionSpec: FreeSpec({
   beforeEach {
-    GlobalEmbeddedPostgres.run(
+    QuickPostgres.run(
       """
       DELETE FROM person;
       DELETE FROM address;
@@ -48,7 +48,7 @@ class TransactionSpec: FreeSpec({
     }
    */
 
-  val ctx by lazy { PostgresJdbcContext(GlobalEmbeddedPostgres.get().getPostgresDatabase())  }
+  val ctx by lazy { PostgresJdbcContext(QuickPostgres.get().getPostgresDatabase())  }
 
   @Serializable
   data class Person(val id: Int, val firstName: String, val lastName: String, val age: Int)

@@ -8,8 +8,12 @@ import io.kotest.matchers.shouldBe
 import kotlinx.serialization.Serializable
 
 class BasicQuerySpec : FreeSpec({
+
+  val ds = KotestProjectConfig.postgres
+  val ctx by lazy { PostgresJdbcContext(ds)  }
+
   beforeSpec {
-    GlobalEmbeddedPostgres.run(
+    ds.run(
       """
       DELETE FROM person;
       DELETE FROM address;
@@ -19,8 +23,6 @@ class BasicQuerySpec : FreeSpec({
       """
     )
   }
-
-  val ctx by lazy { PostgresJdbcContext(GlobalEmbeddedPostgres.get().getPostgresDatabase())  }
 
   "SELECT person - simple" {
     @Serializable
