@@ -4,9 +4,7 @@ import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.EncodingSpecData.insert
 import io.exoquery.sql.jdbc.JdbcEncodersWithTimeLegacy.Companion.StringEncoder
 import io.exoquery.sql.jdbc.PostgresJdbcContext
-import io.kotest.core.extensions.install
 import io.kotest.core.spec.style.FreeSpec
-import io.kotest.extensions.testcontainers.JdbcDatabaseContainerExtension
 import io.kotest.matchers.bigdecimal.shouldBeEqualIgnoringScale
 import io.kotest.matchers.equals.shouldBeEqual
 import kotlinx.serialization.Contextual
@@ -16,12 +14,10 @@ import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import org.testcontainers.containers.PostgreSQLContainer
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import javax.sql.DataSource
 import kotlin.test.assertEquals
 
 /*
@@ -294,7 +290,7 @@ object EncodingSpecData {
 }
 
 class EncodingSpec: FreeSpec({
-  val ds = KotestProjectConfig.postgres
+  val ds = KotestProjectConfig.mysql
   val ctx by lazy {
     object: PostgresJdbcContext(ds) {
       override val additionalEncoders = super.additionalEncoders + StringEncoder.contramap { ett: EncodingSpecData.SerializeableTestType -> ett.value }

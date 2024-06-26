@@ -1,6 +1,5 @@
 package io.exoquery.sql
 
-import io.exoquery.sql.jdbc.JdbcContext
 import io.exoquery.sql.jdbc.PostgresJdbcContext
 import io.exoquery.sql.jdbc.Sql
 import io.kotest.core.spec.style.FreeSpec
@@ -9,7 +8,7 @@ import kotlinx.serialization.Serializable
 
 class BasicQuerySpec : FreeSpec({
 
-  val ds = KotestProjectConfig.postgres
+  val ds = KotestProjectConfig.mysql
   val ctx by lazy { PostgresJdbcContext(ds)  }
 
   beforeSpec {
