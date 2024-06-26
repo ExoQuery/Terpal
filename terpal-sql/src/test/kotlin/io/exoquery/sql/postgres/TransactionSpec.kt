@@ -1,7 +1,9 @@
-package io.exoquery.sql
+package io.exoquery.sql.postgres
 
+import io.exoquery.sql.QuickPostgres
 import io.exoquery.sql.jdbc.PostgresJdbcContext
 import io.exoquery.sql.jdbc.Sql
+import io.exoquery.sql.run
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe

@@ -1,9 +1,13 @@
-package io.exoquery.sql
+package io.exoquery.sql.postgres
 
+import io.exoquery.sql.Action
+import io.exoquery.sql.Param
+import io.exoquery.sql.QuickPostgres
 import io.exoquery.sql.jdbc.Sql
-import io.exoquery.sql.EncodingSpecData.insert
+import io.exoquery.sql.postgres.EncodingSpecData.insert
 import io.exoquery.sql.jdbc.JdbcEncodersWithTimeLegacy.Companion.StringEncoder
 import io.exoquery.sql.jdbc.PostgresJdbcContext
+import io.exoquery.sql.run
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.bigdecimal.shouldBeEqualIgnoringScale
 import io.kotest.matchers.equals.shouldBeEqual
@@ -15,9 +19,11 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import java.math.BigDecimal
+import java.sql.Date
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.util.*
 import kotlin.test.assertEquals
 
 /*
@@ -187,10 +193,10 @@ object EncodingSpecData {
       34.4f,
       42.0,
       byteArrayOf(1.toByte(), 2.toByte()),
-      java.sql.Date.from(LocalDateTime.of(2013, 11, 23, 0, 0, 0, 0).toInstant(ZoneOffset.UTC)),
+      Date.from(LocalDateTime.of(2013, 11, 23, 0, 0, 0, 0).toInstant(ZoneOffset.UTC)),
       SerializeableTestType("s"),
       LocalDate.of(2013, 11, 23),
-      java.util.UUID.randomUUID(),
+      UUID.randomUUID(),
       "s",
       BigDecimal("1.1"),
       true,
@@ -201,10 +207,10 @@ object EncodingSpecData {
       34.4f,
       42.0,
       byteArrayOf(1.toByte(), 2.toByte()),
-      java.sql.Date.from(LocalDateTime.of(2013, 11, 23, 0, 0, 0, 0).toInstant(ZoneOffset.UTC)),
+      Date.from(LocalDateTime.of(2013, 11, 23, 0, 0, 0, 0).toInstant(ZoneOffset.UTC)),
       SerializeableTestType("s"),
       LocalDate.of(2013, 11, 23),
-      java.util.UUID.randomUUID()
+      UUID.randomUUID()
     )
 
   val nullEntity =
@@ -219,10 +225,10 @@ object EncodingSpecData {
       0f,
       0.0,
       byteArrayOf(),
-      java.sql.Date(0),
+      Date(0),
       SerializeableTestType(""),
       LocalDate.ofEpochDay(0),
-      java.util.UUID(0, 0),
+      UUID(0, 0),
       null,
       null,
       null,
