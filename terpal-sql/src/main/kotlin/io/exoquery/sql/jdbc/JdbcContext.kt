@@ -23,6 +23,11 @@ sealed interface ReturnAction {
 open class PostgresJdbcContext(override val database: DataSource): JdbcContext(database) {
   override val additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, out Any>>(UUIDObjectEncoding.UUIDObjectEncoder)
   override val additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, out Any>>(UUIDObjectEncoding.UUIDObjectDecoder)
+
+  open class Legacy(override val database: DataSource): PostgresJdbcContext(database) {
+    override protected open val encoders: SqlEncoders<Connection, PreparedStatement> by lazy { JdbcContext.JdbcEncodersWithTimeLegacyDefault(additionalEncoders) }
+    override protected open val decoders: SqlDecoders<Connection, ResultSet> by lazy { JdbcContext.JdbcDecodersWithTimeLegacyDefault(additionalDecoders) }
+  }
 }
 
 
@@ -49,8 +54,8 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
   protected open val additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, out Any>>()
   protected open val timezone: TimeZone = TimeZone.getDefault()
 
-  protected open val encoders: SqlEncoders<Connection, PreparedStatement> by lazy { JdbcContext.JdbcEncodersWithTimeLegacyDefault(additionalEncoders) }
-  protected open val decoders: SqlDecoders<Connection, ResultSet> by lazy { JdbcContext.JdbcDecodersWithTimeLegacyDefault(additionalDecoders) }
+  protected open val encoders: SqlEncoders<Connection, PreparedStatement> by lazy { JdbcContext.JdbcEncodersWithTimeDefault(additionalEncoders) }
+  protected open val decoders: SqlDecoders<Connection, ResultSet> by lazy { JdbcContext.JdbcDecodersWithTimeDefault(additionalDecoders) }
   protected open val batchReturnBehavior: ReturnAction = ReturnAction.ReturnRecord
 
   override fun newSession(): Connection = database.connection

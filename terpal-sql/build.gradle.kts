@@ -44,6 +44,12 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
     testImplementation("io.kotest.extensions:kotest-extensions-testcontainers:2.0.2")
+
+    testImplementation("org.testcontainers:mysql:1.19.8")
+    testImplementation("org.testcontainers:postgresql:1.19.8")
+    testImplementation("org.testcontainers:mssqlserver:1.19.8")
+    testImplementation("org.testcontainers:oracle-xe:1.19.8")
+
     testImplementation("org.flywaydb:flyway-core:7.15.0") // corresponding to embedded-postgres
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")

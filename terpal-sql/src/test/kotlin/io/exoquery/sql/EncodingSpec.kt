@@ -1,11 +1,12 @@
 package io.exoquery.sql
 
-import io.exoquery.sql.jdbc.JdbcContext
 import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.EncodingSpecData.insert
 import io.exoquery.sql.jdbc.JdbcEncodersWithTimeLegacy.Companion.StringEncoder
 import io.exoquery.sql.jdbc.PostgresJdbcContext
+import io.kotest.core.extensions.install
 import io.kotest.core.spec.style.FreeSpec
+import io.kotest.extensions.testcontainers.JdbcDatabaseContainerExtension
 import io.kotest.matchers.bigdecimal.shouldBeEqualIgnoringScale
 import io.kotest.matchers.equals.shouldBeEqual
 import kotlinx.serialization.Contextual
@@ -15,11 +16,12 @@ import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import org.testcontainers.containers.PostgreSQLContainer
 import java.math.BigDecimal
-import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import javax.sql.DataSource
 import kotlin.test.assertEquals
 
 /*
@@ -291,21 +293,18 @@ object EncodingSpecData {
     else this.shouldBeEqualIgnoringScale(expected) // otherwise they are both not null and we compare by scale
 }
 
-
-
-/*
-
- */
-
 class EncodingSpec: FreeSpec({
+  val ds = installPostgres()
   val ctx by lazy {
-    object: PostgresJdbcContext(GlobalEmbeddedPostgres.get().getPostgresDatabase()) {
+    object: PostgresJdbcContext(ds) {
       override val additionalEncoders = super.additionalEncoders + StringEncoder.contramap { ett: EncodingSpecData.SerializeableTestType -> ett.value }
     }
   }
 
   beforeEach {
-    GlobalEmbeddedPostgres.run("DELETE FROM EncodingTestEntity")
+    ds.getConnection().use { conn -> conn.createStatement().use { stmt ->
+      stmt.execute("DELETE FROM EncodingTestEntity")
+    } }
   }
 
   "encodes and decodes nullables - not nulls" {
