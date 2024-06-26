@@ -290,7 +290,7 @@ object EncodingSpecData {
 }
 
 class EncodingSpec: FreeSpec({
-  val ds = KotestProjectConfig.mysql
+  val ds = QuickPostgres.postgres
   val ctx by lazy {
     object: PostgresJdbcContext(ds) {
       override val additionalEncoders = super.additionalEncoders + StringEncoder.contramap { ett: EncodingSpecData.SerializeableTestType -> ett.value }

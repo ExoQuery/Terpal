@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 
 class BasicQuerySpec : FreeSpec({
 
-  val ds = KotestProjectConfig.mysql
+  val ds = QuickPostgres.postgres
   val ctx by lazy { PostgresJdbcContext(ds)  }
 
   beforeSpec {
