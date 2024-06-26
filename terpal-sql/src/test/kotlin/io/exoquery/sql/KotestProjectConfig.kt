@@ -3,8 +3,6 @@ package io.exoquery.sql
 import io.kotest.core.config.AbstractProjectConfig
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import io.zonky.test.db.postgres.embedded.FlywayPreparer
-import org.postgresql.ds.PGSimpleDataSource
-import org.testcontainers.containers.MySQLContainer
 import javax.sql.DataSource
 
 object KotestProjectConfig : AbstractProjectConfig() {
@@ -12,22 +10,6 @@ object KotestProjectConfig : AbstractProjectConfig() {
 
   override suspend fun beforeProject() {
     super.beforeProject()
-
-    val mysqlContainer by lazy {
-      MySQLContainer("8.4.0").apply {
-        withInitScript("db/mysql-schema.sql")
-        withReuse(true)
-        startupAttempts = 1
-        start()
-      }
-    }
-    mysql = PGSimpleDataSource().apply {
-      setUrl(mysqlContainer.getJdbcUrl())
-      user = mysqlContainer.getUsername()
-      password = mysqlContainer.getPassword()
-    }
-
-    FlywayPreparer.forClasspathLocation("db/postgres-schema.sql").prepare(QuickPostgres.get().getPostgresDatabase())
   }
 }
 
@@ -43,7 +25,11 @@ object QuickPostgres {
   }
 
   fun get(): EmbeddedPostgres {
-    return embeddedPostgres ?: EmbeddedPostgres.start().also { embeddedPostgres = it }
+    return embeddedPostgres ?: run {
+      val started = EmbeddedPostgres.start().also { embeddedPostgres = it }
+      FlywayPreparer.forClasspathLocation("db/postgres").prepare(started.getPostgresDatabase())
+      started
+    }
   }
 }
 
