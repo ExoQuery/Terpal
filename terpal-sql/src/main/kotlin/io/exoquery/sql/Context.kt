@@ -42,7 +42,7 @@ abstract class Context<Session, Database> {
     return session != null && !isClosedSession(session)
   }
 
-  suspend fun <T> transaction(block: suspend CoroutineScope.() -> T): T {
+  suspend fun <T> withTransactionScope(block: suspend CoroutineScope.() -> T): T {
     val existingTransaction = coroutineContext[CoroutineTransaction]
 
     return when {

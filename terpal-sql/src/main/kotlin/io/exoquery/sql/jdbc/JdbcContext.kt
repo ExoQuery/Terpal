@@ -181,7 +181,7 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       deserialize(decoder)
     }
 
-  suspend fun <T> stream(query: Query<T>): Flow<T> =
+  internal suspend fun <T> stream(query: Query<T>): Flow<T> =
     flowWithConnection {
       val conn = localConnection()
       makeStmt(query.sql, conn).use { stmt ->
@@ -192,24 +192,33 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       }
     }
 
-  suspend fun <T> stream(query: BatchActionReturning<T>): Flow<T> =
-    runBatchActionReturningScoped(query.sql, query.params, batchReturnBehavior, query.resultMaker.makeExtractor())
+  internal suspend fun <T> stream(query: BatchActionReturning<T>): Flow<T> = runBatchActionReturningScoped(query.sql, query.params, batchReturnBehavior, query.resultMaker.makeExtractor())
+  internal suspend fun <T> stream(query: ActionReturning<T>): Flow<T> = runActionReturningScoped(query.sql, query.params, batchReturnBehavior, query.resultMaker.makeExtractor())
+  internal suspend fun <T> run(query: Query<T>): List<T> = stream(query).toList()
+  internal suspend fun run(query: Action): Int = runActionScoped(query.sql, query.params)
+  internal suspend fun run(query: BatchAction): List<Int> = runBatchActionScoped(query.sql, query.params)
+  internal suspend fun <T> run(query: ActionReturning<T>): T = stream(query).first()
+  internal suspend fun <T> run(query: BatchActionReturning<T>): List<T> = stream(query).toList()
 
-  suspend fun <T> stream(query: ActionReturning<T>): Flow<T> =
-    runActionReturningScoped(query.sql, query.params, batchReturnBehavior, query.resultMaker.makeExtractor())
+  suspend fun <T> transaction(block: suspend ExternalTransactionScope.() -> T): T =
+    withTransactionScope {
+      val coroutineScope = this
+      block(ExternalTransactionScope(coroutineScope, this@JdbcContext))
+    }
+}
 
-  suspend fun <T> run(query: Query<T>): List<T> =
-    stream(query).toList()
+suspend fun <T> Query<T>.runOn(ctx: JdbcContext) = ctx.run(this)
+suspend fun <T> Query<T>.streamOn(ctx: JdbcContext) = ctx.stream(this)
+suspend fun Action.runOn(ctx: JdbcContext) = ctx.run(this)
+suspend fun <T> ActionReturning<T>.runOn(ctx: JdbcContext) = ctx.run(this)
+suspend fun BatchAction.runOn(ctx: JdbcContext) = ctx.run(this)
+suspend fun <T> BatchActionReturning<T>.runOn(ctx: JdbcContext) = ctx.run(this)
+suspend fun <T> BatchActionReturning<T>.streamOn(ctx: JdbcContext) = ctx.stream(this)
 
-  suspend fun run(query: Action): Int =
-    runActionScoped(query.sql, query.params)
-
-  suspend fun run(query: BatchAction): List<Int> =
-    runBatchActionScoped(query.sql, query.params)
-
-  suspend fun <T> run(query: ActionReturning<T>): T =
-    stream(query).first()
-
-  suspend fun <T> run(query: BatchActionReturning<T>): List<T> =
-    stream(query).toList()
+data class ExternalTransactionScope(val scope: CoroutineScope, val ctx: JdbcContext) {
+  suspend fun <T> Query<T>.run(): List<T> = ctx.run(this)
+  suspend fun Action.run(): Int = ctx.run(this)
+  suspend fun BatchAction.run(): List<Int> = ctx.run(this)
+  suspend fun <T> ActionReturning<T>.run(): T = ctx.run(this)
+  suspend fun <T> BatchActionReturning<T>.run(): List<T> = ctx.run(this)
 }

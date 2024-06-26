@@ -3,6 +3,7 @@ package io.exoquery.sql.examples
 import io.exoquery.sql.jdbc.JdbcContext
 import io.exoquery.sql.jdbc.PostgresJdbcContext
 import io.exoquery.sql.jdbc.Sql
+import io.exoquery.sql.jdbc.runOn
 import io.exoquery.sql.run
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import kotlinx.serialization.Contextual
@@ -35,7 +36,7 @@ object ContextualColumn {
     val postgres = EmbeddedPostgres.start()
     postgres.run("CREATE TABLE customers (id SERIAL PRIMARY KEY, first_name TEXT, last_name TEXT, created_at DATE)")
     val ctx = PostgresJdbcContext(postgres.postgresDatabase)
-    ctx.run(Sql("INSERT INTO customers (first_name, last_name, created_at) VALUES (${id("Alice")}, ${id("Smith")}, ${id(LocalDate.of(2021, 1, 1))})").action())
+    Sql("INSERT INTO customers (first_name, last_name, created_at) VALUES (${("Alice")}, ${("Smith")}, ${(LocalDate.of(2021, 1, 1))})").action().runOn(ctx)
     val customers = ctx.run(Sql("SELECT * FROM customers").queryOf<Customer>())
     val module = SerializersModule { contextual(LocalDate::class, DateAsStringSerialzier) }
     val json = Json { serializersModule = module }

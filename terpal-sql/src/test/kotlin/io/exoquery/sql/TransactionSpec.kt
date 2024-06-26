@@ -1,7 +1,5 @@
 package io.exoquery.sql
 
-import io.exoquery.sql.examples.id
-import io.exoquery.sql.jdbc.JdbcContext
 import io.exoquery.sql.jdbc.PostgresJdbcContext
 import io.exoquery.sql.jdbc.Sql
 import io.kotest.assertions.throwables.shouldThrow
@@ -68,7 +66,7 @@ class TransactionSpec: FreeSpec({
 
     "success" {
       ctx.transaction {
-        ctx.run(insert(joe))
+        insert(joe).run()
       }
       ctx.run(select()) shouldBe listOf(joe)
     }
@@ -76,7 +74,7 @@ class TransactionSpec: FreeSpec({
       ctx.run(insert(joe))
       shouldThrow<IllegalStateException> {
         ctx.transaction {
-          ctx.run(insert(jack))
+          insert(jack).run()
           throw IllegalStateException()
         }
       }
@@ -85,7 +83,7 @@ class TransactionSpec: FreeSpec({
     "nested" {
       ctx.transaction {
         ctx.transaction {
-          ctx.run(insert(joe))
+          insert(joe).run()
         }
       }
       ctx.run(select()) shouldBe listOf(joe)
