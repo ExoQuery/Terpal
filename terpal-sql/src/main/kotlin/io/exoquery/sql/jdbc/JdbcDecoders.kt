@@ -44,7 +44,7 @@ abstract class JdbcDecoderAny<T: Any>: JdbcDecoder<T>() {
   }
 }
 
-abstract class JdbcDecodersBasic: SqlDecoders<Connection, ResultSet> {
+abstract class JdbcDecodersBasic: SqlDecoders<Connection, ResultSet>() {
   override fun preview(index: Int, row: ResultSet): String? = row.getObject(index)?.let { it.toString() }
   override fun isNull(index: Int, row: ResultSet): Boolean {
     row.getObject(index)
@@ -68,8 +68,8 @@ abstract class JdbcDecodersBasic: SqlDecoders<Connection, ResultSet> {
     }
 }
 
-abstract class JdbcDecodersWithTime: JdbcDecodersBasic() {
-  companion object: JdbcDecodersWithTime() { override val decoders = computeDecoders() }
+abstract class JdbcDecodersWithTime(): JdbcDecodersBasic() {
+  companion object: JdbcDecodersWithTime()
 
   override val LocalDateDecoder: JdbcDecoderAny<LocalDate> = JdbcDecoderAny.fromFunction { ctx, i -> ctx.row.getObject(i, LocalDate::class.java) }
   override val LocalTimeDecoder: JdbcDecoderAny<LocalTime> = JdbcDecoderAny.fromFunction { ctx, i -> ctx.row.getObject(i, LocalTime::class.java) }
@@ -83,11 +83,11 @@ abstract class JdbcDecodersWithTime: JdbcDecodersBasic() {
   override val OffsetTimeDecoder: JdbcDecoderAny<OffsetTime> = JdbcDecoderAny.fromFunction { ctx, i -> ctx.row.getObject(i, OffsetTime::class.java) }
   override val OffsetDateTimeDecoder: JdbcDecoderAny<OffsetDateTime> = JdbcDecoderAny.fromFunction { ctx, i -> ctx.row.getObject(i, OffsetDateTime::class.java) }
 
-  override fun computeDecoders() = super.computeDecoders() + setOf(SqlDateDecoder, SqlTimeDecoder, SqlTimestampDecoder)
+  override val decoders by lazy { super.decoders + setOf(SqlDateDecoder, SqlTimeDecoder, SqlTimestampDecoder) }
 }
 
-abstract class JdbcDecodersWithTimeLegacy: JdbcDecodersBasic() {
-  companion object: JdbcDecodersWithTimeLegacy() { override val decoders = computeDecoders() }
+abstract class JdbcDecodersWithTimeLegacy(): JdbcDecodersBasic() {
+  companion object: JdbcDecodersWithTimeLegacy()
 
   override val LocalDateDecoder: JdbcDecoderAny<LocalDate> = JdbcDecoderAny.fromFunction { ctx, i -> ctx.row.getDate(i).toLocalDate() }
   override val LocalTimeDecoder: JdbcDecoderAny<LocalTime> = JdbcDecoderAny.fromFunction { ctx, i -> ctx.row.getTime(i).toLocalTime() }
@@ -101,5 +101,5 @@ abstract class JdbcDecodersWithTimeLegacy: JdbcDecodersBasic() {
   override val OffsetTimeDecoder: JdbcDecoderAny<OffsetTime> = JdbcDecoderAny.fromFunction { ctx, i -> OffsetTime.of(ctx.row.getTime(i).toLocalTime(), ZoneOffset.UTC) }
   override val OffsetDateTimeDecoder: JdbcDecoderAny<OffsetDateTime> = JdbcDecoderAny.fromFunction { ctx, i -> OffsetDateTime.ofInstant(ctx.row.getTimestamp(i).toInstant(), ctx.timeZone.toZoneId()) }
 
-  override fun computeDecoders() = super.computeDecoders() + setOf(SqlDateEncoder, SqlTimeEncoder, SqlTimestampEncoder)
+  override val decoders by lazy { super.decoders + setOf(SqlDateEncoder, SqlTimeEncoder, SqlTimestampEncoder) }
 }

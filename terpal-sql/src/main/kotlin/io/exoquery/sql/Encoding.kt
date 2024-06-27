@@ -35,7 +35,7 @@ abstract class SqlEncoder<Session, Statement, T> {
   }
 }
 
-interface SqlDecoders<Session, Row> {
+abstract class SqlDecoders<Session, Row> {
   abstract fun isNull(index: Int, row: Row): Boolean
   abstract fun preview(index: Int, row: Row): String?
 
@@ -61,7 +61,7 @@ interface SqlDecoders<Session, Row> {
   abstract val OffsetTimeDecoder: SqlDecoder<Session, Row, OffsetTime>
   abstract val OffsetDateTimeDecoder: SqlDecoder<Session, Row, OffsetDateTime>
 
-  fun computeDecoders(): Set<SqlDecoder<Session, Row, out Any>> =
+  open val decoders: Set<SqlDecoder<Session, Row, out Any>> by lazy {
     setOf(
       BooleanDecoder,
       ByteDecoder,
@@ -83,12 +83,10 @@ interface SqlDecoders<Session, Row> {
       OffsetTimeDecoder,
       OffsetDateTimeDecoder
     )
-
-  /** Implement this in the final class/object using computeDecoders() to have a stable list of them */
-  val decoders: Set<SqlDecoder<Session, Row, out Any>>
+  }
 }
 
-interface SqlEncoders<Session, Stmt> {
+abstract class SqlEncoders<Session, Stmt> {
   abstract val BooleanEncoder: SqlEncoder<Session, Stmt, Boolean>
   abstract val ByteEncoder: SqlEncoder<Session, Stmt, Byte>
   abstract val CharEncoder: SqlEncoder<Session, Stmt, Char>
@@ -111,7 +109,8 @@ interface SqlEncoders<Session, Stmt> {
   abstract val OffsetTimeEncoder: SqlEncoder<Session, Stmt, OffsetTime>
   abstract val OffsetDateTimeEncoder: SqlEncoder<Session, Stmt, OffsetDateTime>
 
-  fun computeEncoders(): Set<SqlEncoder<Session, Stmt, out Any>> =
+  /** Implement this in the final class/object using computeEncoders() to have a stable list of them */
+  open val encoders: Set<SqlEncoder<Session, Stmt, out Any>> by lazy {
     setOf(
       BooleanEncoder,
       ByteEncoder,
@@ -133,7 +132,5 @@ interface SqlEncoders<Session, Stmt> {
       OffsetTimeEncoder,
       OffsetDateTimeEncoder
     )
-
-  /** Implement this in the final class/object using computeEncoders() to have a stable list of them */
-  val encoders: Set<SqlEncoder<Session, Stmt, out Any>>
+  }
 }
