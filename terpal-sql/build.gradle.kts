@@ -54,8 +54,6 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
-
-
     implementation("io.exoquery:pprint-kotlin:2.0.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
@@ -71,6 +69,8 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:1.19.8")
     testImplementation("org.testcontainers:mssqlserver:1.19.8")
     testImplementation("org.testcontainers:oracle-xe:1.19.8")
+
+    api(platform("io.zonky.test.postgres:embedded-postgres-binaries-bom:16.2.0"))
 
     testImplementation("org.flywaydb:flyway-core:7.15.0") // corresponding to embedded-postgres
 

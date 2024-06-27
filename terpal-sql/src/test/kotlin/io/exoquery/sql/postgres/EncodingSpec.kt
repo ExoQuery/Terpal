@@ -13,7 +13,7 @@ import io.exoquery.sql.EncodingSpecData.TimeEntity
 class EncodingSpec: FreeSpec({
   val ds = TestDatabases.postgres
   val ctx by lazy {
-    object: PostgresJdbcContext.Legacy(ds) {
+    object: PostgresJdbcContext(ds) {
       override val additionalEncoders = super.additionalEncoders + StringEncoder.contramap { ett: EncodingSpecData.SerializeableTestType -> ett.value }
     }
   }
