@@ -2,7 +2,7 @@ package io.exoquery.sql.postgres
 
 import io.exoquery.sql.Action
 import io.exoquery.sql.Param
-import io.exoquery.sql.QuickPostgres
+import io.exoquery.sql.TestDatabases
 import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.postgres.EncodingSpecData.insert
 import io.exoquery.sql.jdbc.JdbcEncodersWithTimeLegacy.Companion.StringEncoder
@@ -296,7 +296,7 @@ object EncodingSpecData {
 }
 
 class EncodingSpec: FreeSpec({
-  val ds = QuickPostgres.postgres
+  val ds = TestDatabases.postgres
   val ctx by lazy {
     object: PostgresJdbcContext(ds) {
       override val additionalEncoders = super.additionalEncoders + StringEncoder.contramap { ett: EncodingSpecData.SerializeableTestType -> ett.value }

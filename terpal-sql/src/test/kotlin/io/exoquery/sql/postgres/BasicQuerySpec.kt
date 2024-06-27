@@ -1,6 +1,6 @@
 package io.exoquery.sql.postgres
 
-import io.exoquery.sql.QuickPostgres
+import io.exoquery.sql.TestDatabases
 import io.exoquery.sql.jdbc.PostgresJdbcContext
 import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.run
@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
 
 class BasicQuerySpec : FreeSpec({
 
-  val ds = QuickPostgres.postgres
+  val ds = TestDatabases.postgres
   val ctx by lazy { PostgresJdbcContext(ds)  }
 
   beforeSpec {

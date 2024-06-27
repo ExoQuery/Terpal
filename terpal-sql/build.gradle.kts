@@ -59,7 +59,10 @@ dependencies {
     implementation("io.exoquery:pprint-kotlin:2.0.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+
     testImplementation("io.zonky.test:embedded-postgres:2.0.7")
+    testImplementation("mysql:mysql-connector-java:8.0.29")
+
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
     testImplementation("io.kotest.extensions:kotest-extensions-testcontainers:2.0.2")

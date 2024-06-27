@@ -1,4 +1,4 @@
-package io.exoquery.sql.postgres
+package io.exoquery.sql.mysql
 
 import io.exoquery.sql.TestDatabases
 import io.exoquery.sql.jdbc.PostgresJdbcContext
@@ -13,7 +13,7 @@ import kotlinx.serialization.Serializable
 import org.testcontainers.containers.PostgreSQLContainer
 
 class TransactionSpec: FreeSpec({
-  val ds = TestDatabases.postgres
+  val ds = TestDatabases.mysql
   val ctx by lazy { PostgresJdbcContext(ds) }
   beforeEach {
     ds.run(
@@ -54,6 +54,8 @@ class TransactionSpec: FreeSpec({
       ctx.run(qr1).map(_.i) mustEqual List(33)
     }
    */
+
+
 
   @Serializable
   data class Person(val id: Int, val firstName: String, val lastName: String, val age: Int)

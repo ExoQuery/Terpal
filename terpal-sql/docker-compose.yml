@@ -1,0 +1,43 @@
+version: '3.7'
+
+services:
+  mysql:
+    image: mysql/mysql-server:8.0.23 # use this because it supports ARM64 architecture for M1 Mac
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - "33306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+      - MYSQL_ROOT_HOST=%
+
+  setup:
+    build:
+      context: .
+      dockerfile: ./scripts/Dockerfile-setup
+#    depends_on:
+#      - oracle
+    links:
+      - mysql:mysql
+#      - sqlserver:sqlserver
+#      - oracle:oracle
+    volumes:
+      - ./:/app:delegated
+    command:
+      - ./scripts/setup_local.sh
+
+#  sqlserver:
+#    image: mcr.microsoft.com/azure-sql-edge:latest # use this because it supports ARM64 architecture for M1 Mac
+#    ports:
+#      - "11433:1433"
+#    environment:
+#      - ACCEPT_EULA=Y
+#      - SA_PASSWORD=QuillRocks!
+#
+#  oracle:
+#    image: quillbuilduser/oracle-18-xe-micro-sq
+#    ports:
+#      - "11521:1521"
+#    # Opatch is an internal java-based daemon in the Oracle container that updates components, don't really need it here. Reduce it's memory settings.
+#    environment:
+#      - OPATCH_JRE_MEMORY_OPTIONS=-Xms128m -Xmx256m -XX:PermSize=16m -XX:MaxPermSize=32m -Xss1m
