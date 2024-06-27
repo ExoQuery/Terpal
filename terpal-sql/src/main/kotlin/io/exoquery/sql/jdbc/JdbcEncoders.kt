@@ -74,8 +74,8 @@ abstract class JdbcEncodersBasic: SqlEncoders<Connection, PreparedStatement>() {
     }
 }
 
-abstract class JdbcEncodersWithTime(): JdbcEncodersBasic() {
-  companion object: JdbcEncodersWithTime()
+open class JdbcEncodersWithTime(val additionalEncoders: Set<SqlEncoder<Connection, PreparedStatement, out Any>>): JdbcEncodersBasic() {
+  companion object: JdbcEncodersWithTime(setOf())
 
   open val jdbcTypeOfLocalDate     = Types.DATE
   open val jdbcTypeOfLocalTime     = Types.TIME
@@ -99,11 +99,11 @@ abstract class JdbcEncodersWithTime(): JdbcEncodersBasic() {
   override val OffsetTimeEncoder: JdbcEncoderAny<OffsetTime> = JdbcEncoderAny.fromFunction(jdbcTypeOfOffsetTime) { ctx, v, i -> ctx.stmt.setObject(i, v, jdbcTypeOfOffsetTime) }
   override val OffsetDateTimeEncoder: JdbcEncoderAny<OffsetDateTime> = JdbcEncoderAny.fromFunction(jdbcTypeOfOffsetDateTime) { ctx, v, i -> ctx.stmt.setObject(i, v, jdbcTypeOfOffsetDateTime) }
 
-  override val encoders by lazy { super.encoders + setOf(SqlDateEncoder, SqlTimeEncoder, SqlTimestampEncoder) }
+  override val encoders by lazy { super.encoders + setOf(SqlDateEncoder, SqlTimeEncoder, SqlTimestampEncoder) + additionalEncoders }
 }
 
-abstract class JdbcEncodersWithTimeLegacy: JdbcEncodersBasic() {
-  companion object: JdbcEncodersWithTimeLegacy()
+open class JdbcEncodersWithTimeLegacy(val additionalEncoders: Set<SqlEncoder<Connection, PreparedStatement, out Any>>): JdbcEncodersBasic() {
+  companion object: JdbcEncodersWithTimeLegacy(setOf())
 
   override val LocalDateEncoder: JdbcEncoderAny<LocalDate> = JdbcEncoderAny.fromFunction(Types.DATE) { ctx, v, i -> ctx.stmt.setDate(i, java.sql.Date.valueOf(v)) }
   override val LocalTimeEncoder: JdbcEncoderAny<LocalTime> = JdbcEncoderAny.fromFunction(Types.TIME) { ctx, v, i -> ctx.stmt.setTime(i, java.sql.Time.valueOf(v)) }
@@ -117,5 +117,5 @@ abstract class JdbcEncodersWithTimeLegacy: JdbcEncodersBasic() {
   override val OffsetTimeEncoder: JdbcEncoderAny<OffsetTime> = JdbcEncoderAny.fromFunction(Types.TIME) { ctx, v, i -> ctx.stmt.setTime(i, java.sql.Time.valueOf(v.withOffsetSameInstant(ZoneOffset.UTC).toLocalTime()))  }
   override val OffsetDateTimeEncoder: JdbcEncoderAny<OffsetDateTime> = JdbcEncoderAny.fromFunction(Types.TIMESTAMP) { ctx, v, i -> ctx.stmt.setTimestamp(i, java.sql.Timestamp.from(v.toInstant())) }
 
-  override val encoders by lazy { super.encoders + setOf(SqlDateEncoder, SqlTimeEncoder, SqlTimestampEncoder) }
+  override val encoders by lazy { super.encoders + setOf(SqlDateEncoder, SqlTimeEncoder, SqlTimestampEncoder) + additionalEncoders }
 }

@@ -25,20 +25,17 @@ open class PostgresJdbcContext(override val database: DataSource): JdbcContext(d
   override val additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, out Any>>(UUIDObjectEncoding.UUIDObjectEncoder)
   override val additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, out Any>>(UUIDObjectEncoding.UUIDObjectDecoder)
   override protected open val encoders: SqlEncoders<Connection, PreparedStatement> by lazy {
-    object: JdbcEncodersWithTime() {
+    // Unless you do `this@PostgresJdbcContext.additionalEncoders` it will use the encoders for the parent class which is incorrect (i.e. doesn't contain the UUIDObjectEncoder)
+    object: JdbcEncodersWithTime(this@PostgresJdbcContext.additionalEncoders) {
       // Postgres does not support Types.TIME_WITH_TIMEZONE as a JDBC type but does have a `TIME WITH TIMEZONE` datatype this is puzzling.
       override val jdbcTypeOfOffsetTime = Types.TIME
-      override val encoders by lazy { super.encoders + additionalEncoders }
+      //override val encoders by lazy { super.encoders + additionalEncoders }
     }
   }
 
   open class Legacy(override val database: DataSource): PostgresJdbcContext(database) {
-    override protected open val encoders: SqlEncoders<Connection, PreparedStatement> by lazy {
-      object: JdbcEncodersWithTimeLegacy() { override val encoders by lazy { super.encoders + additionalEncoders } }
-    }
-    override protected open val decoders: SqlDecoders<Connection, ResultSet> by lazy {
-      object: JdbcDecodersWithTimeLegacy() { override val decoders by lazy { super.decoders + additionalDecoders } }
-    }
+    override protected open val encoders: SqlEncoders<Connection, PreparedStatement> by lazy { JdbcEncodersWithTimeLegacy(additionalEncoders) }
+    override protected open val decoders: SqlDecoders<Connection, ResultSet> by lazy { JdbcDecodersWithTimeLegacy(additionalDecoders) }
   }
 }
 
@@ -49,12 +46,8 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
   protected open val additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, out Any>>()
   protected open val timezone: TimeZone = TimeZone.getDefault()
 
-  protected open val encoders: SqlEncoders<Connection, PreparedStatement> by lazy {
-    object: JdbcEncodersWithTime() { override val encoders by lazy { super.encoders + additionalEncoders } }
-  }
-  protected open val decoders: SqlDecoders<Connection, ResultSet> by lazy {
-    object: JdbcDecodersWithTime() { override val decoders by lazy { super.decoders + additionalDecoders } }
-  }
+  protected open val encoders: SqlEncoders<Connection, PreparedStatement> by lazy { JdbcEncodersWithTime(additionalEncoders) }
+  protected open val decoders: SqlDecoders<Connection, ResultSet> by lazy { JdbcDecodersWithTime(additionalDecoders) }
   protected open val batchReturnBehavior: ReturnAction = ReturnAction.ReturnRecord
 
   override fun newSession(): Connection = database.connection
