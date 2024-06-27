@@ -1,7 +1,7 @@
 package io.exoquery.sql.postgres
 
 import io.exoquery.sql.TestDatabases
-import io.exoquery.sql.jdbc.PostgresJdbcContext
+import io.exoquery.sql.jdbc.TerpalContext
 import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.run
 import io.kotest.assertions.throwables.shouldThrow
@@ -14,7 +14,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 
 class TransactionSpec: FreeSpec({
   val ds = TestDatabases.postgres
-  val ctx by lazy { PostgresJdbcContext(ds) }
+  val ctx by lazy { TerpalContext.Postgres(ds) }
   beforeEach {
     ds.run(
       """

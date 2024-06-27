@@ -35,11 +35,19 @@ abstract class SqlEncoder<Session, Statement, T> {
   }
 }
 
-abstract class SqlDecoders<Session, Row> {
+interface BooleanEncoders<Session, Stmt> {
+  val BooleanEncoder: SqlEncoder<Session, Stmt, Boolean>
+}
+
+interface BooleanDecoders<Session, Row> {
+  val BooleanDecoder: SqlDecoder<Session, Row, Boolean>
+}
+
+abstract class SqlDecoders<Session, Row>: BooleanDecoders<Session, Row> {
   abstract fun isNull(index: Int, row: Row): Boolean
   abstract fun preview(index: Int, row: Row): String?
 
-  abstract val BooleanDecoder: SqlDecoder<Session, Row, Boolean>
+  override abstract val BooleanDecoder: SqlDecoder<Session, Row, Boolean>
   abstract val ByteDecoder: SqlDecoder<Session, Row, Byte>
   abstract val CharDecoder: SqlDecoder<Session, Row, Char>
   abstract val DoubleDecoder: SqlDecoder<Session, Row, Double>
@@ -86,8 +94,8 @@ abstract class SqlDecoders<Session, Row> {
   }
 }
 
-abstract class SqlEncoders<Session, Stmt> {
-  abstract val BooleanEncoder: SqlEncoder<Session, Stmt, Boolean>
+abstract class SqlEncoders<Session, Stmt>: BooleanEncoders<Session, Stmt> {
+  override abstract val BooleanEncoder: SqlEncoder<Session, Stmt, Boolean>
   abstract val ByteEncoder: SqlEncoder<Session, Stmt, Byte>
   abstract val CharEncoder: SqlEncoder<Session, Stmt, Char>
   abstract val DoubleEncoder: SqlEncoder<Session, Stmt, Double>

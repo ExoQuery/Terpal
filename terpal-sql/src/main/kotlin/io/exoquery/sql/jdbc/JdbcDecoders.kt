@@ -51,7 +51,7 @@ abstract class JdbcDecodersBasic: SqlDecoders<Connection, ResultSet>() {
     return row.wasNull()
   }
 
-  override val BooleanDecoder: JdbcDecoderAny<Boolean> = JdbcDecoderAny.fromFunction { ctx, i -> ctx.row.getBoolean(i) }
+
   override val ByteDecoder: JdbcDecoderAny<Byte> = JdbcDecoderAny.fromFunction { ctx, i -> ctx.row.getByte(i) }
   override val CharDecoder: JdbcDecoderAny<Char> = JdbcDecoderAny.fromFunction { ctx, i -> ctx.row.getString(i)[0] }
   override val DoubleDecoder: JdbcDecoderAny<Double> = JdbcDecoderAny.fromFunction { ctx, i -> ctx.row.getDouble(i) }

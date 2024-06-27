@@ -4,7 +4,7 @@ import io.exoquery.sql.*
 import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.EncodingSpecData.insert
 import io.exoquery.sql.jdbc.JdbcEncodersWithTimeLegacy.Companion.StringEncoder
-import io.exoquery.sql.jdbc.PostgresJdbcContext
+import io.exoquery.sql.jdbc.TerpalContext
 import io.exoquery.sql.jdbc.runOn
 import io.kotest.core.spec.style.FreeSpec
 import java.time.ZoneId
@@ -13,7 +13,7 @@ import io.exoquery.sql.EncodingSpecData.TimeEntity
 class EncodingSpec: FreeSpec({
   val ds = TestDatabases.postgres
   val ctx by lazy {
-    object: PostgresJdbcContext(ds) {
+    object: TerpalContext.Postgres(ds) {
       override val additionalEncoders = super.additionalEncoders + StringEncoder.contramap { ett: EncodingSpecData.SerializeableTestType -> ett.value }
     }
   }

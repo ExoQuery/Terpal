@@ -7,7 +7,6 @@ import kotlinx.serialization.KSerializer
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.sql.Types
 import java.util.*
 import javax.sql.DataSource
 import kotlin.coroutines.CoroutineContext
@@ -20,26 +19,6 @@ sealed interface ReturnAction {
   data object ReturnRecord: ReturnAction
 }
 
-
-open class PostgresJdbcContext(override val database: DataSource): JdbcContext(database) {
-  override val additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, out Any>>(UUIDObjectEncoding.UUIDObjectEncoder)
-  override val additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, out Any>>(UUIDObjectEncoding.UUIDObjectDecoder)
-  override protected open val encoders: SqlEncoders<Connection, PreparedStatement> by lazy {
-    // Unless you do `this@PostgresJdbcContext.additionalEncoders` it will use the encoders for the parent class which is incorrect (i.e. doesn't contain the UUIDObjectEncoder)
-    object: JdbcEncodersWithTime(this@PostgresJdbcContext.additionalEncoders) {
-      // Postgres does not support Types.TIME_WITH_TIMEZONE as a JDBC type but does have a `TIME WITH TIMEZONE` datatype this is puzzling.
-      override val jdbcTypeOfOffsetTime = Types.TIME
-      //override val encoders by lazy { super.encoders + additionalEncoders }
-    }
-  }
-
-  open class Legacy(override val database: DataSource): PostgresJdbcContext(database) {
-    override protected open val encoders: SqlEncoders<Connection, PreparedStatement> by lazy { JdbcEncodersWithTimeLegacy(additionalEncoders) }
-    override protected open val decoders: SqlDecoders<Connection, ResultSet> by lazy { JdbcDecodersWithTimeLegacy(additionalDecoders) }
-  }
-}
-
-
 abstract class JdbcContext(override val database: DataSource): Context<Connection, DataSource>() {
   // Need to do this first in iniitalization
   protected open val additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, out Any>>()
@@ -50,17 +29,17 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
   protected open val decoders: SqlDecoders<Connection, ResultSet> by lazy { JdbcDecodersWithTime(additionalDecoders) }
   protected open val batchReturnBehavior: ReturnAction = ReturnAction.ReturnRecord
 
-  override fun newSession(): Connection = database.connection
-  override fun closeSession(session: Connection): Unit = session.close()
-  override fun isClosedSession(session: Connection): Boolean = session.isClosed
+  override open fun newSession(): Connection = database.connection
+  override open fun closeSession(session: Connection): Unit = session.close()
+  override open fun isClosedSession(session: Connection): Boolean = session.isClosed
 
-  protected fun createEncodingContext(session: Connection, stmt: PreparedStatement) = EncodingContext(session, stmt, timezone)
-  protected fun createDecodingContext(session: Connection, row: ResultSet) = DecodingContext(session, row, timezone)
+  protected open fun createEncodingContext(session: Connection, stmt: PreparedStatement) = EncodingContext(session, stmt, timezone)
+  protected open fun createDecodingContext(session: Connection, row: ResultSet) = DecodingContext(session, row, timezone)
 
-  private val JdbcCoroutineContext = object: CoroutineContext.Key<CoroutineSession<Connection>> {}
+  protected val JdbcCoroutineContext = object: CoroutineContext.Key<CoroutineSession<Connection>> {}
   override val sessionKey: CoroutineContext.Key<CoroutineSession<Connection>> = JdbcCoroutineContext
 
-  override internal suspend fun <T> runTransactionally(block: suspend CoroutineScope.() -> T): T {
+  override open internal suspend fun <T> runTransactionally(block: suspend CoroutineScope.() -> T): T {
     val session = coroutineContext.get(sessionKey)?.session ?: error("No connection found")
     session.runWithManualCommit {
       val transaction = CoroutineTransaction()
@@ -95,17 +74,17 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
     PreparedStatementElementEncoder(createEncodingContext(conn, ps), index+1, encoders).encodeNullableSerializableValue(serializer, value)
   }
 
-  protected fun makeStmtReturning(sql: String, conn: Connection, returningBehavior: ReturnAction) =
+  protected open fun makeStmtReturning(sql: String, conn: Connection, returningBehavior: ReturnAction) =
     when(returningBehavior) {
       is ReturnAction.ReturnDefault -> conn.prepareStatement(sql)
       is ReturnAction.ReturnColumns -> conn.prepareStatement(sql, returningBehavior.columns.toTypedArray())
       is ReturnAction.ReturnRecord -> conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)
     }
 
-  protected fun makeStmt(sql: String, conn: Connection) =
+  protected open fun makeStmt(sql: String, conn: Connection) =
     makeStmtReturning(sql, conn, ReturnAction.ReturnDefault)
 
-  protected fun prepare(stmt: PreparedStatement, conn: Connection, params: List<Param<*>>) =
+  protected open fun prepare(stmt: PreparedStatement, conn: Connection, params: List<Param<*>>) =
     params.withIndex().forEach { (idx, param) ->
       param.write(idx, conn, stmt)
     }
@@ -118,7 +97,7 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
     }
   }
 
-  private fun <T> runQueryScoped(conn: Connection, sql: String, params: List<Param<*>>, extract: (Connection, ResultSet) -> T): Flow<T> =
+  protected open fun <T> runQueryScoped(conn: Connection, sql: String, params: List<Param<*>>, extract: (Connection, ResultSet) -> T): Flow<T> =
     flow {
       makeStmt(sql, conn).use { stmt ->
         prepare(stmt, conn, params)
@@ -128,7 +107,7 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       }
     }
 
-  private suspend fun <T> runActionReturningScoped(sql: String, params: List<Param<*>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+  protected open suspend fun <T> runActionReturningScoped(sql: String, params: List<Param<*>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
     flow {
       withConnection {
         val conn = localConnection()
@@ -140,7 +119,7 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       }
     }
 
-  private suspend fun runBatchActionScoped(sql: String, batches: Sequence<List<Param<*>>>): List<Int> =
+  protected open suspend fun runBatchActionScoped(sql: String, batches: Sequence<List<Param<*>>>): List<Int> =
     withConnection {
       val conn = localConnection()
       makeStmt(sql, conn).use { stmt ->
@@ -152,7 +131,7 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       }
     }
 
-  private suspend fun <T> runBatchActionReturningScoped(sql: String, batches: Sequence<List<Param<*>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+  protected open suspend fun <T> runBatchActionReturningScoped(sql: String, batches: Sequence<List<Param<*>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
     flowWithConnection {
       val conn = localConnection()
       makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
@@ -165,7 +144,7 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       }
     }
 
-  private suspend fun runActionScoped(sql: String, params: List<Param<*>>): Int =
+  protected open suspend fun runActionScoped(sql: String, params: List<Param<*>>): Int =
     withConnection {
       val conn = localConnection()
        makeStmt(sql, conn).use { stmt ->
@@ -180,7 +159,7 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       deserialize(decoder)
     }
 
-  internal suspend fun <T> stream(query: Query<T>): Flow<T> =
+  internal open suspend fun <T> stream(query: Query<T>): Flow<T> =
     flowWithConnection {
       val conn = localConnection()
       makeStmt(query.sql, conn).use { stmt ->
@@ -191,15 +170,15 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       }
     }
 
-  internal suspend fun <T> stream(query: BatchActionReturning<T>): Flow<T> = runBatchActionReturningScoped(query.sql, query.params, batchReturnBehavior, query.resultMaker.makeExtractor())
-  internal suspend fun <T> stream(query: ActionReturning<T>): Flow<T> = runActionReturningScoped(query.sql, query.params, batchReturnBehavior, query.resultMaker.makeExtractor())
-  internal suspend fun <T> run(query: Query<T>): List<T> = stream(query).toList()
-  internal suspend fun run(query: Action): Int = runActionScoped(query.sql, query.params)
-  internal suspend fun run(query: BatchAction): List<Int> = runBatchActionScoped(query.sql, query.params)
-  internal suspend fun <T> run(query: ActionReturning<T>): T = stream(query).first()
-  internal suspend fun <T> run(query: BatchActionReturning<T>): List<T> = stream(query).toList()
+  internal open suspend fun <T> stream(query: BatchActionReturning<T>): Flow<T> = runBatchActionReturningScoped(query.sql, query.params, batchReturnBehavior, query.resultMaker.makeExtractor())
+  internal open suspend fun <T> stream(query: ActionReturning<T>): Flow<T> = runActionReturningScoped(query.sql, query.params, batchReturnBehavior, query.resultMaker.makeExtractor())
+  internal open suspend fun <T> run(query: Query<T>): List<T> = stream(query).toList()
+  internal open suspend fun run(query: Action): Int = runActionScoped(query.sql, query.params)
+  internal open suspend fun run(query: BatchAction): List<Int> = runBatchActionScoped(query.sql, query.params)
+  internal open suspend fun <T> run(query: ActionReturning<T>): T = stream(query).first()
+  internal open suspend fun <T> run(query: BatchActionReturning<T>): List<T> = stream(query).toList()
 
-  suspend fun <T> transaction(block: suspend ExternalTransactionScope.() -> T): T =
+  suspend open fun <T> transaction(block: suspend ExternalTransactionScope.() -> T): T =
     withTransactionScope {
       val coroutineScope = this
       block(ExternalTransactionScope(coroutineScope, this@JdbcContext))

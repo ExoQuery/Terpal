@@ -57,7 +57,6 @@ abstract class JdbcEncoderAny<T: Any>: JdbcEncoder<T>() {
 }
 
 abstract class JdbcEncodersBasic: SqlEncoders<Connection, PreparedStatement>() {
-  override val BooleanEncoder: JdbcEncoderAny<Boolean> = JdbcEncoderAny.fromFunction(Types.BOOLEAN) { ctx, v, i -> ctx.stmt.setBoolean(i, v) }
   override val ByteEncoder: JdbcEncoderAny<Byte> = JdbcEncoderAny.fromFunction(Types.TINYINT) { ctx, v, i -> ctx.stmt.setByte(i, v) }
   override val CharEncoder: JdbcEncoderAny<Char> = JdbcEncoderAny.fromFunction(Types.VARCHAR) { ctx, v, i -> ctx.stmt.setString(i, v.toString()) }
   override val DoubleEncoder: JdbcEncoderAny<Double> = JdbcEncoderAny.fromFunction(Types.DOUBLE) { ctx, v, i -> ctx.stmt.setDouble(i, v) }
