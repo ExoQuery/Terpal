@@ -26,7 +26,11 @@ abstract class SqlJdbcBase(): SqlBase() {
   override fun wrap(value: Boolean?): SqlFragment = Param(value)
   fun wrap(value: BigDecimal?): SqlFragment = Param.contextual(value)
   fun wrap(value: ByteArray?): SqlFragment = Param(value)
-  fun wrap(value: java.util.Date?): SqlFragment = Param.contextual(value)
+
+  fun wrap(value: java.util.Date?): SqlFragment = Param(value)
+  fun wrap(value: java.sql.Date?): SqlFragment = Param(value)
+  fun wrap(value: java.sql.Time?): SqlFragment = Param(value)
+  fun wrap(value: java.sql.Timestamp?): SqlFragment = Param(value)
 
   fun wrap(value: LocalDate?): SqlFragment = Param.contextual(value)
   fun wrap(value: LocalTime?): SqlFragment = Param.contextual(value)

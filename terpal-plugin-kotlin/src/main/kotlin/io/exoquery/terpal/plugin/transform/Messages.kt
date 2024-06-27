@@ -15,7 +15,7 @@ object Messages {
 
   fun errorFailedToFindWrapper(ctx: BuilderContext, caller: IrExpression, expr: IrExpression, interpolateClass: IrType): Nothing {
     val validWrapFunctions =
-      caller.type.classOrFail.functions.filter { it.isValidWrapFunction(interpolateClass) }.map { it.owner.valueParameters.first().type.dumpKotlinLike() }.toList()
+      caller.type.classOrFail.functions.filter { it.isValidWrapFunction(interpolateClass) }.map { it.owner.valueParameters.first().type.classOrNull?.safeName }.toList()
     val invalidWrapFunctions =
       caller.type.classOrFail.functions.filter { it.safeName == "wrap" && !it.isValidWrapFunction(interpolateClass) }.map { it.owner.dumpKotlinLike() }.toList()
     val dol = '$'

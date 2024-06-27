@@ -38,8 +38,11 @@ data class Param<T>(val serializer: SerializationStrategy<T>, val cls: KClass<*>
     operator fun invoke(value: Double?): Param<Double> = Param(Double.serializer(), Double::class, value)
     operator fun invoke(value: Boolean?): Param<Boolean> = Param(Boolean.serializer(), Boolean::class, value)
     operator fun invoke(value: ByteArray?): Param<ByteArray> = Param(serializer<ByteArray>(), ByteArray::class, value)
-    operator fun invoke(value: java.util.Date?): Param<java.util.Date> = Param(serializer<java.util.Date>(), ByteArray::class, value)
 
+    @OptIn(SerApi::class) operator fun invoke(value: java.util.Date?): Param<java.util.Date> = Param(ContextualSerializer(java.util.Date::class), java.util.Date::class, value)
+    @OptIn(SerApi::class) operator fun invoke(value: java.sql.Date?): Param<java.sql.Date> = Param(ContextualSerializer(java.sql.Date::class), java.sql.Date::class, value)
+    @OptIn(SerApi::class) operator fun invoke(value: java.sql.Time?): Param<java.sql.Time> = Param(ContextualSerializer(java.sql.Time::class), java.sql.Time::class, value)
+    @OptIn(SerApi::class) operator fun invoke(value: java.sql.Timestamp?): Param<java.sql.Timestamp> = Param(ContextualSerializer(java.sql.Timestamp::class), java.sql.Timestamp::class, value)
     @OptIn(SerApi::class) operator fun invoke(value: BigDecimal?): Param<BigDecimal> = Param(ContextualSerializer(BigDecimal::class), BigDecimal::class, value)
     @OptIn(SerApi::class) operator fun invoke(value: LocalDate?): Param<LocalDate> = Param(ContextualSerializer(LocalDate::class), LocalDate::class, value)
     @OptIn(SerApi::class) operator fun invoke(value: LocalTime?): Param<LocalTime> = Param(ContextualSerializer(LocalTime::class), LocalTime::class, value)

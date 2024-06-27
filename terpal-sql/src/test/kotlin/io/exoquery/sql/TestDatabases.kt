@@ -2,15 +2,16 @@ package io.exoquery.sql
 
 import com.zaxxer.hikari.HikariDataSource
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
-import io.zonky.test.db.postgres.embedded.FlywayPreparer
-import org.testcontainers.containers.MySQLContainer
-import org.testcontainers.shaded.org.bouncycastle.cms.RecipientId.password
 import javax.sql.DataSource
 
 object TestDatabases {
   val embeddedPostgres by lazy {
     val started = EmbeddedPostgres.start()
-    FlywayPreparer.forClasspathLocation("db/postgres").prepare(started.getPostgresDatabase())
+    val postgresScriptsPath = "/db/postgres-schema.sql"
+    val resource = this::class.java.getResource(postgresScriptsPath)
+    if (resource == null) throw NullPointerException("The postgres script path `$postgresScriptsPath` was not found")
+    val postgresScript = resource.readText()
+    started.getPostgresDatabase().run(postgresScript)
     started
   }
   val postgres by lazy { embeddedPostgres.getPostgresDatabase() }

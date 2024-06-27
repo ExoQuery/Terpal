@@ -98,8 +98,10 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
 
   // Do it this way so we can avoid value casting in the runScoped function
   @Suppress("UNCHECKED_CAST")
-  fun <T> Param<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit =
+  fun <T> Param<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit {
+    println("----- Preparing parameter $index - $value - using $serializer")
     PreparedStatementElementEncoder(createEncodingContext(conn, ps), index+1, encoders).encodeNullableSerializableValue(serializer, value)
+  }
 
   protected fun makeStmtReturning(sql: String, conn: Connection, returningBehavior: ReturnAction) =
     when(returningBehavior) {
@@ -119,7 +121,7 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
   suspend fun <T> FlowCollector<T>.emitResultSet(conn: Connection, rs: ResultSet, extract: (Connection, ResultSet) -> T) {
     while (rs.next()) {
       val meta = rs.metaData
-      println("--- Emit: ${(1..meta.columnCount).map { rs.getObject(it) }.joinToString(",")}")
+      //println("--- Emit: ${(1..meta.columnCount).map { rs.getObject(it) }.joinToString(",")}")
       emit(extract(conn, rs))
     }
   }

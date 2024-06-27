@@ -24,39 +24,6 @@ class TransactionSpec: FreeSpec({
     )
   }
 
-  /*
-  // Scala:
-    "provides transaction support" - {
-    "success" in {
-      ctx.run(qr1.delete)
-      ctx.transaction {
-        ctx.run(qr1.insert(_.i -> 33))
-      }
-      ctx.run(qr1).map(_.i) mustEqual List(33)
-    }
-    "failure" in {
-      ctx.run(qr1.delete)
-      intercept[IllegalStateException] {
-        ctx.transaction {
-          ctx.run(qr1.insert(_.i -> 33))
-          throw new IllegalStateException
-        }
-      }
-      ctx.run(qr1).isEmpty mustEqual true
-    }
-    "nested" in {
-      ctx.run(qr1.delete)
-      ctx.transaction {
-        ctx.transaction {
-          ctx.run(qr1.insert(_.i -> 33))
-        }
-      }
-      ctx.run(qr1).map(_.i) mustEqual List(33)
-    }
-   */
-
-
-
   @Serializable
   data class Person(val id: Int, val firstName: String, val lastName: String, val age: Int)
 
