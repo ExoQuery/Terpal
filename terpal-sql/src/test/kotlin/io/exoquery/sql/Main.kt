@@ -1,9 +1,9 @@
 package io.exoquery.sql
 
 import io.exoquery.sql.jdbc.JdbcContext
-import io.exoquery.sql.jdbc.PostgresJdbcContext
 import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.jdbc.SqlBatch
+import io.exoquery.sql.jdbc.TerpalContext
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
@@ -48,7 +48,7 @@ suspend fun main() {
     //  println(p)
     //}
 
-    val ctx = PostgresJdbcContext(ds)
+    val ctx = TerpalContext.Postgres(ds)
 
     val d = LocalDate.now()
     val par = Param(d)

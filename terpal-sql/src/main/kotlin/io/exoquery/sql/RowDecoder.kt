@@ -1,10 +1,8 @@
 package io.exoquery.sql
 
-import io.exoquery.sql.jdbc.JdbcDecodersWithTime
 import io.exoquery.sql.jdbc.JdbcDecodingContext
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.CompositeDecoder
 import kotlinx.serialization.encoding.Decoder
@@ -43,27 +41,40 @@ fun SerialDescriptor.verifyColumns(columns: List<ColumnInfo>): Unit {
 class JdbcRowDecoder(
   ctx: JdbcDecodingContext,
   initialRowIndex: Int,
-  decoders: SqlDecoders<Connection, ResultSet>,
+  api: ApiDecoders<Connection, ResultSet>,
+  decoders: Set<SqlDecoder<Connection, ResultSet, out Any>>,
   columnInfos: List<ColumnInfo>,
   endCallback: (Int) -> Unit
-): RowDecoder<Connection, ResultSet>(ctx, initialRowIndex, decoders, columnInfos, endCallback) {
+): RowDecoder<Connection, ResultSet>(ctx, initialRowIndex, api, decoders, columnInfos, endCallback) {
 
   companion object {
-    operator fun invoke(ctx: JdbcDecodingContext, decoders: SqlDecoders<Connection, ResultSet>, descriptor: SerialDescriptor): JdbcRowDecoder {
+    operator fun invoke(
+      ctx: JdbcDecodingContext,
+      api: ApiDecoders<Connection, ResultSet>,
+      decoders: Set<SqlDecoder<Connection, ResultSet, out Any>>,
+      descriptor: SerialDescriptor
+    ): JdbcRowDecoder {
       fun metaColumnData(meta: ResultSetMetaData) =
         (1..meta.columnCount).map { ColumnInfo(meta.getColumnName(it), meta.getColumnTypeName(it)) }
       val metaColumns = metaColumnData(ctx.row.metaData)
       descriptor.verifyColumns(metaColumns)
-      return JdbcRowDecoder(ctx, 1, decoders, metaColumns, {})
+      return JdbcRowDecoder(ctx, 1, api, decoders, metaColumns, {})
     }
   }
 
   override fun cloneSelf(ctx: JdbcDecodingContext, initialRowIndex: Int, endCallback: (Int) -> Unit): RowDecoder<Connection, ResultSet> =
-    JdbcRowDecoder(ctx, initialRowIndex, decoders, columnInfos, endCallback)
+    JdbcRowDecoder(ctx, initialRowIndex, api, decoders, columnInfos, endCallback)
 }
 
 @OptIn(ExperimentalSerializationApi::class)
-abstract class RowDecoder<Session, Row>(val ctx: DecodingContext<Session, Row>, val initialRowIndex: Int, val decoders: SqlDecoders<Session, Row>, val columnInfos: List<ColumnInfo>, val endCallback: (Int) -> Unit): Decoder, CompositeDecoder {
+abstract class RowDecoder<Session, Row>(
+  val ctx: DecodingContext<Session, Row>,
+  val initialRowIndex: Int,
+  val api: ApiDecoders<Session, Row>,
+  val decoders: Set<SqlDecoder<Session, Row, out Any>>,
+  val columnInfos: List<ColumnInfo>,
+  val endCallback: (Int) -> Unit
+): Decoder, CompositeDecoder {
 
   abstract fun cloneSelf(ctx: DecodingContext<Session, Row>, initialRowIndex: Int, endCallback: (Int) -> Unit): RowDecoder<Session, Row>
 
@@ -72,41 +83,41 @@ abstract class RowDecoder<Session, Row>(val ctx: DecodingContext<Session, Row>, 
 
   fun nextRowIndex(desc: SerialDescriptor, descIndex: Int, note: String = ""): Int {
     val curr = rowIndex
-    println("---- Get Row ${columnInfos[rowIndex-1].name}, Index: ${curr} - (${descIndex}) ${desc.getElementDescriptor(descIndex)} - (Preview:${decoders.preview(rowIndex, ctx.row)})" + (if (note != "") " - ${note}" else ""))
+    println("---- Get Row ${columnInfos[rowIndex-1].name}, Index: ${curr} - (${descIndex}) ${desc.getElementDescriptor(descIndex)} - (Preview:${api.preview(rowIndex, ctx.row)})" + (if (note != "") " - ${note}" else ""))
     rowIndex += 1
     return curr
   }
 
   fun nextRowIndex(note: String = ""): Int {
     val curr = rowIndex
-    println("---- Get Row ${columnInfos[rowIndex-1].name} - (Preview:${decoders.preview(rowIndex, ctx.row)})" + (if (note != "") " - ${note}" else ""))
+    println("---- Get Row ${columnInfos[rowIndex-1].name} - (Preview:${api.preview(rowIndex, ctx.row)})" + (if (note != "") " - ${note}" else ""))
     rowIndex += 1
     return curr
   }
 
   override val serializersModule: SerializersModule = EmptySerializersModule()
 
-  override fun decodeBooleanElement(descriptor: SerialDescriptor, index: Int): Boolean = decoders.BooleanDecoder.decode(ctx, nextRowIndex(descriptor, index))
-  override fun decodeByteElement(descriptor: SerialDescriptor, index: Int): Byte = decoders.ByteDecoder.decode(ctx, nextRowIndex(descriptor, index))
-  override fun decodeCharElement(descriptor: SerialDescriptor, index: Int): Char = decoders.CharDecoder.decode(ctx, nextRowIndex(descriptor, index))
-  override fun decodeDoubleElement(descriptor: SerialDescriptor, index: Int): Double = decoders.DoubleDecoder.decode(ctx, nextRowIndex(descriptor, index))
-  override fun decodeFloatElement(descriptor: SerialDescriptor, index: Int): Float = decoders.FloatDecoder.decode(ctx, nextRowIndex(descriptor, index))
-  override fun decodeIntElement(descriptor: SerialDescriptor, index: Int): Int = decoders.IntDecoder.decode(ctx, nextRowIndex(descriptor, index))
-  override fun decodeLongElement(descriptor: SerialDescriptor, index: Int): Long = decoders.LongDecoder.decode(ctx, nextRowIndex(descriptor, index))
-  override fun decodeShortElement(descriptor: SerialDescriptor, index: Int): Short = decoders.ShortDecoder.decode(ctx, nextRowIndex(descriptor, index))
-  override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String = decoders.StringDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeBooleanElement(descriptor: SerialDescriptor, index: Int): Boolean = api.BooleanDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeByteElement(descriptor: SerialDescriptor, index: Int): Byte = api.ByteDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeCharElement(descriptor: SerialDescriptor, index: Int): Char = api.CharDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeDoubleElement(descriptor: SerialDescriptor, index: Int): Double = api.DoubleDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeFloatElement(descriptor: SerialDescriptor, index: Int): Float = api.FloatDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeIntElement(descriptor: SerialDescriptor, index: Int): Int = api.IntDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeLongElement(descriptor: SerialDescriptor, index: Int): Long = api.LongDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeShortElement(descriptor: SerialDescriptor, index: Int): Short = api.ShortDecoder.decode(ctx, nextRowIndex(descriptor, index))
+  override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String = api.StringDecoder.decode(ctx, nextRowIndex(descriptor, index))
 
   // These are primarily used when there is some kind of encoder delegation used e.g. if it is a new-type or wrapped-type e.g. DateToLongSerializer
   // they will be invoked from `deserializer.deserialize(this)` in decodeNullableSerializableElement in the last clause.
-  override fun decodeBoolean(): Boolean = decoders.BooleanDecoder.decode(ctx, nextRowIndex())
-  override fun decodeByte(): Byte = decoders.ByteDecoder.decode(ctx, nextRowIndex())
-  override fun decodeChar(): Char = decoders.CharDecoder.decode(ctx, nextRowIndex())
-  override fun decodeDouble(): Double = decoders.DoubleDecoder.decode(ctx, nextRowIndex())
-  override fun decodeFloat(): Float = decoders.FloatDecoder.decode(ctx, nextRowIndex())
-  override fun decodeShort(): Short = decoders.ShortDecoder.decode(ctx, nextRowIndex())
-  override fun decodeString(): String = decoders.StringDecoder.decode(ctx, nextRowIndex())
-  override fun decodeInt(): Int = decoders.IntDecoder.decode(ctx, nextRowIndex())
-  override fun decodeLong(): Long = decoders.LongDecoder.decode(ctx, nextRowIndex())
+  override fun decodeBoolean(): Boolean = api.BooleanDecoder.decode(ctx, nextRowIndex())
+  override fun decodeByte(): Byte = api.ByteDecoder.decode(ctx, nextRowIndex())
+  override fun decodeChar(): Char = api.CharDecoder.decode(ctx, nextRowIndex())
+  override fun decodeDouble(): Double = api.DoubleDecoder.decode(ctx, nextRowIndex())
+  override fun decodeFloat(): Float = api.FloatDecoder.decode(ctx, nextRowIndex())
+  override fun decodeShort(): Short = api.ShortDecoder.decode(ctx, nextRowIndex())
+  override fun decodeString(): String = api.StringDecoder.decode(ctx, nextRowIndex())
+  override fun decodeInt(): Int = api.IntDecoder.decode(ctx, nextRowIndex())
+  override fun decodeLong(): Long = api.LongDecoder.decode(ctx, nextRowIndex())
 
 
   @ExperimentalSerializationApi
@@ -141,12 +152,12 @@ abstract class RowDecoder<Session, Row>(val ctx: DecodingContext<Session, Row>, 
           when {
             // When its contextual, get the decoder for that base on the capturedKClass
             childDesc.capturedKClass != null ->
-              decoders.decoders.find { it.type == childDesc.capturedKClass }
+              decoders.find { it.type == childDesc.capturedKClass }
                 ?: throw IllegalArgumentException("Could not find a decoder for the (contextual) structural list type ${childDesc.capturedKClass} with the descriptor: ${childDesc} because not decoder for ${childDesc.capturedKClass} was found")
 
             childDesc.elementDescriptors.toList().size == 1 && childDesc.elementDescriptors.first().kind is PrimitiveKind.BYTE ->
               // When its not contextual there wont be a captured class, in that case get the first type-parameter from the List descriptor and decode some known types based on that
-              decoders.decoders.find { it.type == ByteArray::class }
+              decoders.find { it.type == ByteArray::class }
                 ?: throw IllegalArgumentException("Could not find a byte array decoder in the database-context for the list type ${childDesc.capturedKClass}")
 
             else ->
@@ -162,7 +173,7 @@ abstract class RowDecoder<Session, Row>(val ctx: DecodingContext<Session, Row>, 
         // so we need to check [street..<zip] indexes i.e. [3..<(3+2)] for nullity
         val allRowsNull =
           (rowIndex until (rowIndex + childDesc.elementsCount)).all {
-            decoders.isNull(it, ctx.row)
+            api.isNull(it, ctx.row)
           }
 
         if (allRowsNull) {
@@ -172,7 +183,7 @@ abstract class RowDecoder<Session, Row>(val ctx: DecodingContext<Session, Row>, 
         }
       }
       SerialKind.CONTEXTUAL -> {
-        val decoder = decoders.decoders.find { it.type == childDesc.capturedKClass }?.asNullableIfSpecified()
+        val decoder = decoders.find { it.type == childDesc.capturedKClass }?.asNullableIfSpecified()
         if (decoder == null) throw IllegalArgumentException("Could not find a decoder for the contextual type ${childDesc.capturedKClass}")
         @Suppress("UNCHECKED_CAST")
         run { decodeWithDecoder(decoder as SqlDecoder<Session, Row, T>) }
@@ -180,7 +191,7 @@ abstract class RowDecoder<Session, Row>(val ctx: DecodingContext<Session, Row>, 
       else -> {
         when {
           childDesc.kind is PrimitiveKind ->
-            if (decoders.isNull(rowIndex, ctx.row)) {
+            if (api.isNull(rowIndex, ctx.row)) {
               // Advance to the next row (since we know the current one is null)
               // otherwise the next row lookup will think the element is still this one (i.e. null)
               //rowIndex += 1

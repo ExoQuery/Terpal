@@ -8,7 +8,12 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.modules.EmptySerializersModule
 import kotlinx.serialization.modules.SerializersModule
 
-class PreparedStatementElementEncoder<Session, Stmt>(val ctx: EncodingContext<Session, Stmt>, val index: Int, val encoders: SqlEncoders<Session, Stmt>): Encoder {
+class PreparedStatementElementEncoder<Session, Stmt>(
+  val ctx: EncodingContext<Session, Stmt>,
+  val index: Int,
+  val api: ApiEncoders<Session, Stmt>,
+  val encoders: Set<SqlEncoder<Session, Stmt, out Any>>
+): Encoder {
 
   override val serializersModule: SerializersModule = EmptySerializersModule()
 
@@ -32,15 +37,15 @@ class PreparedStatementElementEncoder<Session, Stmt>(val ctx: EncodingContext<Se
     else
       throw IllegalArgumentException("Illegal descriptor kind: ${descriptor.kind} was attempted for structural decoding. This should be impossible.")
 
-  override fun encodeBoolean(value: Boolean) = encoders.BooleanEncoder.encode(ctx, value, index)
-  override fun encodeByte(value: Byte) = encoders.ByteEncoder.encode(ctx, value, index)
-  override fun encodeChar(value: Char) = encoders.CharEncoder.encode(ctx, value, index)
-  override fun encodeDouble(value: Double) = encoders.DoubleEncoder.encode(ctx, value, index)
-  override fun encodeFloat(value: Float) = encoders.FloatEncoder.encode(ctx, value, index)
-  override fun encodeInt(value: Int) = encoders.IntEncoder.encode(ctx, value, index)
-  override fun encodeLong(value: Long) = encoders.LongEncoder.encode(ctx, value, index)
-  override fun encodeShort(value: Short) = encoders.ShortEncoder.encode(ctx, value, index)
-  override fun encodeString(value: String) = encoders.StringEncoder.encode(ctx, value, index)
+  override fun encodeBoolean(value: Boolean) = api.BooleanEncoder.encode(ctx, value, index)
+  override fun encodeByte(value: Byte) = api.ByteEncoder.encode(ctx, value, index)
+  override fun encodeChar(value: Char) = api.CharEncoder.encode(ctx, value, index)
+  override fun encodeDouble(value: Double) = api.DoubleEncoder.encode(ctx, value, index)
+  override fun encodeFloat(value: Float) = api.FloatEncoder.encode(ctx, value, index)
+  override fun encodeInt(value: Int) = api.IntEncoder.encode(ctx, value, index)
+  override fun encodeLong(value: Long) = api.LongEncoder.encode(ctx, value, index)
+  override fun encodeShort(value: Short) = api.ShortEncoder.encode(ctx, value, index)
+  override fun encodeString(value: String) = api.StringEncoder.encode(ctx, value, index)
 
   override fun encodeEnum(enumDescriptor: SerialDescriptor, index: Int) =
     TODO("Enum encoding not yet supported")
@@ -68,10 +73,10 @@ class PreparedStatementElementEncoder<Session, Stmt>(val ctx: EncodingContext<Se
         val encoder =
           when {
             desc.capturedKClass != null -> {
-              encoders.encoders.find { it.type == desc.capturedKClass } ?: throw IllegalArgumentException("Could not find a decoder for the list type ${desc.capturedKClass}")
+              encoders.find { it.type == desc.capturedKClass } ?: throw IllegalArgumentException("Could not find a decoder for the list type ${desc.capturedKClass}")
             }
             desc.elementDescriptors.toList().size == 1 && desc.elementDescriptors.first().kind is PrimitiveKind.BYTE ->
-              encoders.encoders.find { it.type == ByteArray::class }
+              encoders.find { it.type == ByteArray::class }
             else ->
               null
           }
@@ -80,7 +85,7 @@ class PreparedStatementElementEncoder<Session, Stmt>(val ctx: EncodingContext<Se
           ?: throw IllegalArgumentException("Could not find a encoder for the structural list type ${desc.capturedKClass} with the descriptor: ${desc}")
       }
       SerialKind.CONTEXTUAL -> {
-        val encoder = encoders.encoders.find { it.type == desc.capturedKClass }?.asNullable()
+        val encoder = encoders.find { it.type == desc.capturedKClass }?.asNullable()
         if (encoder == null) throw IllegalArgumentException("Could not find a encoder for the contextual type ${desc.capturedKClass}")
         @Suppress("UNCHECKED_CAST")
         run { (encoder as SqlEncoder<Session, Stmt, T?>).encode(ctx, value, index) }
@@ -88,15 +93,15 @@ class PreparedStatementElementEncoder<Session, Stmt>(val ctx: EncodingContext<Se
       else -> {
         if (value == null) {
           when (desc.kind) {
-            is PrimitiveKind.BYTE -> encoders.ByteEncoder.asNullable().encode(ctx, null, index)
-            is PrimitiveKind.SHORT -> encoders.ShortEncoder.asNullable().encode(ctx, null, index)
-            is PrimitiveKind.INT -> encoders.IntEncoder.asNullable().encode(ctx, null, index)
-            is PrimitiveKind.LONG -> encoders.LongEncoder.asNullable().encode(ctx, null, index)
-            is PrimitiveKind.FLOAT -> encoders.FloatEncoder.asNullable().encode(ctx, null, index)
-            is PrimitiveKind.DOUBLE -> encoders.DoubleEncoder.asNullable().encode(ctx, null, index)
-            is PrimitiveKind.BOOLEAN -> encoders.BooleanEncoder.asNullable().encode(ctx, null, index)
-            is PrimitiveKind.CHAR -> encoders.CharEncoder.asNullable().encode(ctx, null, index)
-            is PrimitiveKind.STRING -> encoders.StringEncoder.asNullable().encode(ctx, null, index)
+            is PrimitiveKind.BYTE -> api.ByteEncoder.asNullable().encode(ctx, null, index)
+            is PrimitiveKind.SHORT -> api.ShortEncoder.asNullable().encode(ctx, null, index)
+            is PrimitiveKind.INT -> api.IntEncoder.asNullable().encode(ctx, null, index)
+            is PrimitiveKind.LONG -> api.LongEncoder.asNullable().encode(ctx, null, index)
+            is PrimitiveKind.FLOAT -> api.FloatEncoder.asNullable().encode(ctx, null, index)
+            is PrimitiveKind.DOUBLE -> api.DoubleEncoder.asNullable().encode(ctx, null, index)
+            is PrimitiveKind.BOOLEAN -> api.BooleanEncoder.asNullable().encode(ctx, null, index)
+            is PrimitiveKind.CHAR -> api.CharEncoder.asNullable().encode(ctx, null, index)
+            is PrimitiveKind.STRING -> api.StringEncoder.asNullable().encode(ctx, null, index)
             else -> throw IllegalArgumentException("Unsupported null primitive kind: ${desc.kind}")
           }
         } else if (desc.kind is PrimitiveKind) {

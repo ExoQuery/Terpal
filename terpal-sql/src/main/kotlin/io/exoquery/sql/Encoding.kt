@@ -1,9 +1,8 @@
 package io.exoquery.sql
 
 import java.math.BigDecimal
-import java.sql.Connection
-import java.sql.PreparedStatement
 import java.time.*
+import java.util.UUID
 import kotlin.reflect.KClass
 
 abstract class SqlDecoder<Session, Row, T> {
@@ -35,90 +34,107 @@ abstract class SqlEncoder<Session, Statement, T> {
   }
 }
 
-interface BooleanEncoders<Session, Stmt> {
+interface BooleanEncoding<Session, Stmt, Row> {
   val BooleanEncoder: SqlEncoder<Session, Stmt, Boolean>
-}
-
-interface BooleanDecoders<Session, Row> {
   val BooleanDecoder: SqlDecoder<Session, Row, Boolean>
 }
 
-abstract class SqlDecoders<Session, Row>: BooleanDecoders<Session, Row> {
-  abstract fun isNull(index: Int, row: Row): Boolean
-  abstract fun preview(index: Int, row: Row): String?
-
-  override abstract val BooleanDecoder: SqlDecoder<Session, Row, Boolean>
-  abstract val ByteDecoder: SqlDecoder<Session, Row, Byte>
-  abstract val CharDecoder: SqlDecoder<Session, Row, Char>
-  abstract val DoubleDecoder: SqlDecoder<Session, Row, Double>
-  abstract val FloatDecoder: SqlDecoder<Session, Row, Float>
-  abstract val IntDecoder: SqlDecoder<Session, Row, Int>
-  abstract val LongDecoder: SqlDecoder<Session, Row, Long>
-  abstract val ShortDecoder: SqlDecoder<Session, Row, Short>
-  abstract val StringDecoder: SqlDecoder<Session, Row, String>
-  abstract val BigDecimalDecoder: SqlDecoder<Session, Row, BigDecimal>
-  abstract val ByteArrayDecoder: SqlDecoder<Session, Row, ByteArray>
-  abstract val DateDecoder: SqlDecoder<Session, Row, java.util.Date>
-
-  abstract val LocalDateDecoder: SqlDecoder<Session, Row, LocalDate>
-  abstract val LocalTimeDecoder: SqlDecoder<Session, Row, LocalTime>
-  abstract val LocalDateTimeDecoder: SqlDecoder<Session, Row, LocalDateTime>
-  abstract val ZonedDateTimeDecoder: SqlDecoder<Session, Row, ZonedDateTime>
-
-  abstract val InstantDecoder: SqlDecoder<Session, Row, Instant>
-  abstract val OffsetTimeDecoder: SqlDecoder<Session, Row, OffsetTime>
-  abstract val OffsetDateTimeDecoder: SqlDecoder<Session, Row, OffsetDateTime>
-
-  open val decoders: Set<SqlDecoder<Session, Row, out Any>> by lazy {
-    setOf(
-      BooleanDecoder,
-      ByteDecoder,
-      CharDecoder,
-      DoubleDecoder,
-      FloatDecoder,
-      IntDecoder,
-      LongDecoder,
-      ShortDecoder,
-      StringDecoder,
-      BigDecimalDecoder,
-      ByteArrayDecoder,
-      DateDecoder,
-      LocalDateDecoder,
-      LocalTimeDecoder,
-      LocalDateTimeDecoder,
-      ZonedDateTimeDecoder,
-      InstantDecoder,
-      OffsetTimeDecoder,
-      OffsetDateTimeDecoder
-    )
-  }
+interface UuidEncoding<Session, Stmt, Row> {
+  val UuidEncoder: SqlEncoder<Session, Stmt, UUID>
+  val UuidDecoder: SqlDecoder<Session, Row, UUID>
 }
 
-abstract class SqlEncoders<Session, Stmt>: BooleanEncoders<Session, Stmt> {
-  override abstract val BooleanEncoder: SqlEncoder<Session, Stmt, Boolean>
-  abstract val ByteEncoder: SqlEncoder<Session, Stmt, Byte>
-  abstract val CharEncoder: SqlEncoder<Session, Stmt, Char>
-  abstract val DoubleEncoder: SqlEncoder<Session, Stmt, Double>
-  abstract val FloatEncoder: SqlEncoder<Session, Stmt, Float>
-  abstract val IntEncoder: SqlEncoder<Session, Stmt, Int>
-  abstract val LongEncoder: SqlEncoder<Session, Stmt, Long>
-  abstract val ShortEncoder: SqlEncoder<Session, Stmt, Short>
-  abstract val StringEncoder: SqlEncoder<Session, Stmt, String>
-  abstract val BigDecimalEncoder: SqlEncoder<Session, Stmt, BigDecimal>
-  abstract val ByteArrayEncoder: SqlEncoder<Session, Stmt, ByteArray>
-  abstract val DateEncoder: SqlEncoder<Session, Stmt, java.util.Date>
+// Used by the PreparedStatementEncoder
+interface ApiEncoders<Session, Stmt> {
+  val BooleanEncoder: SqlEncoder<Session, Stmt, Boolean>
+  val ByteEncoder: SqlEncoder<Session, Stmt, Byte>
+  val CharEncoder: SqlEncoder<Session, Stmt, Char>
+  val DoubleEncoder: SqlEncoder<Session, Stmt, Double>
+  val FloatEncoder: SqlEncoder<Session, Stmt, Float>
+  val IntEncoder: SqlEncoder<Session, Stmt, Int>
+  val LongEncoder: SqlEncoder<Session, Stmt, Long>
+  val ShortEncoder: SqlEncoder<Session, Stmt, Short>
+  val StringEncoder: SqlEncoder<Session, Stmt, String>
+  val BigDecimalEncoder: SqlEncoder<Session, Stmt, BigDecimal>
+  val ByteArrayEncoder: SqlEncoder<Session, Stmt, ByteArray>
+  val DateEncoder: SqlEncoder<Session, Stmt, java.util.Date>
+}
+// Used by the RowDecoder
+interface ApiDecoders<Session, Row> {
+  val BooleanDecoder: SqlDecoder<Session, Row, Boolean>
+  val ByteDecoder: SqlDecoder<Session, Row, Byte>
+  val CharDecoder: SqlDecoder<Session, Row, Char>
+  val DoubleDecoder: SqlDecoder<Session, Row, Double>
+  val FloatDecoder: SqlDecoder<Session, Row, Float>
+  val IntDecoder: SqlDecoder<Session, Row, Int>
+  val LongDecoder: SqlDecoder<Session, Row, Long>
+  val ShortDecoder: SqlDecoder<Session, Row, Short>
+  val StringDecoder: SqlDecoder<Session, Row, String>
+  val BigDecimalDecoder: SqlDecoder<Session, Row, BigDecimal>
+  val ByteArrayDecoder: SqlDecoder<Session, Row, ByteArray>
+  val DateDecoder: SqlDecoder<Session, Row, java.util.Date>
 
-  abstract val LocalDateEncoder: SqlEncoder<Session, Stmt, LocalDate>
-  abstract val LocalTimeEncoder: SqlEncoder<Session, Stmt, LocalTime>
-  abstract val LocalDateTimeEncoder: SqlEncoder<Session, Stmt, LocalDateTime>
-  abstract val ZonedDateTimeEncoder: SqlEncoder<Session, Stmt, ZonedDateTime>
+  abstract fun isNull(index: Int, row: Row): Boolean
+  abstract fun preview(index: Int, row: Row): String?
+}
 
-  abstract val InstantEncoder: SqlEncoder<Session, Stmt, Instant>
-  abstract val OffsetTimeEncoder: SqlEncoder<Session, Stmt, OffsetTime>
-  abstract val OffsetDateTimeEncoder: SqlEncoder<Session, Stmt, OffsetDateTime>
+interface BasicEncoding<Session, Stmt, Row> {
+  val ByteEncoder: SqlEncoder<Session, Stmt, Byte>
+  val CharEncoder: SqlEncoder<Session, Stmt, Char>
+  val DoubleEncoder: SqlEncoder<Session, Stmt, Double>
+  val FloatEncoder: SqlEncoder<Session, Stmt, Float>
+  val IntEncoder: SqlEncoder<Session, Stmt, Int>
+  val LongEncoder: SqlEncoder<Session, Stmt, Long>
+  val ShortEncoder: SqlEncoder<Session, Stmt, Short>
+  val StringEncoder: SqlEncoder<Session, Stmt, String>
+  val BigDecimalEncoder: SqlEncoder<Session, Stmt, BigDecimal>
+  val ByteArrayEncoder: SqlEncoder<Session, Stmt, ByteArray>
+  val DateEncoder: SqlEncoder<Session, Stmt, java.util.Date>
 
-  /** Implement this in the final class/object using computeEncoders() to have a stable list of them */
-  open val encoders: Set<SqlEncoder<Session, Stmt, out Any>> by lazy {
+  val ByteDecoder: SqlDecoder<Session, Row, Byte>
+  val CharDecoder: SqlDecoder<Session, Row, Char>
+  val DoubleDecoder: SqlDecoder<Session, Row, Double>
+  val FloatDecoder: SqlDecoder<Session, Row, Float>
+  val IntDecoder: SqlDecoder<Session, Row, Int>
+  val LongDecoder: SqlDecoder<Session, Row, Long>
+  val ShortDecoder: SqlDecoder<Session, Row, Short>
+  val StringDecoder: SqlDecoder<Session, Row, String>
+  val BigDecimalDecoder: SqlDecoder<Session, Row, BigDecimal>
+  val ByteArrayDecoder: SqlDecoder<Session, Row, ByteArray>
+  val DateDecoder: SqlDecoder<Session, Row, java.util.Date>
+
+  abstract fun isNull(index: Int, row: Row): Boolean
+  abstract fun preview(index: Int, row: Row): String?
+}
+
+interface TimeEncoding<Session, Stmt, Row> {
+  val LocalDateEncoder: SqlEncoder<Session, Stmt, LocalDate>
+  val LocalTimeEncoder: SqlEncoder<Session, Stmt, LocalTime>
+  val LocalDateTimeEncoder: SqlEncoder<Session, Stmt, LocalDateTime>
+  val ZonedDateTimeEncoder: SqlEncoder<Session, Stmt, ZonedDateTime>
+  val InstantEncoder: SqlEncoder<Session, Stmt, Instant>
+  val OffsetTimeEncoder: SqlEncoder<Session, Stmt, OffsetTime>
+  val OffsetDateTimeEncoder: SqlEncoder<Session, Stmt, OffsetDateTime>
+
+  val LocalDateDecoder: SqlDecoder<Session, Row, LocalDate>
+  val LocalTimeDecoder: SqlDecoder<Session, Row, LocalTime>
+  val LocalDateTimeDecoder: SqlDecoder<Session, Row, LocalDateTime>
+  val ZonedDateTimeDecoder: SqlDecoder<Session, Row, ZonedDateTime>
+  val InstantDecoder: SqlDecoder<Session, Row, Instant>
+  val OffsetTimeDecoder: SqlDecoder<Session, Row, OffsetTime>
+  val OffsetDateTimeDecoder: SqlDecoder<Session, Row, OffsetDateTime>
+}
+
+interface SqlEncoding<Session, Stmt, Row>:
+  BasicEncoding<Session, Stmt, Row>,
+  BooleanEncoding<Session, Stmt, Row>,
+  TimeEncoding<Session, Stmt, Row>,
+  UuidEncoding<Session, Stmt, Row>,
+  // Use by the PreparedStatementElementEncoder and the RowDecoder
+  ApiEncoders<Session, Stmt>,
+  ApiDecoders<Session, Row>{
+
+  fun computeEncoders(): Set<SqlEncoder<Session, Stmt, out Any>> =
     setOf(
       BooleanEncoder,
       ByteEncoder,
@@ -138,7 +154,69 @@ abstract class SqlEncoders<Session, Stmt>: BooleanEncoders<Session, Stmt> {
       ZonedDateTimeEncoder,
       InstantEncoder,
       OffsetTimeEncoder,
-      OffsetDateTimeEncoder
+      OffsetDateTimeEncoder,
+      UuidEncoder
     )
-  }
+
+  fun computeDecoders(): Set<SqlDecoder<Session, Row, out Any>> =
+    setOf(
+      BooleanDecoder,
+      ByteDecoder,
+      CharDecoder,
+      DoubleDecoder,
+      FloatDecoder,
+      IntDecoder,
+      LongDecoder,
+      ShortDecoder,
+      StringDecoder,
+      BigDecimalDecoder,
+      ByteArrayDecoder,
+      DateDecoder,
+      LocalDateDecoder,
+      LocalTimeDecoder,
+      LocalDateTimeDecoder,
+      ZonedDateTimeDecoder,
+      InstantDecoder,
+      OffsetTimeDecoder,
+      OffsetDateTimeDecoder,
+      UuidDecoder
+    )
 }
+
+//interface FooFoo {
+//  fun xx(): String
+//}
+//
+//interface Foo: FooFoo {
+//  fun x(): String
+//  fun all() = listOf(x(), xx())
+//}
+//class FooFooImpl: FooFoo {
+//  override fun xx(): String = "FooFooImpl"
+//}
+//class FooImpl: Foo, FooFoo by FooFooImpl() {
+//  override fun x(): String = "FooImpl"
+//}
+//
+//interface Bar {
+//  fun y(): String
+//  fun all() = listOf(y())
+//}
+//class BarImpl: Bar {
+//  override fun y(): String = "BarImpl"
+//}
+//interface FooBar: Foo, Bar {
+//  override fun all() = listOf(super<Foo>.all(), super<Bar>.all()).flatten()
+//}
+//
+//class FooBarImpl: FooBar, Foo by FooImpl(), Bar by BarImpl() {
+//  override fun all() = super<FooBar>.all()
+//}
+
+
+
+
+
+
+
+

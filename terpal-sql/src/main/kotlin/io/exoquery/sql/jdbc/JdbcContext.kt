@@ -20,13 +20,15 @@ sealed interface ReturnAction {
 }
 
 abstract class JdbcContext(override val database: DataSource): Context<Connection, DataSource>() {
+  // Maybe should just have all the encdoers from the base SqlEncoders class an everything introduced after should be added via additionalEncoders.
+  // that would make it much easier to reason about what encoders fome from where
+
   // Need to do this first in iniitalization
-  protected open val additionalEncoders = setOf<SqlEncoder<Connection, PreparedStatement, out Any>>()
-  protected open val additionalDecoders = setOf<SqlDecoder<Connection, ResultSet, out Any>>()
+  protected open val additionalEncoders: Set<SqlEncoder<Connection, PreparedStatement, out Any>> = setOf()
+  protected open val additionalDecoders: Set<SqlDecoder<Connection, ResultSet, out Any>> = setOf()
   protected open val timezone: TimeZone = TimeZone.getDefault()
 
-  protected open val encoders: SqlEncoders<Connection, PreparedStatement> by lazy { JdbcEncodersWithTime(additionalEncoders) }
-  protected open val decoders: SqlDecoders<Connection, ResultSet> by lazy { JdbcDecodersWithTime(additionalDecoders) }
+  protected abstract val encodingApi: SqlEncoding<Connection, PreparedStatement, ResultSet>
   protected open val batchReturnBehavior: ReturnAction = ReturnAction.ReturnRecord
 
   override open fun newSession(): Connection = database.connection
@@ -67,11 +69,14 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
     }
   }
 
+  protected val allEncoders by lazy { encodingApi.computeEncoders() + additionalEncoders }
+  protected val allDecoders by lazy { encodingApi.computeDecoders() + additionalDecoders }
+
   // Do it this way so we can avoid value casting in the runScoped function
   @Suppress("UNCHECKED_CAST")
   fun <T> Param<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit {
     println("----- Preparing parameter $index - $value - using $serializer")
-    PreparedStatementElementEncoder(createEncodingContext(conn, ps), index+1, encoders).encodeNullableSerializableValue(serializer, value)
+    PreparedStatementElementEncoder(createEncodingContext(conn, ps), index+1, encodingApi, allEncoders).encodeNullableSerializableValue(serializer, value)
   }
 
   protected open fun makeStmtReturning(sql: String, conn: Connection, returningBehavior: ReturnAction) =
@@ -155,7 +160,7 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
 
   protected fun <T> KSerializer<T>.makeExtractor() =
     { conn: Connection, rs: ResultSet ->
-      val decoder = JdbcRowDecoder(createDecodingContext(conn, rs), decoders, descriptor)
+      val decoder = JdbcRowDecoder(createDecodingContext(conn, rs), encodingApi, allDecoders, descriptor)
       deserialize(decoder)
     }
 

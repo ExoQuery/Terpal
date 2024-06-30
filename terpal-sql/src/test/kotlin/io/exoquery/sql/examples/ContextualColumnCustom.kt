@@ -2,9 +2,8 @@ package io.exoquery.sql.examples
 
 import io.exoquery.sql.Param
 import io.exoquery.sql.jdbc.*
-import io.exoquery.sql.jdbc.JdbcDecodersWithTimeLegacy.Companion.ZonedDateTimeDecoder
-import io.exoquery.sql.jdbc.JdbcEncodersWithTimeLegacy.Companion.ZonedDateTimeEncoder
-import io.exoquery.sql.run
+import io.exoquery.sql.jdbc.JdbcTimeEncodingLegacy.ZonedDateTimeEncoder
+import io.exoquery.sql.jdbc.JdbcTimeEncodingLegacy.ZonedDateTimeDecoder
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.KSerializer
@@ -17,12 +16,10 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.TimeZone
-import javax.sql.DataSource
 
 object ContextualColumnCustom {
 
@@ -51,7 +48,7 @@ object ContextualColumnCustom {
     val postgres = EmbeddedPostgres.start()
     postgres.run("CREATE TABLE customers (id SERIAL PRIMARY KEY, first_name TEXT, last_name TEXT, created_at TIMESTAMP WITH TIME ZONE)")
 
-    val ctx = object: JdbcContext(postgres.postgresDatabase) {
+    val ctx = object: TerpalContext.Postgres(postgres.postgresDatabase) {
       override val additionalDecoders = super.additionalDecoders + ZonedDateTimeDecoder.map { zd -> MyDateTime(zd.year, zd.dayOfMonth, zd.monthValue, TimeZone.getTimeZone(zd.zone)) }
       override val additionalEncoders = super.additionalEncoders + ZonedDateTimeEncoder.contramap { md: MyDateTime -> ZonedDateTime.of(md.year, md.month, md.day, 0, 0, 0, 0, md.timeZone.toZoneId()) }
     }

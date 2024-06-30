@@ -1,7 +1,7 @@
 package io.exoquery.sql.jdbc
 
-import io.exoquery.sql.Param
-import io.exoquery.sql.SqlEncoders
+import io.exoquery.sql.*
+import io.exoquery.sql.jdbc.TerpalContext.Mysql.MysqlTimeEncoding
 import kotlinx.coroutines.flow.Flow
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -11,37 +11,61 @@ import javax.sql.DataSource
 
 object TerpalContext {
   open class Postgres(override val database: DataSource): JdbcContext(database) {
-    override val additionalEncoders = setOf(UUIDEncoding.AsObjectEncoder, BooleanEncoding.AsObjectEncoder)
-    override val additionalDecoders = setOf(UUIDEncoding.AsObjectDecoder, BooleanEncoding.AsObjectDecoder)
+    override val additionalEncoders = super.additionalEncoders + AdditionaJdbcTimeEncoding.encoders
+    override val additionalDecoders = super.additionalDecoders + AdditionaJdbcTimeEncoding.decoders
 
-    override protected open val encoders: SqlEncoders<Connection, PreparedStatement> by lazy {
-      // Unless you do `this@PostgresJdbcContext.additionalEncoders` it will use the encoders for the parent class which is incorrect (i.e. doesn't contain the UUIDObjectEncoder)
-      object : JdbcEncodersWithTime(this@Postgres.additionalEncoders) {
-        // Postgres does not support Types.TIME_WITH_TIMEZONE as a JDBC type but does have a `TIME WITH TIMEZONE` datatype this is puzzling.
-        override val jdbcTypeOfOffsetTime = Types.TIME
-        //override val encoders by lazy { super.encoders + additionalEncoders }
-      }
+    // Postgres does not support Types.TIME_WITH_TIMEZONE as a JDBC type but does have a `TIME WITH TIMEZONE` datatype this is puzzling.
+    object PostgresTimeEncoding: JdbcTimeEncoding() {
+      override val jdbcTypeOfOffsetTime = Types.TIME
     }
+    override protected open val encodingApi: SqlEncoding<Connection, PreparedStatement, ResultSet> =
+      object : SqlEncoding<Connection, PreparedStatement, ResultSet>,
+        BasicEncoding<Connection, PreparedStatement, ResultSet> by JdbcEncodingBasic,
+        BooleanEncoding<Connection, PreparedStatement, ResultSet> by JdbcBooleanObjectEncoding,
+        TimeEncoding<Connection, PreparedStatement, ResultSet> by PostgresTimeEncoding,
+        UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidObjectEncoding {}
   }
 
   open class PostgresLegacy(override val database: DataSource): Postgres(database) {
-    override protected open val encoders by lazy { JdbcEncodersWithTimeLegacy(additionalEncoders) }
-    override protected open val decoders by lazy { JdbcDecodersWithTimeLegacy(additionalDecoders) }
+    override protected open val encodingApi: SqlEncoding<Connection, PreparedStatement, ResultSet> =
+      object : SqlEncoding<Connection, PreparedStatement, ResultSet>,
+        BasicEncoding<Connection, PreparedStatement, ResultSet> by JdbcEncodingBasic,
+        BooleanEncoding<Connection, PreparedStatement, ResultSet> by JdbcBooleanObjectEncoding,
+        TimeEncoding<Connection, PreparedStatement, ResultSet> by JdbcTimeEncodingLegacy,
+        UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidObjectEncoding {}
   }
 
   open class Mysql(override val database: DataSource): JdbcContext(database) {
-    override val additionalEncoders = setOf(UUIDEncoding.AsObjectEncoder, BooleanEncoding.AsObjectEncoder)
-    override val additionalDecoders = setOf(UUIDEncoding.AsObjectDecoder, BooleanEncoding.AsObjectDecoder)
+    object MysqlTimeEncoding: JdbcTimeEncoding() {
+      override val jdbcTypeOfZonedDateTime  = Types.TIMESTAMP
+      override val jdbcTypeOfInstant        = Types.TIMESTAMP
+      override val jdbcTypeOfOffsetTime     = Types.TIME
+      override val jdbcTypeOfOffsetDateTime = Types.TIMESTAMP
+    }
+    override protected open val encodingApi: SqlEncoding<Connection, PreparedStatement, ResultSet> =
+      object : SqlEncoding<Connection, PreparedStatement, ResultSet>,
+        BasicEncoding<Connection, PreparedStatement, ResultSet> by JdbcEncodingBasic,
+        BooleanEncoding<Connection, PreparedStatement, ResultSet> by JdbcBooleanObjectEncoding,
+        TimeEncoding<Connection, PreparedStatement, ResultSet> by MysqlTimeEncoding,
+        UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidStringEncoding {}
   }
 
   open class Oracle(override val database: DataSource): JdbcContext(database) {
-    override val additionalEncoders = setOf(UUIDEncoding.AsStringEncoder, BooleanEncoding.AsIntEncoder)
-    override val additionalDecoders = setOf(UUIDEncoding.AsStringDecoder, BooleanEncoding.AsIntDecoder)
+    override protected open val encodingApi: SqlEncoding<Connection, PreparedStatement, ResultSet> =
+      object : SqlEncoding<Connection, PreparedStatement, ResultSet>,
+        BasicEncoding<Connection, PreparedStatement, ResultSet> by JdbcEncodingBasic,
+        BooleanEncoding<Connection, PreparedStatement, ResultSet> by JdbcBooleanIntEncoding,
+        TimeEncoding<Connection, PreparedStatement, ResultSet> by MysqlTimeEncoding,
+        UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidStringEncoding {}
   }
 
   open class SqlServer(override val database: DataSource): JdbcContext(database) {
-    override val additionalEncoders = setOf(UUIDEncoding.AsStringEncoder, BooleanEncoding.AsObjectEncoder)
-    override val additionalDecoders = setOf(UUIDEncoding.AsStringDecoder, BooleanEncoding.AsObjectDecoder)
+    override protected open val encodingApi: SqlEncoding<Connection, PreparedStatement, ResultSet> =
+      object : SqlEncoding<Connection, PreparedStatement, ResultSet>,
+        BasicEncoding<Connection, PreparedStatement, ResultSet> by JdbcEncodingBasic,
+        BooleanEncoding<Connection, PreparedStatement, ResultSet> by JdbcBooleanObjectEncoding,
+        TimeEncoding<Connection, PreparedStatement, ResultSet> by JdbcTimeEncoding(),
+        UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidStringEncoding {}
 
     override suspend fun <T> runBatchActionReturningScoped(sql: String, batches: Sequence<List<Param<*>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
       flowWithConnection {
