@@ -1,13 +1,11 @@
 package io.exoquery.sql
 
-import io.exoquery.sql.jdbc.JdbcContext
 import io.exoquery.sql.jdbc.Sql
 import io.exoquery.sql.jdbc.SqlBatch
 import io.exoquery.sql.jdbc.TerpalContext
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.serializer
 import java.sql.Connection
 import java.time.LocalDate
 
@@ -68,7 +66,7 @@ suspend fun main() {
       SqlBatch { p: Person -> "INSERT INTO person (id, firstName, lastName, age) VALUES (${Param(p.id)}, ${Param(p.name.firstName)}, ${Param(p.name.lastName)}, ${Param(p.age)}) RETURNING *" }.values(
         Person(11, Name("Joe", "Bloggs"), 111, LocalDate.ofEpochDay(0)),
         Person(22, Name("Jim", "Roogs"), 222, LocalDate.ofEpochDay(0))
-      ).batchActionReturning<Person>()
+      ).actionReturning<Person>()
 
     val ret = ctx.run(batch)
     println("-------------- Inserted: ${ret}")

@@ -7,6 +7,7 @@ import kotlinx.serialization.KSerializer
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.sql.SQLException
 import java.util.*
 import javax.sql.DataSource
 import kotlin.coroutines.CoroutineContext
@@ -75,7 +76,8 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
   // Do it this way so we can avoid value casting in the runScoped function
   @Suppress("UNCHECKED_CAST")
   fun <T> Param<T>.write(index: Int, conn: Connection, ps: PreparedStatement): Unit {
-    println("----- Preparing parameter $index - $value - using $serializer")
+    // TODO logging integration
+    //println("----- Preparing parameter $index - $value - using $serializer")
     PreparedStatementElementEncoder(createEncodingContext(conn, ps), index+1, encodingApi, allEncoders).encodeNullableSerializableValue(serializer, value)
   }
 
@@ -141,6 +143,7 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       val conn = localConnection()
       makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
         batches.forEach { batch ->
+          // TODO tryCatchQuery
           prepare(stmt, conn, batch)
           stmt.addBatch()
         }
@@ -154,7 +157,9 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       val conn = localConnection()
        makeStmt(sql, conn).use { stmt ->
         prepare(stmt, conn, params)
-        stmt.executeUpdate()
+        tryCatchQuery(sql) {
+          stmt.executeUpdate()
+        }
       }
     }
 
@@ -169,10 +174,19 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       val conn = localConnection()
       makeStmt(query.sql, conn).use { stmt ->
         prepare(stmt, conn, query.params)
-        stmt.executeQuery().use { rs ->
-          emitResultSet(conn, rs, query.resultMaker.makeExtractor())
+        tryCatchQuery(query.sql) {
+          stmt.executeQuery().use { rs ->
+            emitResultSet(conn, rs, query.resultMaker.makeExtractor())
+          }
         }
       }
+    }
+
+  private inline fun <T> tryCatchQuery(sql: String, op: () -> T): T =
+    try {
+      op()
+    } catch (e: SQLException) {
+      throw SQLException("Error executing query: ${sql}", e)
     }
 
   internal open suspend fun <T> stream(query: BatchActionReturning<T>): Flow<T> = runBatchActionReturningScoped(query.sql, query.params, batchReturnBehavior, query.resultMaker.makeExtractor())

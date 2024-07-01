@@ -11,6 +11,12 @@ CREATE TABLE address (
     zip INT
 );
 
+CREATE TABLE Product(
+    description VARCHAR(255),
+    id SERIAL PRIMARY KEY,
+    sku BIGINT
+);
+
 CREATE TABLE TimeEntity(
     sqlDate        DATE,                     -- java.sql.Date
     sqlTime        TIME,                     -- java.sql.Time

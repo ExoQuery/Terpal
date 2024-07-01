@@ -83,14 +83,16 @@ abstract class RowDecoder<Session, Row>(
 
   fun nextRowIndex(desc: SerialDescriptor, descIndex: Int, note: String = ""): Int {
     val curr = rowIndex
-    println("---- Get Row ${columnInfos[rowIndex-1].name}, Index: ${curr} - (${descIndex}) ${desc.getElementDescriptor(descIndex)} - (Preview:${api.preview(rowIndex, ctx.row)})" + (if (note != "") " - ${note}" else ""))
+    // TODO logging integration
+    //println("---- Get Row ${columnInfos[rowIndex-1].name}, Index: ${curr} - (${descIndex}) ${desc.getElementDescriptor(descIndex)} - (Preview:${api.preview(rowIndex, ctx.row)})" + (if (note != "") " - ${note}" else ""))
     rowIndex += 1
     return curr
   }
 
   fun nextRowIndex(note: String = ""): Int {
     val curr = rowIndex
-    println("---- Get Row ${columnInfos[rowIndex-1].name} - (Preview:${api.preview(rowIndex, ctx.row)})" + (if (note != "") " - ${note}" else ""))
+    // TODO logging integration
+    //println("---- Get Row ${columnInfos[rowIndex-1].name} - (Preview:${api.preview(rowIndex, ctx.row)})" + (if (note != "") " - ${note}" else ""))
     rowIndex += 1
     return curr
   }
