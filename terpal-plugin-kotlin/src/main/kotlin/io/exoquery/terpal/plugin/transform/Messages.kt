@@ -30,8 +30,9 @@ object Messages {
                   """.trimMargin() +
                     // TODO The last part is context specific, need to find a way to propagate it from the compile-time
         (if (invalidWrapFunctions.size > 0)
+                      "\n" +
                       """|-----------------------------------
-                         |The following invalid wrap functions also exist. A wrap-function needs to contain only one argument and return a type: ${interpolateClass.dumpKotlinLike()}
+                         |The following invalid wrap functions also exist but are invalid. A wrap-function needs to contain only one argument and return a type: ${interpolateClass.dumpKotlinLike()}
                          |${invalidWrapFunctions}
                       """.trimMargin() else "")
     )

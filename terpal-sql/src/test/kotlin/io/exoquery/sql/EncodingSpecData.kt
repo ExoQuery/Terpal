@@ -1,6 +1,7 @@
 package io.exoquery.sql
 
 import io.exoquery.sql.jdbc.Sql
+import io.exoquery.sql.jdbc.SqlBatch
 import io.kotest.matchers.bigdecimal.shouldBeEqualIgnoringScale
 import io.kotest.matchers.equals.shouldBeEqual
 import kotlinx.serialization.Contextual
@@ -268,11 +269,22 @@ object EncodingSpecData {
     )
 
   fun insert(e: EncodingTestEntity): Action {
-    val v12 = Param.withSer(e.v12, SerializeableTestType.serializer())
-    val v14 = Param.ctx(e.v14)
-    val o12 = Param.withSer(e.o12, SerializeableTestType.serializer())
-    val o14 = Param.ctx(e.o14)
+    val v12: Param<SerializeableTestType> = Param.withSer(e.v12, SerializeableTestType.serializer())
+    val v14: Param<UUID> = Param.ctx(e.v14)
+    val o12: Param<SerializeableTestType> = Param.withSer(e.o12, SerializeableTestType.serializer())
+    val o14: Param<UUID> = Param.ctx(e.o14)
     return Sql("INSERT INTO EncodingTestEntity VALUES (${e.v1}, ${e.v2}, ${e.v3}, ${e.v4}, ${e.v5}, ${e.v6}, ${e.v7}, ${e.v8}, ${e.v9}, ${e.v10}, ${e.v11}, ${v12}, ${e.v13}, ${v14}, ${e.o1}, ${e.o2}, ${e.o3}, ${e.o4}, ${e.o5}, ${e.o6}, ${e.o7}, ${e.o8}, ${e.o9}, ${e.o10}, ${e.o11}, ${o12}, ${e.o13}, ${o14})").action()
+  }
+
+  fun insertBatch(es: List<EncodingTestEntity>): BatchAction {
+    fun v12(v12: SerializeableTestType): Param<SerializeableTestType> = Param.withSer(v12, SerializeableTestType.serializer())
+    fun v14(v14: UUID): Param<UUID> = Param.ctx(v14)
+    fun o12(o12: SerializeableTestType?): Param<SerializeableTestType> = Param.withSer(o12, SerializeableTestType.serializer())
+    fun o14(o14: UUID?): Param<UUID> = Param.ctx(o14)
+
+    return SqlBatch { e: EncodingTestEntity ->
+      "INSERT INTO EncodingTestEntity VALUES (${e.v1}, ${e.v2}, ${e.v3}, ${e.v4}, ${e.v5}, ${e.v6}, ${e.v7}, ${e.v8}, ${e.v9}, ${e.v10}, ${e.v11}, ${v12(e.v12)}, ${e.v13}, ${v14(e.v14)}, ${e.o1}, ${e.o2}, ${e.o3}, ${e.o4}, ${e.o5}, ${e.o6}, ${e.o7}, ${e.o8}, ${e.o9}, ${e.o10}, ${e.o11}, ${o12(e.o12)}, ${e.o13}, ${o14(e.o14)})"
+    }.values(es.asSequence()).action()
   }
 
   fun verify(e1: EncodingTestEntity, e2: EncodingTestEntity) {

@@ -101,14 +101,11 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
       val wrapperFunctionInvoke = run {
         val isInterpolatorWithWrapper =
           caller.type.superTypesRecursive()
-            .find { it.isClassOf<InterpolatorWithWrapper<*, *>>() } != null
+            .find { it.isClassOf<InterpolatorBatchingWithWrapper<*>>() } != null
 
-        if (isInterpolatorWithWrapper) {
-          { expr: IrExpression ->
-            //ctx.logger.error("============ Calling Wrap ${expr.dumpKotlinLike()} with type: ${expr.type.dumpKotlinLike()}")
-            caller.callMethodTyped("wrap").invoke(expr.type).invoke(expr, builder.kClassReference(expr.type))
-          }
-        } else
+        if (isInterpolatorWithWrapper)
+          { expr: IrExpression -> wrapInterpolatedTerm(ctx, caller, expr, interpolateType) }
+        else
           null
       }
 

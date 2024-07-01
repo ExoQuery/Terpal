@@ -10,12 +10,35 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.isSubclassOf
 
 object Sql: SqlJdbcBase()
-object SqlBatch: SqlJdbcBatchBase()
+object SqlBatch: SqlJdbcBatchBase() {
+  override fun wrap(value: String?): Param<String> = Param(value)
+  override fun wrap(value: Int?): Param<Int> = Param(value)
+  override fun wrap(value: Long?): Param<Long> = Param(value)
+  override fun wrap(value: Short?): Param<Short> = Param(value)
+  override fun wrap(value: Byte?): Param<Byte> = Param(value)
+  override fun wrap(value: Float?): Param<Float> = Param(value)
+  override fun wrap(value: Double?): Param<Double> = Param(value)
+  override fun wrap(value: Boolean?): Param<Boolean> = Param(value)
+  fun wrap(value: BigDecimal?): Param<BigDecimal> = Param.contextual(value)
+  fun wrap(value: ByteArray?): Param<ByteArray> = Param(value)
+
+  fun wrap(value: java.util.Date?): Param<java.util.Date> = Param(value)
+  fun wrap(value: java.sql.Date?): Param<java.sql.Date> = Param(value)
+  fun wrap(value: java.sql.Time?): Param<java.sql.Time> = Param(value)
+  fun wrap(value: java.sql.Timestamp?): Param<java.sql.Timestamp> = Param(value)
+
+  fun wrap(value: LocalDate?): Param<LocalDate> = Param.contextual(value)
+  fun wrap(value: LocalTime?): Param<LocalTime> = Param.contextual(value)
+  fun wrap(value: LocalDateTime?): Param<LocalDateTime> = Param.contextual(value)
+  fun wrap(value: ZonedDateTime?): Param<ZonedDateTime> = Param.contextual(value)
+  fun wrap(value: Instant?): Param<Instant> = Param.contextual(value)
+  fun wrap(value: OffsetTime?): Param<OffsetTime> = Param.contextual(value)
+  fun wrap(value: OffsetDateTime?): Param<OffsetDateTime> = Param.contextual(value)
+}
 
 
 // The Jdbc Specific Sql implemenation which will use the Jdbc wrapping functions to auto-wrap things
 abstract class SqlJdbcBase(): SqlBase() {
-  // TODO Should check this at compile-time
   override fun wrap(value: String?): SqlFragment = Param(value)
   override fun wrap(value: Int?): SqlFragment = Param(value)
   override fun wrap(value: Long?): SqlFragment = Param(value)

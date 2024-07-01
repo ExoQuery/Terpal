@@ -5,6 +5,15 @@ import kotlin.reflect.KClass
 
 interface InterpolatorBatchingWithWrapper<T>: InterpolatorBatching<T> {
   fun <V> wrap(value: V, cls: KClass<*>): T
+
+  fun wrap(value: String?): T
+  fun wrap(value: Int?): T
+  fun wrap(value: Long?): T
+  fun wrap(value: Short?): T
+  fun wrap(value: Byte?): T
+  fun wrap(value: Float?): T
+  fun wrap(value: Double?): T
+  fun wrap(value: Boolean?): T
 }
 
 // TODO in the macro need to make sure invoke and interpolate have same type signature
@@ -22,14 +31,11 @@ interface InterpolatorBatchingWithWrapper<T>: InterpolatorBatching<T> {
  */
 interface InterpolatorBatching<T> {
   // TODO better error message
-  operator fun <A: Any> invoke(create: (A) -> String): Any = interpolatorBody()
+  operator fun <A: Any> invoke(create: (A) -> String): Any = Messages.throwPluginNotExecuted()
   fun <A: Any> interpolate(parts: () -> List<String>, params: (A) -> List<T>): Any
 }
 
 /*
 for example:
-
 SqlBatch { p: Person -> "insert into person (name, age) values (${p.name}, ${p.age})" }
-
-
  */

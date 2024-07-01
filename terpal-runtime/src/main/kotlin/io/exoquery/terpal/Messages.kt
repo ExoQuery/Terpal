@@ -18,4 +18,5 @@ plugins {
 
 """.trimIndent()
 
+  fun throwPluginNotExecuted(): Nothing = throw IllegalStateException(Messages.PluginWasNotExecuted)
 }

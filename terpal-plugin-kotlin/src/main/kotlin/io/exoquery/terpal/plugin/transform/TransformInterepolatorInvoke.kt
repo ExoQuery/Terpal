@@ -7,28 +7,22 @@ import io.exoquery.terpal.UnzipPartsParams
 import io.exoquery.terpal.Interpolator
 import io.exoquery.terpal.InterpolatorWithWrapper
 import io.exoquery.terpal.parseError
-import io.exoquery.terpal.plugin.findMethodOrFail
 import io.exoquery.terpal.plugin.isValidWrapFunction
 import io.exoquery.terpal.plugin.printing.dumpSimple
-import io.exoquery.terpal.plugin.safeName
 import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
 import io.exoquery.terpal.plugin.trees.isClassOf
 import io.exoquery.terpal.plugin.trees.isSubclassOf
 import io.exoquery.terpal.plugin.trees.simpleTypeArgs
 import io.exoquery.terpal.plugin.trees.superTypesRecursive
-import org.jetbrains.kotlin.backend.jvm.ir.kClassReference
 import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.expressions.impl.IrClassReferenceImpl
-import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.ir.util.functions
-import org.jetbrains.kotlin.js.parser.parse
 
 class TransformInterepolatorInvoke(val ctx: BuilderContext) {
   private val compileLogger = ctx.logger
@@ -107,18 +101,9 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
           caller.type.superTypesRecursive()
             .find { it.isClassOf<InterpolatorWithWrapper<*, *>>() } != null
 
-        if (isInterpolatorWithWrapper) {
-          { expr: IrExpression ->
-            val invokeFunction =
-              caller.type.classOrFail.functions.find { it.isValidWrapFunction(interpolateType) && it.owner.valueParameters.first().type.isSubtypeOfClass(expr.type.classOrFail) }
-                ?: Messages.errorFailedToFindWrapper(ctx, caller, expr, interpolateType)
-
-            val invokeCall = caller.callMethodTyped(invokeFunction).invoke().invoke(expr)
-            ctx.logger.warn("============ Calling Wrap ${expr.dumpKotlinLike()} with type: ${expr.type.dumpKotlinLike()} - ${invokeCall.dumpKotlinLike()}")
-            invokeCall
-          }
-
-        } else
+        if (isInterpolatorWithWrapper)
+          { expr: IrExpression -> wrapInterpolatedTerm(ctx, caller, expr, interpolateType) }
+        else
           null
       }
 
@@ -150,6 +135,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       // TODO if it's a InterpolatorWithPreProcess need to invoke the preProcess function on the Params (this is what will inoke the param & do the lift)
       //      (it should also check if the user manually created a Param with it, if so just ignore it. Should unify Param and Statement also because it should just be Sql
       //      interface which should make these things easier)
+      // TODO this capability exists, need to test it
 
       val paramsLifted =
         with (lifter) { params.liftExprTyped(interpolateType) }

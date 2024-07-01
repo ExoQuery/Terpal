@@ -9,6 +9,7 @@ import io.exoquery.sql.jdbc.runOn
 import io.kotest.core.spec.style.FreeSpec
 import java.time.ZoneId
 import io.exoquery.sql.EncodingSpecData.TimeEntity
+import io.exoquery.sql.EncodingSpecData.insertBatch
 
 class EncodingSpec: FreeSpec({
   val ds = TestDatabases.postgres
@@ -28,9 +29,16 @@ class EncodingSpec: FreeSpec({
     EncodingSpecData.verify(res.first(), EncodingSpecData.regularEntity)
   }
 
+  "encodes and decodes batch" {
+    insertBatch(listOf(EncodingSpecData.regularEntity, EncodingSpecData.regularEntity)).runOn(ctx)
+    val res = Sql("SELECT * FROM EncodingTestEntity").queryOf<EncodingSpecData.EncodingTestEntity>().runOn(ctx)
+    EncodingSpecData.verify(res.get(0), EncodingSpecData.regularEntity)
+    EncodingSpecData.verify(res.get(1), EncodingSpecData.regularEntity)
+  }
+
   "encodes and decodes nullables - nulls" {
-    ctx.run(insert(EncodingSpecData.nullEntity))
-    val res = ctx.run(Sql("SELECT * FROM EncodingTestEntity").queryOf<EncodingSpecData.EncodingTestEntity>())
+    insert(EncodingSpecData.nullEntity).runOn(ctx)
+    val res = Sql("SELECT * FROM EncodingTestEntity").queryOf<EncodingSpecData.EncodingTestEntity>().runOn(ctx)
     EncodingSpecData.verify(res.first(), EncodingSpecData.nullEntity)
   }
 
@@ -84,46 +92,6 @@ class EncodingSpec: FreeSpec({
 
     assert(actual == timeEntityB)
   }
-
-
-  /*
-  // Scala/Quill
-
-  "Encode/Decode Other Time Types ordering" in {
-    context.run(query[TimeEntity].delete)
-
-    val zid         = ZoneId.systemDefault()
-    val timeEntityA = TimeEntity.make(zid, TimeEntity.TimeEntityInput(2022, 1, 1, 1, 1, 1, 0))
-    val timeEntityB = TimeEntity.make(zid, TimeEntity.TimeEntityInput(2022, 2, 2, 2, 2, 2, 0))
-
-    // Importing extras messes around with the quto-quote, need to look into why
-    import context.extras._
-    context.run(quote(query[TimeEntity].insertValue(lift(timeEntityA))))
-    context.run(quote(query[TimeEntity].insertValue(lift(timeEntityB))))
-
-
-
-    val actual =
-      context
-        .run(
-          query[TimeEntity].filter(t =>
-            t.sqlDate > lift(timeEntityA.sqlDate) &&
-              t.sqlTime > lift(timeEntityA.sqlTime) &&
-              t.sqlTimestamp > lift(timeEntityA.sqlTimestamp) &&
-              t.timeLocalDate > lift(timeEntityA.timeLocalDate) &&
-              t.timeLocalTime > lift(timeEntityA.timeLocalTime) &&
-              t.timeLocalDateTime > lift(timeEntityA.timeLocalDateTime) &&
-              t.timeZonedDateTime > lift(timeEntityA.timeZonedDateTime) &&
-              t.timeInstant > lift(timeEntityA.timeInstant) &&
-              t.timeOffsetTime > lift(timeEntityA.timeOffsetTime) &&
-              t.timeOffsetDateTime > lift(timeEntityA.timeOffsetDateTime)
-          )
-        )
-        .head
-
-    assert(actual == timeEntityB)
-  }
-   */
 
 
 })

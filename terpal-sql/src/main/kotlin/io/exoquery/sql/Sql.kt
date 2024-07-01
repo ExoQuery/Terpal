@@ -2,12 +2,12 @@ package io.exoquery.sql
 
 import io.exoquery.terpal.InterpolatorBatchingWithWrapper
 import io.exoquery.terpal.InterpolatorWithWrapper
-import io.exoquery.terpal.interpolatorBody
+import io.exoquery.terpal.Messages
 import kotlinx.serialization.serializer
 
 interface SqlFragment
 
-data class SqlBatchCallWithValues<A: Any>(val batch: SqlBatchCall<A>, val values: Sequence<A>) {
+data class SqlBatchCallWithValues<A: Any>(internal val batch: SqlBatchCall<A>, internal val values: Sequence<A>) {
   // Note that we don't actually care about the value of element of the batch anymore
   // because the parameters have been prepared and it just needs to be excuted
   // We only need type-data when there is a value returned
@@ -17,9 +17,12 @@ data class SqlBatchCallWithValues<A: Any>(val batch: SqlBatchCall<A>, val values
     return BatchAction(sql, paramSeq)
   }
 
+  fun batchCallValues() = values
+  fun batchCall() = batch
+
   inline fun <reified T> batchActionReturning(): BatchActionReturning<T> {
-    val sql = batch.parts.joinToString("?")
-    val paramSeq = values.map { batch.params(it) }
+    val sql = batchCall().parts.joinToString("?")
+    val paramSeq = batchCallValues().map { batchCall().params(it) }
     val resultMaker = serializer<T>()
     return BatchActionReturning(sql, paramSeq, resultMaker)
   }
@@ -44,7 +47,7 @@ data class SqlBatchCall<T: Any>(val parts: List<String>, val params: (T) -> List
 }
 
 abstract class SqlBatchBase: InterpolatorBatchingWithWrapper<Param<*>> {
-  override fun <A : Any> invoke(create: (A) -> String): SqlBatchCall<A> = interpolatorBody()
+  override fun <A : Any> invoke(create: (A) -> String): SqlBatchCall<A> = Messages.throwPluginNotExecuted()
   @Suppress("UNCHECKED_CAST")
   override fun <A : Any> interpolate(parts: () -> List<String>, params: (A) -> List<Param<*>>): SqlBatchCall<A> =
     SqlBatchCall<A>(parts(), params as (A) -> List<Param<A>>)
