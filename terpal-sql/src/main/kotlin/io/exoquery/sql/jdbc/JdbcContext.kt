@@ -104,25 +104,13 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
     }
   }
 
-  protected open fun <T> runQueryScoped(conn: Connection, sql: String, params: List<Param<*>>, extract: (Connection, ResultSet) -> T): Flow<T> =
-    flow {
-      makeStmt(sql, conn).use { stmt ->
-        prepare(stmt, conn, params)
-        stmt.executeQuery().use { rs ->
-          emitResultSet(conn, rs, extract)
-        }
-      }
-    }
-
   protected open suspend fun <T> runActionReturningScoped(sql: String, params: List<Param<*>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
-    flow {
-      withConnection {
-        val conn = localConnection()
-        makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
-          prepare(stmt, conn, params)
-          stmt.executeUpdate()
-          emitResultSet(conn, stmt.generatedKeys, extract)
-        }
+    flowWithConnection {
+      val conn = localConnection()
+      makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
+        prepare(stmt, conn, params)
+        stmt.executeUpdate()
+        emitResultSet(conn, stmt.generatedKeys, extract)
       }
     }
 
