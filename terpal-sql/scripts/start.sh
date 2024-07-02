@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker-compose down && docker-compose run --rm --service-ports setup
+docker-compose down && docker-compose build && docker-compose run --rm --service-ports setup

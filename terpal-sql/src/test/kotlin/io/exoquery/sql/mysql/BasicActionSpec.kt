@@ -1,4 +1,4 @@
-package io.exoquery.sql.postgres
+package io.exoquery.sql.mysql
 
 import io.exoquery.sql.TestDatabases
 import io.exoquery.sql.jdbc.TerpalContext
@@ -11,14 +11,16 @@ import kotlinx.serialization.Serializable
 
 class BasicActionSpec : FreeSpec({
 
-  val ds = TestDatabases.postgres
-  val ctx by lazy { TerpalContext.Postgres(ds)  }
+  val ds = TestDatabases.mysql
+  val ctx by lazy { TerpalContext.Mysql(ds)  }
 
   beforeEach {
     ds.run(
       """
-      TRUNCATE TABLE Person RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE Address RESTART IDENTITY CASCADE;
+      DELETE FROM Person;
+      ALTER TABLE Person AUTO_INCREMENT = 1;
+      DELETE FROM Address;
+      ALTER TABLE Address AUTO_INCREMENT = 1;
       """
     )
   }
@@ -35,19 +37,12 @@ class BasicActionSpec : FreeSpec({
     Sql("SELECT id, firstName, lastName, age FROM Person").queryOf<Person>().runOn(ctx) shouldBe listOf(joe, jim)
   }
 
+  // For Mysql you just do Statement.getGeneratedKeys() and then get the id from the ResultSet. The query itself should not have a "RETURNING" clause
   "Insert Returning" {
-    val id1 = Sql("INSERT INTO Person (firstName, lastName, age) VALUES (${joe.firstName}, ${joe.lastName}, ${joe.age}) RETURNING id").actionReturning<Int>().runOn(ctx);
-    val id2 = Sql("INSERT INTO Person (firstName, lastName, age) VALUES (${jim.firstName}, ${jim.lastName}, ${jim.age}) RETURNING id").actionReturning<Int>().runOn(ctx);
+    val id1 = Sql("INSERT INTO Person (firstName, lastName, age) VALUES (${joe.firstName}, ${joe.lastName}, ${joe.age})").actionReturning<Int>().runOn(ctx);
+    val id2 = Sql("INSERT INTO Person (firstName, lastName, age) VALUES (${jim.firstName}, ${jim.lastName}, ${jim.age})").actionReturning<Int>().runOn(ctx);
     id1 shouldBe 1
     id2 shouldBe 2
-    Sql("SELECT id, firstName, lastName, age FROM Person").queryOf<Person>().runOn(ctx) shouldBe listOf(joe, jim)
-  }
-
-  "Insert Returning Record" {
-    val person1 = Sql("INSERT INTO Person (firstName, lastName, age) VALUES (${joe.firstName}, ${joe.lastName}, ${joe.age}) RETURNING id, firstName, lastName, age").actionReturning<Person>().runOn(ctx)
-    val person2 = Sql("INSERT INTO Person (firstName, lastName, age) VALUES (${jim.firstName}, ${jim.lastName}, ${jim.age}) RETURNING id, firstName, lastName, age").actionReturning<Person>().runOn(ctx)
-    person1 shouldBe joe
-    person2 shouldBe jim
     Sql("SELECT id, firstName, lastName, age FROM Person").queryOf<Person>().runOn(ctx) shouldBe listOf(joe, jim)
   }
 

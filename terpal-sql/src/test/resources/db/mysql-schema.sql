@@ -1,4 +1,4 @@
-CREATE TABLE person (
+CREATE TABLE Person (
     id INT NOT NULL AUTO_INCREMENT,
     firstName VARCHAR(255),
     lastName VARCHAR(255),
@@ -6,10 +6,17 @@ CREATE TABLE person (
     PRIMARY KEY (id)
 );
 
-CREATE TABLE address (
+CREATE TABLE Address (
     ownerId INT,
     street VARCHAR(255),
     zip INT
+);
+
+CREATE TABLE Product(
+    description VARCHAR(255),
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    sku BIGINT,
+    PRIMARY KEY (id)
 );
 
 CREATE TABLE TimeEntity(

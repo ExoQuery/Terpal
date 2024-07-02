@@ -1,17 +1,22 @@
-package io.exoquery.sql.postgres
+package io.exoquery.sql.mysql
 
 import io.exoquery.sql.*
+import io.exoquery.sql.Ex3_BatchReturnIds.products
+import io.exoquery.sql.jdbc.SqlBatch
 import io.exoquery.sql.jdbc.TerpalContext
 import io.exoquery.sql.jdbc.runOn
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
 
 class BatchValuesSpec: FreeSpec ({
-  val ds = TestDatabases.postgres
-  val ctx by lazy { TerpalContext.Postgres(ds)  }
+  val ds = TestDatabases.mysql
+  val ctx by lazy { TerpalContext.Mysql(ds)  }
 
   beforeEach {
-    ds.run("TRUNCATE TABLE Product RESTART IDENTITY CASCADE")
+    ds.run("""
+      DELETE FROM Product;
+      ALTER TABLE Product AUTO_INCREMENT = 1;
+    """)
   }
 
   "Ex 1 - Batch Insert Normal" {
@@ -25,12 +30,8 @@ class BatchValuesSpec: FreeSpec ({
   }
 
   "Ex 3 - Batch Return Ids" {
-    Ex3_BatchReturnIds.op.runOn(ctx) shouldBe Ex3_BatchReturnIds.opResult
+    SqlBatch { p: Product -> "INSERT INTO Product (description, sku) VALUES (${p.description}, ${p.sku})" }
+      .values(products.asSequence()).actionReturning<Int>().runOn(ctx) shouldBe Ex3_BatchReturnIds.opResult
     Ex3_BatchReturnIds.get.runOn(ctx) shouldBe Ex3_BatchReturnIds.result
-  }
-
-  "Ex 4 - Batch Return Record" {
-    Ex4_BatchReturnRecord.op.runOn(ctx) shouldBe Ex4_BatchReturnRecord.opResult
-    Ex4_BatchReturnRecord.get.runOn(ctx) shouldBe Ex4_BatchReturnRecord.result
   }
 })

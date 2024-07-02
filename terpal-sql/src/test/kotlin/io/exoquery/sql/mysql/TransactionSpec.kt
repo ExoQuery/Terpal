@@ -14,12 +14,12 @@ import org.testcontainers.containers.PostgreSQLContainer
 
 class TransactionSpec: FreeSpec({
   val ds = TestDatabases.mysql
-  val ctx by lazy { TerpalContext.Postgres(ds) }
+  val ctx by lazy { TerpalContext.Mysql(ds) }
   beforeEach {
     ds.run(
       """
-      DELETE FROM person;
-      DELETE FROM address;
+      DELETE FROM Person;
+      DELETE FROM Address;
       """
     )
   }
@@ -33,10 +33,10 @@ class TransactionSpec: FreeSpec({
 
     // Note the string elements ${...} should not have quotes around them or else they are interpreted as literals
     fun insert(p: Person) =
-      Sql("INSERT INTO person (id, firstName, lastName, age) VALUES (${p.id}, ${p.firstName}, ${p.lastName}, ${p.age})").action()
+      Sql("INSERT INTO Person (id, firstName, lastName, age) VALUES (${p.id}, ${p.firstName}, ${p.lastName}, ${p.age})").action()
 
 
-    fun select() = Sql("SELECT id, firstName, lastName, age FROM person").queryOf<Person>()
+    fun select() = Sql("SELECT id, firstName, lastName, age FROM Person").queryOf<Person>()
 
     "success" {
       ctx.transaction {
