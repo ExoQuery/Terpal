@@ -1,6 +1,7 @@
 package io.exoquery.sql
 
 import com.zaxxer.hikari.HikariDataSource
+import io.exoquery.sql.jdbc.HikariHelper
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import javax.sql.DataSource
 
@@ -17,11 +18,6 @@ object TestDatabases {
   val postgres by lazy { embeddedPostgres.getPostgresDatabase() }
 
   val mysql: DataSource by lazy {
-    HikariDataSource().apply {
-      driverClassName = "com.mysql.cj.jdbc.MysqlDataSource"
-      jdbcUrl = "jdbc:mysql://localhost:33306/terpal_test"
-      username = "root"
-      password = "root"
-    }
+    HikariHelper.makeDataSource("testMysqlDB")
   }
 }

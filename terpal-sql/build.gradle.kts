@@ -54,10 +54,15 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
-    implementation("io.exoquery:pprint-kotlin:2.0.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 
+    api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.2")
+    api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    // Optional by the user. This library provides certain utilities that enhance Hikari.
+    implementation("com.zaxxer:HikariCP:5.0.1")
+    implementation("com.typesafe:config:1.4.1")
+
+    testImplementation("io.exoquery:pprint-kotlin:2.0.2")
     testImplementation("io.zonky.test:embedded-postgres:2.0.7")
     testImplementation("mysql:mysql-connector-java:8.0.29")
 
@@ -70,10 +75,7 @@ dependencies {
     testImplementation("org.testcontainers:mssqlserver:1.19.8")
     testImplementation("org.testcontainers:oracle-xe:1.19.8")
 
-    api(platform("io.zonky.test.postgres:embedded-postgres-binaries-bom:16.2.0"))
-
+    testApi(platform("io.zonky.test.postgres:embedded-postgres-binaries-bom:16.2.0"))
     testImplementation("org.flywaydb:flyway-core:7.15.0") // corresponding to embedded-postgres
-
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 }
