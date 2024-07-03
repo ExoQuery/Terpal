@@ -71,7 +71,7 @@ function setup_sqlserver() {
     echo "Connected to SqlServer"
 
     /opt/mssql-tools/bin/sqlcmd -S $1 -U SA -P "TerpalRocks!" -Q "CREATE DATABASE terpal_test"
-    /opt/mssql-tools/bin/sqlcmd -S $1 -U SA -P "TerpalRocks!" -d quill_test -i $2
+    /opt/mssql-tools/bin/sqlcmd -S $1 -U SA -P "TerpalRocks!" -d terpal_test -i $2
 }
 
 # Do a simple netcat poll to make sure the oracle database is ready.

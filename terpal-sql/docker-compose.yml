@@ -32,7 +32,7 @@ services:
       - "31433:1433"
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=QuillRocks!
+      - SA_PASSWORD=TerpalRocks!
 #
 #  oracle:
 #    image: quillbuilduser/oracle-18-xe-micro-sq

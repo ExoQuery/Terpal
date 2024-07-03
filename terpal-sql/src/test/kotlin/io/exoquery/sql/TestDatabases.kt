@@ -20,4 +20,8 @@ object TestDatabases {
   val mysql: DataSource by lazy {
     HikariHelper.makeDataSource("testMysqlDB")
   }
+
+  val sqlServer: DataSource by lazy {
+    HikariHelper.makeDataSource("testSqlServerDB")
+  }
 }

@@ -47,18 +47,13 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
     session.runWithManualCommit {
       val transaction = CoroutineTransaction()
       try {
-        println("-------- Execute Transaction - ${Thread.currentThread()}")
         val result = withContext(transaction) { block() }
-        println("-------- Commit Transaction - ${Thread.currentThread()}")
         commit()
-        println("-------- DoneCommit Transaction - ${Thread.currentThread()}")
         return result
       } catch (ex: Throwable) {
-        println("-------- Rolling Back Transaction - ${Thread.currentThread()}")
         rollback()
         throw ex
       } finally {
-        println("-------- Completing Transaction - ${Thread.currentThread()}")
         transaction.complete()
       }
     }
@@ -68,11 +63,9 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
     val before = autoCommit
 
     return try {
-      println("----- DisableAutocommit - ${Thread.currentThread()}")
       autoCommit = false
       this.run(block)
     } finally {
-      println("----- ReenableAutocommit - ${Thread.currentThread()}")
       autoCommit = before
     }
   }

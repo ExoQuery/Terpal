@@ -35,7 +35,7 @@ curl 'https://repo1.maven.org/maven2/sqlline/sqlline/1.12.0/sqlline-1.12.0-jar-w
 curl 'https://repo1.maven.org/maven2/com/oracle/ojdbc/ojdbc8/19.3.0.0/ojdbc8-19.3.0.0.jar' -o 'sqlline/ojdbc.jar'
 
 echo "### Starting to Wait for Oracle ###"
-while ! nc -z 127.0.0.1 11521; do
+while ! nc -z 127.0.0.1 31521; do
     echo "Waiting for Oracle"
     sleep 2;
 done;

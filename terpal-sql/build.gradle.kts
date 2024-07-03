@@ -65,6 +65,7 @@ dependencies {
     testImplementation("io.exoquery:pprint-kotlin:2.0.2")
     testImplementation("io.zonky.test:embedded-postgres:2.0.7")
     testImplementation("mysql:mysql-connector-java:8.0.29")
+    testImplementation("com.microsoft.sqlserver:mssql-jdbc:7.4.1.jre11")
 
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-runner-junit5:5.9.1")

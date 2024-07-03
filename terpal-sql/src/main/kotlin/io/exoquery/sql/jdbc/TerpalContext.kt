@@ -67,13 +67,23 @@ object TerpalContext {
         TimeEncoding<Connection, PreparedStatement, ResultSet> by JdbcTimeEncoding(),
         UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidStringEncoding {}
 
+    override suspend fun <T> runActionReturningScoped(sql: String, params: List<Param<*>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+      flowWithConnection {
+        val conn = localConnection()
+        makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
+          prepare(stmt, conn, params)
+          // See comment about SQL Server not supporting getGeneratedKeys below
+          emitResultSet(conn, stmt.executeQuery(), extract)
+        }
+      }
+
     override suspend fun <T> runBatchActionReturningScoped(sql: String, batches: Sequence<List<Param<*>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
       flowWithConnection {
         val conn = localConnection()
         makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
           batches.forEach { batch ->
             prepare(stmt, conn, batch)
-            // The SQL Server drive has no ability to either go getGeneratedKeys or executeQuery
+            // The SQL Server driver has no ability to either do getGeneratedKeys or executeQuery
             // at the end of a sequence of addBatch calls to get all inserted keys/executed queries
             // (whether a `OUTPUT` clause is used in the Query or not). That means that in order
             // be able to get any results, we need to use extractResult(ps.executeQuery, ...)
