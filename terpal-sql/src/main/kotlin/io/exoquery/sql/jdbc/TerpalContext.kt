@@ -66,7 +66,16 @@ object TerpalContext {
         BasicEncoding<Connection, PreparedStatement, ResultSet> by JdbcEncodingBasic,
         BooleanEncoding<Connection, PreparedStatement, ResultSet> by JdbcBooleanObjectEncoding,
         TimeEncoding<Connection, PreparedStatement, ResultSet> by JdbcTimeEncodingLegacy,
-        UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidObjectEncoding {}
+        UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidStringEncoding {}
+
+    protected override open suspend fun <T> runActionReturningScoped(sql: String, params: List<Param<*>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+      flowWithConnection {
+        val conn = localConnection()
+        makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
+          prepare(stmt, conn, params)
+          emitResultSet(conn, stmt.executeQuery(), extract)
+        }
+      }
 
     protected override open suspend fun <T> runBatchActionReturningScoped(sql: String, batches: Sequence<List<Param<*>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
       flowWithConnection {

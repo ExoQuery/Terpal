@@ -20,10 +20,14 @@ abstract class JdbcEncoderAny<T: Any>: JdbcEncoder<T>() {
       override fun asNullable(): SqlEncoder<Connection, PreparedStatement, T?> = this
 
       override fun encode(ctx: JdbcEncodingContext, value: T?, index: Int) =
-        if (value != null)
-          this@JdbcEncoderAny.encode(ctx, value, index)
-        else
-          ctx.stmt.setNull(index, jdbcType)
+        try {
+          if (value != null)
+            this@JdbcEncoderAny.encode(ctx, value, index)
+          else
+            ctx.stmt.setNull(index, jdbcType)
+        } catch (e: Throwable) {
+          throw EncodingException("Error encoding ${type} value: $value at index: $index (whose jdbc-type: ${jdbcType})", e)
+        }
     }
 
   inline fun <reified R: Any> contramap(crossinline f: (R) -> T):JdbcEncoderAny<R> =

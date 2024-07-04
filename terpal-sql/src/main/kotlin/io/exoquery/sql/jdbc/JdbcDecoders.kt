@@ -1,11 +1,17 @@
 package io.exoquery.sql.jdbc
 
 import io.exoquery.sql.SqlDecoder
+import java.awt.event.FocusEvent.Cause
 import java.math.BigDecimal
 import java.sql.Connection
 import java.sql.ResultSet
+import java.sql.SQLException
 import java.time.*
 import java.util.*
+
+data class EncodingException(val msg: String, val errorCause: Throwable? = null): SQLException(msg.toString(), errorCause) {
+  override fun toString(): String = msg
+}
 
 /** Represents a Jdbc Decoder with a nullable or non-nullable output value */
 typealias JdbcDecoder<T> = SqlDecoder<Connection, ResultSet, T>
@@ -37,8 +43,12 @@ abstract class JdbcDecoderAny<T: Any>: JdbcDecoder<T>() {
       object: JdbcDecoderAny<T>() {
         override val type = T::class
         override fun decode(ctx: JdbcDecodingContext, index: Int) =
-          f(ctx, index) ?:
-          throw NullPointerException("Non-nullable Decoder returned null for index $index, column: ${ctx.row.metaData.getColumnName(index)} and expected type: ${T::class}")
+          try {
+            f(ctx, index) ?: throw EncodingException("Non-nullable Decoder returned null")
+          } catch (e: Throwable) {
+            throw EncodingException("Error decoding index: $index, column: ${ctx.row.metaData.getColumnName(index)} and expected type: ${T::class}", e)
+          }
+
       }
   }
 }

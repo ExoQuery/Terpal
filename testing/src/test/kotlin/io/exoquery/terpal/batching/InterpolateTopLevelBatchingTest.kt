@@ -2,7 +2,7 @@ package io.exoquery.terpal.batching
 
 import io.exoquery.terpal.InterpolatorBatching
 import io.exoquery.terpal.InterpolateTestBase
-import io.exoquery.terpal.interpolatorBody
+import io.exoquery.terpal.Messages
 import kotlin.test.Test
 
 data class In(val value: String)
@@ -13,13 +13,13 @@ data class Out<T>(val parts: List<String>, val params: (T) -> List<In>, val info
 data class OutComps(val parts: List<String>, val info: String)
 
 object StaticTerp: InterpolatorBatching<In> {
-  override fun <T: Any> invoke(create: (T) -> String): Out<T> = interpolatorBody()
+  override fun <T: Any> invoke(create: (T) -> String): Out<T> = Messages.throwPluginNotExecuted()
   override fun <T: Any> interpolate(parts: () -> List<String>, params: (T) -> List<In>): Out<T> =
     Out<T>(parts(), params, "Static")
 }
 
 class InstanceTerp(val info: String): InterpolatorBatching<In> {
-  override fun <T: Any> invoke(create: (T) -> String): Out<T> = interpolatorBody()
+  override fun <T: Any> invoke(create: (T) -> String): Out<T> = Messages.throwPluginNotExecuted()
   override fun <T: Any> interpolate(parts: () -> List<String>, params: (T) -> List<In>): Out<T> =
     Out(parts(), params, info)
 }

@@ -17,8 +17,8 @@ class BasicActionSpec : FreeSpec({
   beforeEach {
     ds.run(
       """
-      TRUNCATE TABLE Person RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE Address RESTART IDENTITY CASCADE;
+      DELETE FROM Person;
+      DELETE FROM Address;
       """
     )
   }

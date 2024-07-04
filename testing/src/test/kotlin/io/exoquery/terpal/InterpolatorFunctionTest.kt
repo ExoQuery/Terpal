@@ -3,10 +3,10 @@ package io.exoquery.terpal
 import kotlin.test.Test
 
 @InterpolatorFunction<InterpolatorFunctionTest.StaticTerp>(InterpolatorFunctionTest.StaticTerp::class)
-fun staticTerp(str: String): InterpolatorFunctionTest.Stmt = interpolatorBody()
+fun staticTerp(str: String): InterpolatorFunctionTest.Stmt = Messages.throwPluginNotExecuted()
 
 @InterpolatorFunction<InterpolatorFunctionTest.StaticTerp>(InterpolatorFunctionTest.StaticTerp::class)
-operator fun String.unaryPlus(): InterpolatorFunctionTest.Stmt = interpolatorBody()
+operator fun String.unaryPlus(): InterpolatorFunctionTest.Stmt = Messages.throwPluginNotExecuted()
 
 class InterpolatorFunctionTest: InterpolateTestBase {
   data class Stmt(val parts: List<String>, val params: List<Stmt>)
