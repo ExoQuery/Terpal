@@ -85,17 +85,31 @@ function setup_oracle() {
     done;
     sleep 2;
 
+    echo "Creating Oracle Database"
+    java -cp '/sqlline/sqlline.jar:/sqlline/ojdbc.jar' 'sqlline.SqlLine' \
+      -u 'jdbc:oracle:thin:@oracle:1521:xe' \
+      -n secretsysuser -p 'secretpassword' \
+      -e 'CREATE USER terpal_test IDENTIFIED BY "TerpalRocks!" QUOTA 50M ON system;' \
+      --showWarnings=false
+
+    echo "Granting Oracle Roles"
+    java -cp '/sqlline/sqlline.jar:/sqlline/ojdbc.jar' 'sqlline.SqlLine' \
+      -u 'jdbc:oracle:thin:@oracle:1521:xe' \
+      -n secretsysuser -p 'secretpassword' \
+      -e "GRANT DBA TO terpal_test;" \
+      --showWarnings=false
+
     echo "Running Oracle Setup Script"
     java -cp '/sqlline/sqlline.jar:/sqlline/ojdbc.jar' 'sqlline.SqlLine' \
       -u 'jdbc:oracle:thin:@oracle:1521:xe' \
-      -n quill_test -p 'TerpalRocks!' \
+      -n secretsysuser -p 'secretpassword' \
       -f "$ORACLE_SCRIPT" \
       --showWarnings=false
 
     echo "Extending Oracle Expirations"
     java -cp '/sqlline/sqlline.jar:/sqlline/ojdbc.jar' 'sqlline.SqlLine' \
       -u 'jdbc:oracle:thin:@oracle:1521:xe' \
-      -n quill_test -p 'TerpalRocks!' \
+      -n terpal_test -p 'TerpalRocks!' \
       -e "alter profile DEFAULT limit PASSWORD_REUSE_TIME unlimited; alter profile DEFAULT limit PASSWORD_LIFE_TIME  unlimited; alter profile DEFAULT limit PASSWORD_GRACE_TIME unlimited;" \
       --showWarnings=false
 

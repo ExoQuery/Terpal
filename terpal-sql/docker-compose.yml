@@ -15,8 +15,8 @@ services:
     build:
       context: .
       dockerfile: ./scripts/Dockerfile-setup
-#    depends_on:
-#      - oracle
+    depends_on:
+      - oracle
     links:
       - mysql:mysql
       - sqlserver:sqlserver
@@ -33,11 +33,11 @@ services:
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=TerpalRocks!
-#
-#  oracle:
-#    image: quillbuilduser/oracle-18-xe-micro-sq
-#    ports:
-#      - "31521:1521"
-#    # Opatch is an internal java-based daemon in the Oracle container that updates components, don't really need it here. Reduce it's memory settings.
-#    environment:
-#      - OPATCH_JRE_MEMORY_OPTIONS=-Xms128m -Xmx256m -XX:PermSize=16m -XX:MaxPermSize=32m -Xss1m
+
+  oracle:
+    image: quillbuilduser/oracle-18-xe-micro-sq
+    ports:
+      - "31521:1521"
+    # Opatch is an internal java-based daemon in the Oracle container that updates components, don't really need it here. Reduce it's memory settings.
+    environment:
+      - OPATCH_JRE_MEMORY_OPTIONS=-Xms128m -Xmx256m -XX:PermSize=16m -XX:MaxPermSize=32m -Xss1m
