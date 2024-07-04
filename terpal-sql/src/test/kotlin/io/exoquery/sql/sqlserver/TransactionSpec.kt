@@ -1,4 +1,4 @@
-package io.exoquery.sql.postgres
+package io.exoquery.sql.sqlserver
 
 import io.exoquery.sql.TestDatabases
 import io.exoquery.sql.jdbc.TerpalContext
@@ -13,12 +13,12 @@ import kotlinx.serialization.Serializable
 import org.testcontainers.containers.PostgreSQLContainer
 
 class TransactionSpec: FreeSpec({
-  val ds = TestDatabases.postgres
-  val ctx by lazy { TerpalContext.Postgres(ds) }
+  val ds = TestDatabases.sqlServer
+  val ctx by lazy { TerpalContext.SqlServer(ds) }
   beforeEach {
     ds.run(
       """
-      DELETE FROM Person;
+      TRUNCATE TABLE Person; DBCC CHECKIDENT ('Person', RESEED, 1);
       DELETE FROM Address;
       """
     )
@@ -33,7 +33,7 @@ class TransactionSpec: FreeSpec({
 
     // Note the string elements ${...} should not have quotes around them or else they are interpreted as literals
     fun insert(p: Person) =
-      Sql("INSERT INTO Person (id, firstName, lastName, age) VALUES (${p.id}, ${p.firstName}, ${p.lastName}, ${p.age})").action()
+      Sql("INSERT INTO Person (firstName, lastName, age) VALUES (${p.firstName}, ${p.lastName}, ${p.age})").action()
 
 
     fun select() = Sql("SELECT id, firstName, lastName, age FROM Person").queryOf<Person>()

@@ -60,6 +60,5 @@ CREATE TABLE EncodingTestEntity(
     o11 DATETIME,
     o12 VARCHAR(255),
     o13 DATE,
-    o14 VARCHAR(255),
-    o15 VARCHAR(255)
+    o14 VARCHAR(255)
 );
