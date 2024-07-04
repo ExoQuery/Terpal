@@ -24,4 +24,8 @@ object TestDatabases {
   val sqlServer: DataSource by lazy {
     HikariHelper.makeDataSource("testSqlServerDB")
   }
+
+  val h2: DataSource by lazy {
+    HikariHelper.makeDataSource("testH2DB")
+  }
 }

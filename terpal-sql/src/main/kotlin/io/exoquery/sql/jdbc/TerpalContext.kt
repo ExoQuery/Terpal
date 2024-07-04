@@ -11,6 +11,7 @@ import javax.sql.DataSource
 
 object TerpalContext {
   open class Postgres(override val database: DataSource): JdbcContext(database) {
+    // TODO this setting AdditionaJdbcTimeEncoding.encoders/decoders is already set in the parent class. Try to remove it.
     override val additionalEncoders = super.additionalEncoders + AdditionaJdbcTimeEncoding.encoders
     override val additionalDecoders = super.additionalDecoders + AdditionaJdbcTimeEncoding.decoders
 
@@ -32,6 +33,15 @@ object TerpalContext {
         BasicEncoding<Connection, PreparedStatement, ResultSet> by JdbcEncodingBasic,
         BooleanEncoding<Connection, PreparedStatement, ResultSet> by JdbcBooleanObjectEncoding,
         TimeEncoding<Connection, PreparedStatement, ResultSet> by JdbcTimeEncodingLegacy,
+        UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidObjectEncoding {}
+  }
+
+  open class H2(override val database: DataSource): JdbcContext(database) {
+    override protected open val encodingApi: SqlEncoding<Connection, PreparedStatement, ResultSet> =
+      object : SqlEncoding<Connection, PreparedStatement, ResultSet>,
+        BasicEncoding<Connection, PreparedStatement, ResultSet> by JdbcEncodingBasic,
+        BooleanEncoding<Connection, PreparedStatement, ResultSet> by JdbcBooleanObjectEncoding,
+        TimeEncoding<Connection, PreparedStatement, ResultSet> by JdbcTimeEncoding(),
         UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidObjectEncoding {}
   }
 
