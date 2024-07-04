@@ -60,6 +60,27 @@ object TerpalContext {
         UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidStringEncoding {}
   }
 
+  open class Sqlite(override val database: DataSource): JdbcContext(database) {
+    override protected open val encodingApi: SqlEncoding<Connection, PreparedStatement, ResultSet> =
+      object : SqlEncoding<Connection, PreparedStatement, ResultSet>,
+        BasicEncoding<Connection, PreparedStatement, ResultSet> by JdbcEncodingBasic,
+        BooleanEncoding<Connection, PreparedStatement, ResultSet> by JdbcBooleanObjectEncoding,
+        TimeEncoding<Connection, PreparedStatement, ResultSet> by JdbcTimeEncodingLegacy,
+        UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidObjectEncoding {}
+
+    protected override open suspend fun <T> runBatchActionReturningScoped(sql: String, batches: Sequence<List<Param<*>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+      flowWithConnection {
+        val conn = localConnection()
+        batches.forEach { batch ->
+          // Sqlite does not support Batch-Actions with returning-keys. So we attempt to emulate this function with single-row inserts inside a transaction but using this API is not recommended.
+          makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
+            prepare(stmt, conn, batch)
+            emitResultSet(conn, stmt.executeQuery(), extract)
+          }
+        }
+      }
+  }
+
   open class Oracle(override val database: DataSource): JdbcContext(database) {
     override protected open val encodingApi: SqlEncoding<Connection, PreparedStatement, ResultSet> =
       object : SqlEncoding<Connection, PreparedStatement, ResultSet>,

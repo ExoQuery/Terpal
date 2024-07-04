@@ -131,7 +131,7 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       val conn = localConnection()
       makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
         batches.forEach { batch ->
-          // TODO tryCatchQuery
+          // TODO wrap with tryCatchQuery
           prepare(stmt, conn, batch)
           stmt.addBatch()
         }

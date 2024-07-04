@@ -67,6 +67,7 @@ dependencies {
     testImplementation("mysql:mysql-connector-java:8.0.29")
     testImplementation("com.microsoft.sqlserver:mssql-jdbc:7.4.1.jre11")
     testImplementation("com.h2database:h2:2.2.224")
+    testImplementation("org.xerial:sqlite-jdbc:3.42.0.1")
 
 
     testImplementation(kotlin("test"))

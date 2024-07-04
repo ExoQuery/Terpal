@@ -9,6 +9,7 @@ out/
 .vscode/
 *.iml
 
+terpal_test.db
 
 build-logic/bin
 bin/

@@ -21,7 +21,7 @@ function get_host() {
 function setup_sqlite() {
     # DB File in terpal-sql
     echo "Creating sqlite DB File"
-    DB_FILE=terpal-sql/terpal_test.db
+    DB_FILE=terpal_test.db
     echo "Removing Previous sqlite DB File (if any)"
     rm -f $DB_FILE
     echo "Creating sqlite DB File"
