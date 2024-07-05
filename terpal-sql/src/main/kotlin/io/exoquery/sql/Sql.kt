@@ -20,11 +20,11 @@ data class SqlBatchCallWithValues<A: Any>(internal val batch: SqlBatchCall<A>, i
   fun batchCallValues() = values
   fun batchCall() = batch
 
-  inline fun <reified T> actionReturning(): BatchActionReturning<T> {
+  inline fun <reified T> actionReturning(vararg returningColumns: String): BatchActionReturning<T> {
     val sql = batchCall().parts.joinToString("?")
     val paramSeq = batchCallValues().map { batchCall().params(it) }
     val resultMaker = serializer<T>()
-    return BatchActionReturning(sql, paramSeq, resultMaker)
+    return BatchActionReturning(sql, paramSeq, resultMaker, returningColumns.toList())
   }
 }
 

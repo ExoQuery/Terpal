@@ -1,7 +1,6 @@
 package io.exoquery.sql.jdbc
 
 import io.exoquery.sql.*
-import io.exoquery.sql.jdbc.TerpalContext.Mysql.MysqlTimeEncoding
 import kotlinx.coroutines.flow.Flow
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -68,34 +67,40 @@ object TerpalContext {
         TimeEncoding<Connection, PreparedStatement, ResultSet> by JdbcTimeEncodingLegacy,
         UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidStringEncoding {}
 
-    protected override open suspend fun <T> runActionReturningScoped(sql: String, params: List<Param<*>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+    protected override open suspend fun <T> runActionReturningScoped(act: ActionReturning<T>): Flow<T> =
       flowWithConnection {
         val conn = localConnection()
-        makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
-          prepare(stmt, conn, params)
-          emitResultSet(conn, stmt.executeQuery(), extract)
+        makeStmtReturning(act.sql, conn, act.returningColumns).use { stmt ->
+          prepare(stmt, conn, act.params)
+          emitResultSet(conn, stmt.executeQuery(), act.resultMaker.makeExtractor<T>())
         }
       }
 
-    protected override open suspend fun <T> runBatchActionReturningScoped(sql: String, batches: Sequence<List<Param<*>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+    protected override open suspend fun <T> runBatchActionReturningScoped(act: BatchActionReturning<T>): Flow<T> =
       flowWithConnection {
         val conn = localConnection()
-        batches.forEach { batch ->
+        act.params.forEach { batch ->
           // Sqlite does not support Batch-Actions with returning-keys. So we attempt to emulate this function with single-row inserts inside a transaction but using this API is not recommended.
-          makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
+          makeStmtReturning(act.sql, conn, act.returningColumns).use { stmt ->
             prepare(stmt, conn, batch)
-            emitResultSet(conn, stmt.executeQuery(), extract)
+            emitResultSet(conn, stmt.executeQuery(), act.resultMaker.makeExtractor<T>())
           }
         }
       }
   }
 
   open class Oracle(override val database: DataSource): JdbcContext(database) {
+    object OracleTimeEncoding: JdbcTimeEncoding() {
+      // Normally it is Types.TIME by in that case Oracle truncates the milliseconds
+      override val jdbcTypeOfLocalTime  = Types.TIMESTAMP
+      override val jdbcTypeOfOffsetTime = Types.TIME
+    }
+
     override protected open val encodingApi: SqlEncoding<Connection, PreparedStatement, ResultSet> =
       object : SqlEncoding<Connection, PreparedStatement, ResultSet>,
         BasicEncoding<Connection, PreparedStatement, ResultSet> by JdbcEncodingBasic,
         BooleanEncoding<Connection, PreparedStatement, ResultSet> by JdbcBooleanIntEncoding,
-        TimeEncoding<Connection, PreparedStatement, ResultSet> by MysqlTimeEncoding,
+        TimeEncoding<Connection, PreparedStatement, ResultSet> by OracleTimeEncoding,
         UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidStringEncoding {}
   }
 
@@ -107,21 +112,21 @@ object TerpalContext {
         TimeEncoding<Connection, PreparedStatement, ResultSet> by JdbcTimeEncoding(),
         UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidStringEncoding {}
 
-    override suspend fun <T> runActionReturningScoped(sql: String, params: List<Param<*>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+    override suspend fun <T> runActionReturningScoped(act: ActionReturning<T>): Flow<T> =
       flowWithConnection {
         val conn = localConnection()
-        makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
-          prepare(stmt, conn, params)
+        makeStmtReturning(act.sql, conn, act.returningColumns).use { stmt ->
+          prepare(stmt, conn, act.params)
           // See comment about SQL Server not supporting getGeneratedKeys below
-          emitResultSet(conn, stmt.executeQuery(), extract)
+          emitResultSet(conn, stmt.executeQuery(), act.resultMaker.makeExtractor())
         }
       }
 
-    override suspend fun <T> runBatchActionReturningScoped(sql: String, batches: Sequence<List<Param<*>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+    override suspend fun <T> runBatchActionReturningScoped(act: BatchActionReturning<T>): Flow<T> =
       flowWithConnection {
         val conn = localConnection()
-        makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
-          batches.forEach { batch ->
+        makeStmtReturning(act.sql, conn, act.returningColumns).use { stmt ->
+          act.params.forEach { batch ->
             prepare(stmt, conn, batch)
             // The SQL Server driver has no ability to either do getGeneratedKeys or executeQuery
             // at the end of a sequence of addBatch calls to get all inserted keys/executed queries
@@ -131,7 +136,7 @@ object TerpalContext {
             // https://github.com/microsoft/mssql-jdbc/issues/358
             // https://github.com/Microsoft/mssql-jdbc/issues/245
             stmt.addBatch()
-            emitResultSet(conn, stmt.executeQuery(), extract)
+            emitResultSet(conn, stmt.executeQuery(), act.resultMaker.makeExtractor())
           }
         }
       }

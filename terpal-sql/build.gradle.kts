@@ -68,7 +68,7 @@ dependencies {
     testImplementation("com.microsoft.sqlserver:mssql-jdbc:7.4.1.jre11")
     testImplementation("com.h2database:h2:2.2.224")
     testImplementation("org.xerial:sqlite-jdbc:3.42.0.1")
-
+    testImplementation("com.oracle.ojdbc:ojdbc8:19.3.0.0")
 
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-runner-junit5:5.9.1")

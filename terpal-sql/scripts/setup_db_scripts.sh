@@ -92,6 +92,7 @@ function setup_oracle() {
       -e 'CREATE USER terpal_test IDENTIFIED BY "TerpalRocks!" QUOTA 50M ON system;' \
       --showWarnings=false
 
+    # For some reason need to do `GRANT DBA TO terpal_test;` in a separate command from the the `CREATE USER` command.
     echo "Granting Oracle Roles"
     java -cp '/sqlline/sqlline.jar:/sqlline/ojdbc.jar' 'sqlline.SqlLine' \
       -u 'jdbc:oracle:thin:@oracle:1521:xe' \
@@ -102,7 +103,7 @@ function setup_oracle() {
     echo "Running Oracle Setup Script"
     java -cp '/sqlline/sqlline.jar:/sqlline/ojdbc.jar' 'sqlline.SqlLine' \
       -u 'jdbc:oracle:thin:@oracle:1521:xe' \
-      -n secretsysuser -p 'secretpassword' \
+      -n terpal_test -p 'TerpalRocks!' \
       -f "$ORACLE_SCRIPT" \
       --showWarnings=false
 

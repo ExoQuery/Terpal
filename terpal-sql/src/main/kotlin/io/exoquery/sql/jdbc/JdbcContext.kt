@@ -13,13 +13,6 @@ import javax.sql.DataSource
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
 
-sealed interface ReturnAction {
-  // Used for Query and non-returning actions
-  data object ReturnDefault: ReturnAction
-  data class ReturnColumns(val columns: List<String>): ReturnAction
-  data object ReturnRecord: ReturnAction
-}
-
 abstract class JdbcContext(override val database: DataSource): Context<Connection, DataSource>() {
   // Maybe should just have all the encdoers from the base SqlEncoders class an everything introduced after should be added via additionalEncoders.
   // that would make it much easier to reason about what encoders fome from where
@@ -30,7 +23,6 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
   protected open val timezone: TimeZone = TimeZone.getDefault()
 
   protected abstract val encodingApi: SqlEncoding<Connection, PreparedStatement, ResultSet>
-  protected open val batchReturnBehavior: ReturnAction = ReturnAction.ReturnRecord
 
   override open fun newSession(): Connection = database.connection
   override open fun closeSession(session: Connection): Unit = session.close()
@@ -81,15 +73,14 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
     PreparedStatementElementEncoder(createEncodingContext(conn, ps), index+1, encodingApi, allEncoders).encodeNullableSerializableValue(serializer, value)
   }
 
-  protected open fun makeStmtReturning(sql: String, conn: Connection, returningBehavior: ReturnAction) =
-    when(returningBehavior) {
-      is ReturnAction.ReturnDefault -> conn.prepareStatement(sql)
-      is ReturnAction.ReturnColumns -> conn.prepareStatement(sql, returningBehavior.columns.toTypedArray())
-      is ReturnAction.ReturnRecord -> conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)
-    }
+  protected open fun makeStmtReturning(sql: String, conn: Connection, returningColumns: List<String>) =
+    if (returningColumns.isNotEmpty())
+      conn.prepareStatement(sql, returningColumns.toTypedArray())
+    else
+      conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)
 
   protected open fun makeStmt(sql: String, conn: Connection) =
-    makeStmtReturning(sql, conn, ReturnAction.ReturnDefault)
+    conn.prepareStatement(sql)
 
   protected open fun prepare(stmt: PreparedStatement, conn: Connection, params: List<Param<*>>) =
     params.withIndex().forEach { (idx, param) ->
@@ -98,27 +89,28 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
 
   suspend fun <T> FlowCollector<T>.emitResultSet(conn: Connection, rs: ResultSet, extract: (Connection, ResultSet) -> T) {
     while (rs.next()) {
-      val meta = rs.metaData
+      //val meta = rs.metaData
       //println("--- Emit: ${(1..meta.columnCount).map { rs.getObject(it) }.joinToString(",")}")
       emit(extract(conn, rs))
     }
   }
 
-  protected open suspend fun <T> runActionReturningScoped(sql: String, params: List<Param<*>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+  protected open suspend fun <T> runActionReturningScoped(act: ActionReturning<T>): Flow<T> =
     flowWithConnection {
       val conn = localConnection()
-      makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
-        prepare(stmt, conn, params)
+      makeStmtReturning(act.sql, conn, act.returningColumns).use { stmt ->
+        prepare(stmt, conn, act.params)
         stmt.executeUpdate()
-        emitResultSet(conn, stmt.generatedKeys, extract)
+        emitResultSet(conn, stmt.generatedKeys, act.resultMaker.makeExtractor())
       }
     }
 
-  protected open suspend fun runBatchActionScoped(sql: String, batches: Sequence<List<Param<*>>>): List<Int> =
+  protected open suspend fun runBatchActionScoped(query: BatchAction): List<Int> =
     withConnection {
       val conn = localConnection()
-      makeStmt(sql, conn).use { stmt ->
-        batches.forEach { batch ->
+      makeStmt(query.sql, conn).use { stmt ->
+        // Each set of params is a batch
+        query.params.forEach { batch ->
           prepare(stmt, conn, batch)
           stmt.addBatch()
         }
@@ -126,17 +118,17 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       }
     }
 
-  protected open suspend fun <T> runBatchActionReturningScoped(sql: String, batches: Sequence<List<Param<*>>>, returningBehavior: ReturnAction, extract: (Connection, ResultSet) -> T): Flow<T> =
+  protected open suspend fun <T> runBatchActionReturningScoped(act: BatchActionReturning<T>): Flow<T> =
     flowWithConnection {
       val conn = localConnection()
-      makeStmtReturning(sql, conn, returningBehavior).use { stmt ->
-        batches.forEach { batch ->
-          // TODO wrap with tryCatchQuery
+      makeStmtReturning(act.sql, conn, act.returningColumns).use { stmt ->
+        // Each set of params is a batch
+        act.params.forEach { batch ->
           prepare(stmt, conn, batch)
           stmt.addBatch()
         }
         stmt.executeBatch()
-        emitResultSet(conn, stmt.generatedKeys, extract)
+        emitResultSet(conn, stmt.generatedKeys, act.resultMaker.makeExtractor())
       }
     }
 
@@ -177,11 +169,11 @@ abstract class JdbcContext(override val database: DataSource): Context<Connectio
       throw SQLException("Error executing query: ${sql}", e)
     }
 
-  internal open suspend fun <T> stream(query: BatchActionReturning<T>): Flow<T> = runBatchActionReturningScoped(query.sql, query.params, batchReturnBehavior, query.resultMaker.makeExtractor())
-  internal open suspend fun <T> stream(query: ActionReturning<T>): Flow<T> = runActionReturningScoped(query.sql, query.params, batchReturnBehavior, query.resultMaker.makeExtractor())
+  internal open suspend fun <T> stream(query: BatchActionReturning<T>): Flow<T> = runBatchActionReturningScoped(query)
+  internal open suspend fun <T> stream(query: ActionReturning<T>): Flow<T> = runActionReturningScoped(query)
   internal open suspend fun <T> run(query: Query<T>): List<T> = stream(query).toList()
   internal open suspend fun run(query: Action): Int = runActionScoped(query.sql, query.params)
-  internal open suspend fun run(query: BatchAction): List<Int> = runBatchActionScoped(query.sql, query.params)
+  internal open suspend fun run(query: BatchAction): List<Int> = runBatchActionScoped(query)
   internal open suspend fun <T> run(query: ActionReturning<T>): T = stream(query).first()
   internal open suspend fun <T> run(query: BatchActionReturning<T>): List<T> = stream(query).toList()
 

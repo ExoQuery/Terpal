@@ -32,4 +32,8 @@ object TestDatabases {
   val sqlite: DataSource by lazy {
     HikariHelper.makeDataSource("testSqliteDB")
   }
+
+  val oracle: DataSource by lazy {
+    HikariHelper.makeDataSource("testOracleDB")
+  }
 }
