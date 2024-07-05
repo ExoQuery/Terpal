@@ -1,5 +1,9 @@
 package io.exoquery.terpal
 
+import io.exoquery.terpal.In
+import io.exoquery.terpal.InstanceTerp
+import io.exoquery.terpal.Out
+import io.exoquery.terpal.StaticTerp
 import kotlin.test.Test
 
 data class In(val value: String)

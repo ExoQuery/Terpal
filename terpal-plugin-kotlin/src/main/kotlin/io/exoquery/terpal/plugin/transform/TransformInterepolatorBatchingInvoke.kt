@@ -3,17 +3,16 @@ package io.exoquery.terpal.plugin.transform
 import io.decomat.Is
 import io.decomat.case
 import io.decomat.on
-import io.exoquery.terpal.UnzipPartsParams
-import io.exoquery.terpal.Interpolator
-import io.exoquery.terpal.InterpolatorWithWrapper
-import io.exoquery.terpal.parseError
-import io.exoquery.terpal.plugin.isValidWrapFunction
+import io.exoquery.terpal.*
 import io.exoquery.terpal.plugin.printing.dumpSimple
 import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
 import io.exoquery.terpal.plugin.trees.isClassOf
 import io.exoquery.terpal.plugin.trees.isSubclassOf
 import io.exoquery.terpal.plugin.trees.simpleTypeArgs
 import io.exoquery.terpal.plugin.trees.superTypesRecursive
+import org.jetbrains.kotlin.backend.jvm.ir.kClassReference
+import org.jetbrains.kotlin.codegen.Callable
+import org.jetbrains.kotlin.ir.builders.irFunctionReference
 import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.expressions.IrCall
@@ -21,35 +20,38 @@ import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.types.*
+import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
-import org.jetbrains.kotlin.ir.util.functions
+import org.jetbrains.kotlin.ir.util.referenceFunction
+import org.jetbrains.kotlin.name.CallableId
+import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.name.StandardClassIds
 
-class TransformInterepolatorInvoke(val ctx: BuilderContext) {
+class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
   private val compileLogger = ctx.logger
 
   fun matches(expression: IrCall): Boolean =
     with (compileLogger) {
-      Call.InterpolateInvoke.matchesMethod(expression) || Call.InterpolatorFunctionInvoke.matchesMethod(expression)
+      Call.InterpolateBatchingInvoke.matchesMethod(expression)
     }
 
   fun transform(expression: IrCall, superTransformer: VisitTransformExpressions): IrExpression {
-    val (caller, compsRaw) =
+    //val funSymbol = ctx.pluginCtx.symbolTable.referenceSimpleFunction(IdSignature.LocalSignature("param", null, null))
+
+    val (caller, compsRaw, funExpr) =
       with(compileLogger) {
         on(expression).match(
           // interpolatorSubclass.invoke(.. { stuff } ...)
-          case(Call.InterpolateInvoke[Is(), Is()]).then { caller, comps ->
-            caller to comps
-          },
-          case(Call.InterpolatorFunctionInvoke[Is(), Is()]).then { callerData, comps ->
-            ctx.builder.irGetObject(callerData.interpolatorClass) to comps
+          case(Call.InterpolateBatchingInvoke[Is()]).then { data ->
+            data
           }
         )
       } ?: run {
-        val dol = '$'
+        val bar = "\${bar}"
         parseError(
           """|======= Parsing Error =======
            |The contents of Interpolator.invoke(...) must be a single String concatenation statement e.g:
-           |myInterpolator.invoke("foo $dol{bar} baz")
+           |myInterpolator.invoke("foo $bar baz")
            |
            |==== However, the following was found: ====
            |${expression.dumpKotlinLike()}
@@ -70,17 +72,15 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       // Need to find the most specific interpolator implementation because the less-specific one will have non-generics for their
       // parameter specifications. E.g. if some interpolator e.g. Sql:Interpolator<Fragment, Statement> which implements
       // Interpolator is looked up as (parentCaller:Interpolator).simpleTypeArgs you will get back T,R instead of Fragment,Statement.
-      superTypes.find { it.isClassOf<InterpolatorWithWrapper<*, *>>() }
-        ?: superTypes.find { it.isClassOf<Interpolator<*, *>>() }
+      superTypes.find { it.isClassOf<InterpolatorBatchingWithWrapper<*>>() }
+        ?: superTypes.find { it.isClassOf<InterpolatorBatching<*>>() }
         ?: parseError("Could not isolate the parent type Interpolator<T, R>. This shuold be impossible.")
 
-    // TODO need to catch parseError externally (i.e. in VisitTransformExpressions) & not transform the expressions
-
-    // Interpolator type T
+    // InterpolatorBatching type T
     val interpolateType = parentCaller.simpleTypeArgs.get(0)
     val interpolateTypeClass = interpolateType.classOrNull ?: parseError("The interpolator T parameter type `${interpolateType.dumpKotlinLike()}` was not a class.")
-    // Interpolator type R
-    val interpolateReturn = parentCaller.simpleTypeArgs.get(1)
+    // There is not type R for InterpolateBatch so we use the output-type of the interpolate/invoke function
+    val interpolateReturn = expression.type
 
     val concatStringExprs =
       { a: IrExpression, b: IrExpression ->
@@ -99,7 +99,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       val wrapperFunctionInvoke = run {
         val isInterpolatorWithWrapper =
           caller.type.superTypesRecursive()
-            .find { it.isClassOf<InterpolatorWithWrapper<*, *>>() } != null
+            .find { it.isClassOf<InterpolatorBatchingWithWrapper<*>>() } != null
 
         if (isInterpolatorWithWrapper)
           { expr: IrExpression -> wrapInterpolatedTerm(ctx, caller, expr, interpolateType) }
@@ -130,6 +130,12 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       val partsLifted =
         with (lifter) { parts.liftExprTyped(context.symbols.string.defaultType) }
 
+
+      // TODO what if it's an interpolator in an interpolator (i.e. Sql("...${Sql(...)}...") ) so need to call recursive transform
+      // TODO if it's a InterpolatorWithPreProcess need to invoke the preProcess function on the Params (this is what will inoke the param & do the lift)
+      //      (it should also check if the user manually created a Param with it, if so just ignore it. Should unify Param and Statement also because it should just be Sql
+      //      interface which should make these things easier)
+
       val paramsLifted =
         with (lifter) { params.liftExprTyped(interpolateType) }
 
@@ -142,13 +148,17 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
         return expression
       }
       val partsLiftedFun = createLambda0(partsLifted, currScope)
-      val paramsLiftedFun = createLambda0(paramsLifted, currScope)
+      val paramsLiftedFun = createLambdaN(paramsLifted, funExpr.function.valueParameters, currScope)
+
+
 
       val callOutput =
         caller.callMethodWithType("interpolate", interpolateReturn)(
           partsLiftedFun,
           paramsLiftedFun
         )
+
+      //error("---------- Calling: \n ---------\n${callOutput.dumpKotlinLike()}")
 
       callOutput
     }

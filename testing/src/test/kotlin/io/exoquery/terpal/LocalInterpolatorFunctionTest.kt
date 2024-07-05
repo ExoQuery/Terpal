@@ -11,10 +11,10 @@ class LocalInterpolatorFunctionTest: InterpolateTestBase {
   }
 
   @InterpolatorFunction<StaticTerp>(StaticTerp::class)
-  fun staticTerp(str: String): Stmt = interpolatorBody()
+  fun staticTerp(str: String): Stmt = Messages.throwPluginNotExecuted()
 
   @InterpolatorFunction<StaticTerp>(StaticTerp::class)
-  operator fun String.unaryPlus(): Stmt = interpolatorBody()
+  operator fun String.unaryPlus(): Stmt = Messages.throwPluginNotExecuted()
 
   val A = Stmt(listOf("A"), listOf(), "local")
   val B = Stmt(listOf("B"), listOf(), "local")

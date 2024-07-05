@@ -428,42 +428,42 @@ class RenderIrElementVisitorSimple(normalizeNames: Boolean = false, private val 
     }
 
   override fun visitClassReference(expression: IrClassReference, data: Nothing?): String =
-    "CLASS_REFERENCE '${expression.symbol.renderReference()}' type=${expression.type.render()}"
+    "[IrClassReference] '${expression.symbol.renderReference()}' type=${expression.type.render()}"
 
   override fun visitGetClass(expression: IrGetClass, data: Nothing?): String =
-    "GET_CLASS type=${expression.type.render()}"
+    "[IrGetClass] type=${expression.type.render()}"
 
   override fun visitTry(aTry: IrTry, data: Nothing?): String =
-    "TRY type=${aTry.type.render()}"
+    "[IrTry] type=${aTry.type.render()}"
 
   override fun visitCatch(aCatch: IrCatch, data: Nothing?): String =
-    "CATCH parameter=${aCatch.catchParameter.symbol.renderReference()}"
+    "[IrCatch] parameter=${aCatch.catchParameter.symbol.renderReference()}"
 
   override fun visitDynamicOperatorExpression(expression: IrDynamicOperatorExpression, data: Nothing?): String =
-    "DYN_OP operator=${expression.operator} type=${expression.type.render()}"
+    "[IrDynOpExpr] operator=${expression.operator} type=${expression.type.render()}"
 
   override fun visitDynamicMemberExpression(expression: IrDynamicMemberExpression, data: Nothing?): String =
-    "DYN_MEMBER memberName='${expression.memberName}' type=${expression.type.render()}"
+    "[IrDynMemExpr] memberName='${expression.memberName}' type=${expression.type.render()}"
 
   @OptIn(ObsoleteDescriptorBasedAPI::class)
   override fun visitErrorDeclaration(declaration: IrErrorDeclaration, data: Nothing?): String =
-    "ERROR_DECL ${declaration.descriptor::class.java.simpleName} " +
+    "[IrErrorDecl] ${declaration.descriptor::class.java.simpleName} " +
     descriptorRendererForErrorDeclarations.renderDescriptor(declaration.descriptor.original)
 
   override fun visitErrorExpression(expression: IrErrorExpression, data: Nothing?): String =
-    "ERROR_EXPR '${expression.description}' type=${expression.type.render()}"
+    "[IrErrorExpr] '${expression.description}' type=${expression.type.render()}"
 
   override fun visitErrorCallExpression(expression: IrErrorCallExpression, data: Nothing?): String =
-    "ERROR_CALL '${expression.description}' type=${expression.type.render()}"
+    "[IrErrorCall] '${expression.description}' type=${expression.type.render()}"
 
   override fun visitConstantArray(expression: IrConstantArray, data: Nothing?): String =
-    "CONSTANT_ARRAY type=${expression.type.render()}"
+    "[IrConstantArray] type=${expression.type.render()}"
 
   override fun visitConstantObject(expression: IrConstantObject, data: Nothing?): String =
-    "CONSTANT_OBJECT type=${expression.type.render()} constructor=${expression.constructor.renderReference()}"
+    "[IrConstantObject] type=${expression.type.render()} constructor=${expression.constructor.renderReference()}"
 
   override fun visitConstantPrimitive(expression: IrConstantPrimitive, data: Nothing?): String =
-    "CONSTANT_PRIMITIVE type=${expression.type.render()}"
+    "[IrConstantPrimitive] type=${expression.type.render()}"
 
 
   private val descriptorRendererForErrorDeclarations = DescriptorRenderer.ONLY_NAMES_WITH_SHORT_TYPES

@@ -1,21 +1,15 @@
 package io.exoquery.terpal.plugin.transform
 
-import io.exoquery.terpal.plugin.trees.ExtractorsDomain
-import io.exoquery.terpal.plugin.logging.CompileLogger
+import io.exoquery.terpal.ParseError
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
-import org.jetbrains.kotlin.backend.common.ScopeWithIr
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
-import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocationWithRange
-import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
 import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
 import java.nio.file.Path
 import org.jetbrains.kotlin.ir.util.*
-import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 
 
 class VisitTransformExpressions(
@@ -45,24 +39,34 @@ class VisitTransformExpressions(
     val builderContext = transformerCtx.makeBuilderContext(expression, scopeOwner)
     val transformPrint = TransformPrintSource(builderContext)
     val transformInterpolations = TransformInterepolatorInvoke(builderContext)
+    val transformInterpolationsBatching = TransformInterepolatorBatchingInvoke(builderContext)
 
 
     // TODO need to catch parseError here in VisitTransformExpressions & not transform the expressions
-    val out = when {
-
-      // 1st that that runs here because printed stuff should not be transformed
-      // (and this does not recursively transform stuff inside)
-      transformPrint.matches(expression) -> {
-        transformPrint.transform(expression)
+    val out =
+      try {
+        when {
+          // 1st that that runs here because printed stuff should not be transformed
+          // (and this does not recursively transform stuff inside)
+          transformPrint.matches(expression) ->
+            transformPrint.transform(expression)
+          transformInterpolations.matches(expression) ->
+            transformInterpolations.transform(expression, this)
+          transformInterpolationsBatching.matches(expression) ->
+            transformInterpolationsBatching.transform(expression, this)
+          else ->
+            super.visitCall(expression)
+        }
+      } catch (e: ParseError) {
+        compileLogger.error(e.msg)
+        expression
+      } catch (e: AbortTransform) {
+        expression
+      } catch (e: Exception) {
+        compileLogger.error("Error transforming expression: ${e.message}")
+        expression
       }
 
-      transformInterpolations.matches(expression) -> {
-        transformInterpolations.transform(expression, this)
-      }
-
-      else ->
-        super.visitCall(expression)
-    }
     return out
   }
 }

@@ -1,12 +1,20 @@
 package io.exoquery.terpal
 
-fun interpolatorBody(): Nothing = throw IllegalStateException(Messages.PluginWasNotExecuted)
+import kotlin.reflect.KClass
+
+interface InterpolatorWithWrapper<T, R>: Interpolator<T, R> {
+  fun wrap(value: String?): T
+  fun wrap(value: Int?): T
+  fun wrap(value: Long?): T
+  fun wrap(value: Short?): T
+  fun wrap(value: Byte?): T
+  fun wrap(value: Float?): T
+  fun wrap(value: Double?): T
+  fun wrap(value: Boolean?): T
+}
 
 interface Interpolator<T, R> {
-  // TODO better error message
-  operator fun invoke(string: String): R = interpolatorBody()
-
-
+  operator fun invoke(string: String): R = Messages.throwPluginNotExecuted()
   fun interpolate(parts: () -> List<String>, params: () -> List<T>): R
 
   companion object {
