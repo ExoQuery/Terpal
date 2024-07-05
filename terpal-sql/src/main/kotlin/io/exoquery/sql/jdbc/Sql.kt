@@ -1,6 +1,7 @@
 package io.exoquery.sql.jdbc
 
 import io.exoquery.sql.*
+import io.exoquery.terpal.WrapFailureMessage
 import java.math.BigDecimal
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -9,7 +10,16 @@ import java.time.LocalTime
 import kotlin.reflect.KClass
 import kotlin.reflect.full.isSubclassOf
 
+@WrapFailureMessage(
+"""For a datatype that does not have a wrap-function, use the Param(...) constructor to lift it into the proper type. You may
+need specify a serializer for the type or (if it is contextual) ensure that it has a encoder in the `additionalEncoders` of the context."""
+)
 object Sql: SqlJdbcBase()
+
+@WrapFailureMessage(
+"""For a datatype that does not have a wrap-function, use the Param(...) constructor to lift it into the proper type. You may
+need specify a serializer for the type or (if it is contextual) ensure that it has a encoder in the `additionalEncoders` of the context."""
+)
 object SqlBatch: SqlJdbcBatchBase() {
   override fun wrap(value: String?): Param<String> = Param(value)
   override fun wrap(value: Int?): Param<Int> = Param(value)

@@ -76,8 +76,6 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
         ?: superTypes.find { it.isClassOf<InterpolatorBatching<*>>() }
         ?: parseError("Could not isolate the parent type Interpolator<T, R>. This shuold be impossible.")
 
-    // TODO need to catch parseError externally (i.e. in VisitTransformExpressions) & not transform the expressions
-
     // InterpolatorBatching type T
     val interpolateType = parentCaller.simpleTypeArgs.get(0)
     val interpolateTypeClass = interpolateType.classOrNull ?: parseError("The interpolator T parameter type `${interpolateType.dumpKotlinLike()}` was not a class.")

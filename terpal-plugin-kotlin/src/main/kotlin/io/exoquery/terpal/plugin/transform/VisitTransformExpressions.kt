@@ -1,5 +1,6 @@
 package io.exoquery.terpal.plugin.transform
 
+import io.exoquery.terpal.ParseError
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -42,25 +43,30 @@ class VisitTransformExpressions(
 
 
     // TODO need to catch parseError here in VisitTransformExpressions & not transform the expressions
-    val out = when {
-
-      // 1st that that runs here because printed stuff should not be transformed
-      // (and this does not recursively transform stuff inside)
-      transformPrint.matches(expression) -> {
-        try { transformPrint.transform(expression) } catch (e: AbortTransform) { expression }
+    val out =
+      try {
+        when {
+          // 1st that that runs here because printed stuff should not be transformed
+          // (and this does not recursively transform stuff inside)
+          transformPrint.matches(expression) ->
+            transformPrint.transform(expression)
+          transformInterpolations.matches(expression) ->
+            transformInterpolations.transform(expression, this)
+          transformInterpolationsBatching.matches(expression) ->
+            transformInterpolationsBatching.transform(expression, this)
+          else ->
+            super.visitCall(expression)
+        }
+      } catch (e: ParseError) {
+        compileLogger.error(e.msg)
+        expression
+      } catch (e: AbortTransform) {
+        expression
+      } catch (e: Exception) {
+        compileLogger.error("Error transforming expression: ${e.message}")
+        expression
       }
 
-      transformInterpolations.matches(expression) -> {
-        try { transformInterpolations.transform(expression, this) } catch (e: AbortTransform) { expression }
-      }
-
-      transformInterpolationsBatching.matches(expression) -> {
-          try { transformInterpolationsBatching.transform(expression, this) } catch (e: AbortTransform) { expression }
-      }
-
-      else ->
-        super.visitCall(expression)
-    }
     return out
   }
 }
