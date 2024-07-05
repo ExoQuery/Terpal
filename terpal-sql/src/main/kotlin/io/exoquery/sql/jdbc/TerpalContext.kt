@@ -95,10 +95,22 @@ object TerpalContext {
       override val jdbcTypeOfLocalTime  = Types.TIMESTAMP
       override val jdbcTypeOfOffsetTime = Types.TIME
     }
+    // Oracle has this crazy behavior where empty strings are treated as NULLs in JDBC. Need to account for that by converting to "" when
+    // the getString method returns null. Need to account for this behavior by turning null values from getString into empty strings.
+    // The getString function is used in the StringDecoder as well as the CharDecoder.
+    // Note that this will not mess up the functionality of a Nullable decoder (i.e. the result of JdbcEncoder.asNullable() because the
+    // nullable decoder first checks the row using wasNull() before calling the non-nullable decoder. If the row is null then the non-null
+    // decoder is not invoked so we would not care about it converting a `null` value to an empty String either way.
+    // This same logic applies to the ByteArrayDecoder as well.
+    object JdbcEncodingOracle: JdbcEncodingBasic() {
+      override val CharDecoder: JdbcDecoderAny<Char> = JdbcDecoderAny.fromFunction { ctx, i -> ctx.row.getString(i)?.let { it[0] } ?: Char.MIN_VALUE }
+      override val StringDecoder: JdbcDecoderAny<String> = JdbcDecoderAny.fromFunction { ctx, i -> (ctx.row.getString(i) ?: "") }
+      override val ByteArrayDecoder: JdbcDecoderAny<ByteArray> = JdbcDecoderAny.fromFunction { ctx, i -> ctx.row.getBytes(i) ?: byteArrayOf() }
+    }
 
     override protected open val encodingApi: SqlEncoding<Connection, PreparedStatement, ResultSet> =
       object : SqlEncoding<Connection, PreparedStatement, ResultSet>,
-        BasicEncoding<Connection, PreparedStatement, ResultSet> by JdbcEncodingBasic,
+        BasicEncoding<Connection, PreparedStatement, ResultSet> by JdbcEncodingOracle,
         BooleanEncoding<Connection, PreparedStatement, ResultSet> by JdbcBooleanIntEncoding,
         TimeEncoding<Connection, PreparedStatement, ResultSet> by OracleTimeEncoding,
         UuidEncoding<Connection, PreparedStatement, ResultSet> by JdbcUuidStringEncoding {}

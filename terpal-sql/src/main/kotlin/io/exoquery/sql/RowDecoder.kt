@@ -44,8 +44,9 @@ class JdbcRowDecoder(
   api: ApiDecoders<Connection, ResultSet>,
   decoders: Set<SqlDecoder<Connection, ResultSet, out Any>>,
   columnInfos: List<ColumnInfo>,
+  type: RowDecoderType,
   endCallback: (Int) -> Unit
-): RowDecoder<Connection, ResultSet>(ctx, initialRowIndex, api, decoders, columnInfos, endCallback) {
+): RowDecoder<Connection, ResultSet>(ctx, initialRowIndex, api, decoders, columnInfos, type, endCallback) {
 
   companion object {
     operator fun invoke(
@@ -58,12 +59,17 @@ class JdbcRowDecoder(
         (1..meta.columnCount).map { ColumnInfo(meta.getColumnName(it), meta.getColumnTypeName(it)) }
       val metaColumns = metaColumnData(ctx.row.metaData)
       descriptor.verifyColumns(metaColumns)
-      return JdbcRowDecoder(ctx, 1, api, decoders, metaColumns, {})
+      return JdbcRowDecoder(ctx, 1, api, decoders, metaColumns, RowDecoderType.Regular, {})
     }
   }
 
-  override fun cloneSelf(ctx: JdbcDecodingContext, initialRowIndex: Int, endCallback: (Int) -> Unit): RowDecoder<Connection, ResultSet> =
-    JdbcRowDecoder(ctx, initialRowIndex, api, decoders, columnInfos, endCallback)
+  override fun cloneSelf(ctx: JdbcDecodingContext, initialRowIndex: Int, type: RowDecoderType, endCallback: (Int) -> Unit): RowDecoder<Connection, ResultSet> =
+    JdbcRowDecoder(ctx, initialRowIndex, api, decoders, columnInfos, type, endCallback)
+}
+
+sealed interface RowDecoderType {
+  data class Inline(val descriptor: SerialDescriptor): RowDecoderType
+  object Regular: RowDecoderType
 }
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -73,10 +79,11 @@ abstract class RowDecoder<Session, Row>(
   val api: ApiDecoders<Session, Row>,
   val decoders: Set<SqlDecoder<Session, Row, out Any>>,
   val columnInfos: List<ColumnInfo>,
+  val type: RowDecoderType,
   val endCallback: (Int) -> Unit
 ): Decoder, CompositeDecoder {
 
-  abstract fun cloneSelf(ctx: DecodingContext<Session, Row>, initialRowIndex: Int, endCallback: (Int) -> Unit): RowDecoder<Session, Row>
+  abstract fun cloneSelf(ctx: DecodingContext<Session, Row>, initialRowIndex: Int, type: RowDecoderType, endCallback: (Int) -> Unit): RowDecoder<Session, Row>
 
   var rowIndex: Int = initialRowIndex
   var classIndex: Int = 0
@@ -181,7 +188,7 @@ abstract class RowDecoder<Session, Row>(
         if (allRowsNull) {
           decodeNull()
         } else {
-          deserializer.deserialize(cloneSelf(ctx, rowIndex, { childIndex -> this.rowIndex = childIndex }))
+          deserializer.deserialize(cloneSelf(ctx, rowIndex, type, { childIndex -> this.rowIndex = childIndex }))
         }
       }
       SerialKind.CONTEXTUAL -> {
@@ -191,34 +198,57 @@ abstract class RowDecoder<Session, Row>(
         run { decodeWithDecoder(decoder as SqlDecoder<Session, Row, T>) }
       }
       else -> {
+        infix fun String.eqOrNull(cls: String): Boolean = this == cls || this == "$cls?"
+
         when {
           childDesc.kind is PrimitiveKind ->
-            if (api.isNull(rowIndex, ctx.row)) {
-              // Advance to the next row (since we know the current one is null)
-              // otherwise the next row lookup will think the element is still this one (i.e. null)
-              //rowIndex += 1
-              // increment to the next index
-              nextRowIndex(descriptor, index, "Skipping Null Value")
-              null
-            } else {
+            run {
               val descKind = childDesc.kind
               val serialName = childDesc.serialName
               // just doing deserializer.deserialize(this) at this point will just call the non-element decoders e.g. decodeString, decodeInt, etc... we
               // want to call the decoders that have element information in them (e.g. decodeByteElement, decodeShortElement, etc...) if this is possible
               when {
-                 descKind is PrimitiveKind.BYTE  && serialName == "kotlin.Byte" -> decodeByteElement(descriptor, index)
-                 descKind is PrimitiveKind.SHORT  && serialName == "kotlin.Short" -> decodeShortElement(descriptor, index)
-                 descKind is PrimitiveKind.INT  && serialName == "kotlin.Int" -> decodeIntElement(descriptor, index)
-                 descKind is PrimitiveKind.LONG  && serialName == "kotlin.Long" -> decodeLongElement(descriptor, index)
-                 descKind is PrimitiveKind.FLOAT  && serialName == "kotlin.Float" -> decodeFloatElement(descriptor, index)
-                 descKind is PrimitiveKind.DOUBLE  && serialName == "kotlin.Double" -> decodeDoubleElement(descriptor, index)
-                 descKind is PrimitiveKind.BOOLEAN  && serialName == "kotlin.Boolean"  -> decodeBooleanElement(descriptor, index)
-                 descKind is PrimitiveKind.CHAR && serialName == "kotlin.Char" -> decodeCharElement(descriptor, index)
-                 descKind is PrimitiveKind.STRING && serialName == "kotlin.String" -> decodeStringElement(descriptor, index)
+                 descKind is PrimitiveKind.BYTE  && serialName eqOrNull "kotlin.Byte" -> api.ByteDecoder.asNullableIfSpecified().decode(ctx, nextRowIndex(descriptor, index))
+                 descKind is PrimitiveKind.SHORT  && serialName eqOrNull "kotlin.Short" -> api.ShortDecoder.asNullableIfSpecified().decode(ctx, nextRowIndex(descriptor, index))
+                 descKind is PrimitiveKind.INT  && serialName eqOrNull "kotlin.Int" -> api.IntDecoder.asNullableIfSpecified().decode(ctx, nextRowIndex(descriptor, index))
+                 descKind is PrimitiveKind.LONG  && serialName eqOrNull "kotlin.Long" -> api.LongDecoder.asNullableIfSpecified().decode(ctx, nextRowIndex(descriptor, index))
+                 descKind is PrimitiveKind.FLOAT  && serialName eqOrNull "kotlin.Float" -> api.FloatDecoder.asNullableIfSpecified().decode(ctx, nextRowIndex(descriptor, index))
+                 descKind is PrimitiveKind.DOUBLE  && serialName eqOrNull "kotlin.Double" -> api.DoubleDecoder.asNullableIfSpecified().decode(ctx, nextRowIndex(descriptor, index))
+                 descKind is PrimitiveKind.BOOLEAN  && serialName eqOrNull "kotlin.Boolean"  -> api.BooleanDecoder.asNullableIfSpecified().decode(ctx, nextRowIndex(descriptor, index))
+                 descKind is PrimitiveKind.CHAR && serialName eqOrNull "kotlin.Char" -> api.CharDecoder.asNullableIfSpecified().decode(ctx, nextRowIndex(descriptor, index))
+                 descKind is PrimitiveKind.STRING && serialName eqOrNull "kotlin.String" -> api.StringDecoder.asNullableIfSpecified().decode(ctx, nextRowIndex(descriptor, index))
                 else -> {
-                  //if it is a primitive type wrapped into a non-primitive type (e.g. DateToLongSerializer) then use the encoder defined in the serialization. Note that
-                  //also known as a new-type (e.g. NewTypeInt(value: Int) then this serializer will be the wrapped one
-                  deserializer.deserialize(this)
+                  // If it is a primitive type wrapped into a non-primitive type (e.g. DateToLongSerializer) then use the encoder defined in the serialization. Note that
+                  // also known as a new-type (e.g. NewTypeInt(value: Int) then this serializer will be the wrapped one. It is assumed that in this case these kinds
+                  // cannot deal with their own nullability and that the nullability is handled needs to be handeled here. This is primary because this call to deserializer.deserialize
+                  // would frequently delegate to a non-nullable primitive deserialize call (e.g. this.decodeString()) which would break in the corresponding JDBC decoder (e.g. DecodeString).
+                  // The function decodeString() would be called by the client that would implement a primitive wrapping decoder that might look something like this:
+                  //
+                  //    object TestTypeSerialzier: KSerializer<SerializeableTestType> {
+                  //      override val descriptor = PrimitiveSerialDescriptor("SerializeableTestType", PrimitiveKind.STRING)
+                  //      override fun serialize(...) = ...
+                  //      override fun deserialize(decoder: Decoder): SerializeableTestType = SerializeableTestType(decoder.decodeString())
+                  //    }
+                  // Note how the user uses `decoder.decodeString()` which will use this.decodeString() which will call the JDBC decoder's decodeString() which will call the ResultSet.getString() in StringDecoder
+                  // that function in turn will return null which will fail in the StringDecoder since it was not converted via asNullable. Now if we actually had knowledge of the descriptor
+                  // (i.e. the ability to call descriptor.isNullable() to know if nullability is possible)
+                  // in this.decodeString() we could do StringDecoder.asNullable().decode(...) but the function signature does not allow for that. Now we could technically
+                  // tell the user to always use decodeInline and copy this RowDecoder with the Descriptor available. This is a future direction to explore.
+                  // For now however, it seems to be the best practice to handle nullability ahead of time and if the value is null, not call the deserializer (e.g. decodeString()) call in the first place.
+                  // The exception to this is if the child-descriptor is specifically marked non-nullable. In that case we know we cannot actually return a null-value from this function
+                  // because that would fail downstream. In that case we have no choice but to call deserializer.deserialize(this) and force the deserializer to handle the null-value.
+                  // For example this is the case in the Oracle StringDecoder since Oracle (very strangely!) automacally converts empty-strings to null-values. Therefore
+                  // we need to call the deserializer to handle the null-value and return a non-null value (e.g. an empty string) in the case of a null-value.
+                  if (api.isNull(rowIndex, ctx.row) && childDesc.isNullable) {
+                    // Advance to the next row (since we know the current one is null)
+                    // otherwise the next row lookup will think the element is still this one (i.e. null)
+                    //rowIndex += 1
+                    // increment to the next index
+                    // Note that if this is called from a non-nullable row it will fail during kotlin-serialization construction of the parent object.
+                    nextRowIndex(descriptor, index, "Skipping Null Value")
+                    null
+                  } else
+                    deserializer.deserialize(this)
                 }
               } as T?
             }
@@ -260,7 +290,10 @@ abstract class RowDecoder<Session, Row>(
     TODO("Not yet implemented")
   }
 
-  override fun decodeInline(descriptor: SerialDescriptor): Decoder = this
+  // When using classes with a single primitive (e.g. value-classes) this is very useful because we want to retain informaiton about the primitive type.
+  // For example, if we have a class `class NewTypeInt(val value: Int?)` we want to know that the value is a nullable-Int and not just an Int.
+  // Currently this functionality is not used but we might want to know the type of the primitive in the future.
+  override fun decodeInline(descriptor: SerialDescriptor): Decoder = cloneSelf(ctx, rowIndex, RowDecoderType.Inline(descriptor), endCallback)
 
   /**
    * Checks to see if the element is null before calling an actual deserialzier. Can't use this for nested classes because

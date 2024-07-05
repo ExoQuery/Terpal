@@ -321,7 +321,7 @@ object EncodingSpecData {
   }
 
   public infix fun <A> A?.shouldBeEqualNullable(expected: A?) =
-    assertEquals(this, expected)
+    assertEquals(expected, this)
 
   public infix fun BigDecimal?.shouldBeEqualNullableIgnoringScale(expected: BigDecimal?) =
     if (this == null && expected == null) Unit
