@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     id("conventions")
     id("publish")
-    kotlin("kapt") version "1.9.0"
+    kotlin("kapt") version "1.8.21"
 }
 
 kotlin {
