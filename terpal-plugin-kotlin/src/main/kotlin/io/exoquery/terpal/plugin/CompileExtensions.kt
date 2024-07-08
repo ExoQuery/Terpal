@@ -14,7 +14,6 @@ import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.types.IrType
-import org.jetbrains.kotlin.ir.types.classOrFail
 import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.isSubtypeOfClass
 import org.jetbrains.kotlin.ir.util.*
@@ -67,6 +66,8 @@ fun IrElement.location(fileEntry: IrFileEntry): CompilerMessageSourceLocation {
   )!!
   return messageWithRange
 }
+
+val IrType.classOrFail get() = this.classOrNull ?: fail("Type ${this.dumpKotlinLike()} is not a class type.")
 
 fun IrSimpleFunctionSymbol.isValidWrapFunction(interpolateOutputType: IrType) = run {
   val wrapReturnType = this.owner.returnType.eraseTypeParameters()

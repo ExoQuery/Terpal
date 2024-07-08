@@ -20,7 +20,6 @@ import org.jetbrains.kotlin.utils.addIfNotNull
 import org.jetbrains.kotlin.utils.addToStdlib.ifTrue
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 
-
 fun IrElement.render() =
   accept(RenderIrElementVisitorSimple(), null)
 
@@ -144,7 +143,7 @@ class RenderIrElementVisitorSimple(normalizeNames: Boolean = false, private val 
       }
       when (parent) {
         is IrPackageFragment -> {
-          val fqn = parent.packageFqName.asString()
+          val fqn = parent.fqName.asString()
           append(fqn.ifEmpty { "<root>" })
         }
         is IrDeclaration -> {
@@ -178,10 +177,10 @@ class RenderIrElementVisitorSimple(normalizeNames: Boolean = false, private val 
     "[IrModuleFragment] name:${declaration.name}"
 
   override fun visitExternalPackageFragment(declaration: IrExternalPackageFragment, data: Nothing?): String =
-    "[IrExternalPackageFragment] fqName:${declaration.packageFqName}"
+    "[IrExternalPackageFragment] fqName:${declaration.fqName}"
 
   override fun visitFile(declaration: IrFile, data: Nothing?): String =
-    "[IrFile] fqName:${declaration.packageFqName} fileName:${declaration.path}"
+    "[IrFile] fqName:${declaration.fqName} fileName:${declaration.path}"
 
   override fun visitFunction(declaration: IrFunction, data: Nothing?): String =
     declaration.runTrimEnd {
@@ -524,7 +523,7 @@ private fun IrDeclaration.renderDeclarationParentFqn(sb: StringBuilder) {
     if (parent is IrDeclaration) {
       parent.renderDeclarationFqn(sb)
     } else if (parent is IrPackageFragment) {
-      sb.append(parent.packageFqName.toString())
+      sb.append(parent.fqName.toString())
     }
   } catch (e: UninitializedPropertyAccessException) {
     sb.append("<uninitialized parent>")

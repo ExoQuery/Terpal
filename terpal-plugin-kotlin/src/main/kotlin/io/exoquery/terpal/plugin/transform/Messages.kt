@@ -1,11 +1,11 @@
 package io.exoquery.terpal.plugin.transform
 
+import io.exoquery.terpal.plugin.classOrFail
 import io.exoquery.terpal.plugin.isValidWrapFunction
 import io.exoquery.terpal.plugin.safeName
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classFqName
-import org.jetbrains.kotlin.ir.types.classOrFail
 import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.ir.util.functions

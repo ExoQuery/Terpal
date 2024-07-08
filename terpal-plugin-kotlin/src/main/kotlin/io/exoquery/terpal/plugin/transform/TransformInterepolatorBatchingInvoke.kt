@@ -4,6 +4,7 @@ import io.decomat.Is
 import io.decomat.case
 import io.decomat.on
 import io.exoquery.terpal.*
+import io.exoquery.terpal.plugin.classOrFail
 import io.exoquery.terpal.plugin.printing.dumpSimple
 import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
 import io.exoquery.terpal.plugin.trees.isClassOf

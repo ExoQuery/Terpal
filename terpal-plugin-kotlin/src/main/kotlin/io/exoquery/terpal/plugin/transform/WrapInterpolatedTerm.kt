@@ -2,6 +2,7 @@ package io.exoquery.terpal.plugin.transform
 
 import io.exoquery.terpal.WrapFailureMessage
 import io.exoquery.terpal.plugin.Globals
+import io.exoquery.terpal.plugin.classOrFail
 import io.exoquery.terpal.plugin.isValidWrapFunction
 import io.exoquery.terpal.plugin.location
 import io.exoquery.terpal.plugin.trees.isSubclassOf

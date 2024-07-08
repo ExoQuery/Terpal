@@ -7,6 +7,7 @@ import io.exoquery.terpal.UnzipPartsParams
 import io.exoquery.terpal.Interpolator
 import io.exoquery.terpal.InterpolatorWithWrapper
 import io.exoquery.terpal.parseError
+import io.exoquery.terpal.plugin.classOrFail
 import io.exoquery.terpal.plugin.isValidWrapFunction
 import io.exoquery.terpal.plugin.printing.dumpSimple
 import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
