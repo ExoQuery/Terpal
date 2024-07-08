@@ -13,7 +13,6 @@ import org.jetbrains.kotlin.ir.declarations.isPropertyAccessor
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
-import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classOrFail
 import org.jetbrains.kotlin.ir.types.classOrNull
@@ -34,7 +33,6 @@ fun IrType.findMethodOrFail(methodName: String) = run {
 
 fun IrClassSymbol.isDataClass() = this.owner.isData
 
-@OptIn(UnsafeDuringIrConstructionAPI::class)
 fun IrClassSymbol.dataClassProperties() =
   if (this.isDataClass()) {
     val constructorParams = this.constructors.firstOrNull()?.owner?.valueParameters?.map { it.name }?.toSet() ?: setOf()
@@ -70,7 +68,6 @@ fun IrElement.location(fileEntry: IrFileEntry): CompilerMessageSourceLocation {
   return messageWithRange
 }
 
-@OptIn(UnsafeDuringIrConstructionAPI::class)
 fun IrSimpleFunctionSymbol.isValidWrapFunction(interpolateOutputType: IrType) = run {
   val wrapReturnType = this.owner.returnType.eraseTypeParameters()
   this.safeName == "wrap" && this.owner.valueParameters.size == 1 && wrapReturnType.isSubtypeOfClass(interpolateOutputType.classOrFail)
