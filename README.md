@@ -1,6 +1,6 @@
 # Terpal - Typed String Interpolation for Kotlin
 
-(UPDATE - This plugin is now **fully approved** and available via plugins.gradle.org)
+> NOTE: This repo is the Terpal Compiler Plugin. The Terpal-SQL project that uses this plugin is [here](https://github.com/deusaquilus/terpal-sql).
 
 Terpal is a Kotlin compiler-plugin that allows capturing the "the $dollar $sign $varaibles" of a string before they are spliced back into the string.
 
