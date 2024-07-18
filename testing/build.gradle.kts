@@ -1,11 +1,37 @@
 plugins {
     id("io.exoquery.terpal-plugin")
-    kotlin("jvm")
-    application
+    kotlin("multiplatform") version "1.9.22"
 }
 
 kotlin {
-    jvmToolchain(11)
+    jvm {
+        jvmToolchain(11)
+    }
+
+    linuxX64()
+
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                //api(kotlin("reflect"))
+                api("io.exoquery:terpal-runtime")
+                implementation("io.exoquery:decomat-core:3.0.0")
+                //implementation("io.exoquery:pprint-kotlin:2.0.2")
+            }
+        }
+
+        val commonTest by getting {
+            kotlin.srcDir("$buildDir/generated/ksp/metadata/commonMain/kotlin")
+            dependencies {
+                // Used to ad-hoc some examples but not needed.
+                //api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.2")
+                //implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(kotlin("test"))
+                implementation(kotlin("test-common"))
+                implementation(kotlin("test-annotations-common"))
+            }
+        }
+    }
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
@@ -23,13 +49,4 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 repositories {
     mavenCentral()
     mavenLocal()
-}
-
-application {
-    mainClass.set("MainKt")
-}
-
-dependencies {
-    implementation("io.exoquery:pprint-kotlin:2.0.2")
-    testImplementation(kotlin("test"))
 }

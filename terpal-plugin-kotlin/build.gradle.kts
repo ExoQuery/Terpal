@@ -1,9 +1,11 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
+    kotlin("jvm") version "1.9.22"
+
     id("conventions")
-    id("publish")
-    kotlin("kapt") version "1.8.21"
+    //id("publish")
+    kotlin("kapt") version "1.9.22"
 }
 
 kotlin {
@@ -45,17 +47,20 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEa
 
 // Version from conventions.gradle.kts
 val thisVersion = version
-//println("------------------ This Version: ${thisVersion} --------------------------")
 
-// Having issue with dokka failing: Reason: Task ':kaptmodule:dokkaHtml' uses this output of task ':kaptmodule:kaptDebugKotlin' without declaring an explicit or implicit dependency. This can lead to incorrect results being produced, depending on what order the tasks are executed.
-// See: https://github.com/Kotlin/dokka/issues/3117
-afterEvaluate {
-    tasks["dokkaHtml"].dependsOn(tasks.getByName("kaptKotlin"))
-}
+
+// TODO Reinstante when we bring back publishing functionality
+//// Having issue with dokka failing: Reason: Task ':kaptmodule:dokkaHtml' uses this output of task ':kaptmodule:kaptDebugKotlin' without declaring an explicit or implicit dependency. This can lead to incorrect results being produced, depending on what order the tasks are executed.
+//// See: https://github.com/Kotlin/dokka/issues/3117
+//afterEvaluate {
+//    tasks["dokkaHtml"].dependsOn(tasks.getByName("kaptKotlin"))
+//}
 
 dependencies {
     // Looks like it knows to do a project-dependency even if there is a version attached (i.e. I guess it ignores the version?)
-    api("io.exoquery:terpal-runtime:${thisVersion}")
+
+    // TODO for now don't expose to the outside since with KMP it's not necessarily the JVM dependency clients will want to pull in
+    implementation("io.exoquery:terpal-runtime:${thisVersion}")
 
     compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable")
 
