@@ -1,4 +1,6 @@
 plugins {
+    kotlin("jvm") version "1.9.22"
+
     // No inclusion of `publish` here because this project is not published to maven directly
     id("conventions")
     id("java-gradle-plugin")
