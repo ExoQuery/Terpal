@@ -15,7 +15,7 @@ kotlin {
             dependencies {
                 //api(kotlin("reflect"))
                 api("io.exoquery:terpal-runtime")
-                implementation("io.exoquery:decomat-core:3.0.0")
+                //implementation("io.exoquery:decomat-core:3.0.0")
                 //implementation("io.exoquery:pprint-kotlin:2.0.2")
             }
         }
