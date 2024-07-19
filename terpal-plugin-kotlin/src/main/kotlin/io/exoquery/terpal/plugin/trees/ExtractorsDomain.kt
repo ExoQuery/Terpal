@@ -57,7 +57,7 @@ object ExtractorsDomain {
           if (matchesMethod(call)) {
             val caller = call.dispatchReceiver.also { if (it == null) error("Dispatch reciver of the Interpolator invocation `${call.dumpKotlinLike()}` was null. This should not be possible.") }
             val x = call.simpleValueArgs.first()
-            x.match(
+            on(x).match(
               case(InterpolationString[Is()]).then { components ->
                 Components2(caller, components)
               }
@@ -71,7 +71,7 @@ object ExtractorsDomain {
     object InterpolationString {
       context (CompileLogger) operator fun <AP : Pattern<List<IrExpression>>> get(reciver: AP) =
         customPattern1(reciver) { expr: IrExpression ->
-          expr.match(
+          on(expr).match(
             case(Ir.StringConcatenation[Is()]).then { components ->
               Components1(components)
             },
@@ -97,8 +97,9 @@ object ExtractorsDomain {
           if (matchesMethod(call)) {
             val caller = call.dispatchReceiver ?: throw IllegalStateException("Dispatch reciver of the Interpolator invocation `${call.dumpKotlinLike()}` was null. This should not be possible.")
             val x = call.simpleValueArgs.first()
-            x.match(
+            on(x).match(
               case(Ir.FunctionExpression.withReturnOnlyBlock[InterpolationString[Is()]]).then { (components) ->
+                // TODO this was only included in the latest decomat versions need to rebase-master on it
                 Components1(Data(caller, components, comp))
               }
             )

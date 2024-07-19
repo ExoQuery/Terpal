@@ -67,6 +67,6 @@ dependencies {
     kapt("com.google.auto.service:auto-service:1.0.1")
     compileOnly("com.google.auto.service:auto-service-annotations:1.0.1")
 
-    api("io.exoquery:decomat-core:0.2.0")
+    api("io.exoquery:decomat-core-jvm:4.0.1")
     api(kotlin("reflect"))
 }

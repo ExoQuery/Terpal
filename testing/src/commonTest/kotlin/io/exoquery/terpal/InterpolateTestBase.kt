@@ -13,7 +13,7 @@ interface InterpolateTestBase {
 fun interlace(parts: List<String>, params: List<String>): String {
   val a = parts.iterator()
   val b = params.iterator()
-  val out = StringBuffer()
+  val out = StringBuilder()
   while (a.hasNext() || b.hasNext()) {
     if (a.hasNext()) {
       out.append(a.next())
