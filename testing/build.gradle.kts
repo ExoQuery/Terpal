@@ -72,10 +72,12 @@ repositories {
 
 dependencies {
   //kotlinCompilerClasspath("io.exoquery:terpal-runtime:1.9.22-0.3.0")
-  kotlinCompilerPluginClasspath("io.exoquery:terpal-runtime:1.9.22-0.3.0")
+  //kotlinCompilerPluginClasspath("io.exoquery:terpal-runtime:1.9.22-0.3.0")
+
   kotlinNativeCompilerPluginClasspath("io.exoquery:terpal-runtime:1.9.22-0.3.0")
 
   //kotlinCompilerClasspath("io.exoquery:decomat-core-jvm:4.0.1")
-  kotlinCompilerPluginClasspath("io.exoquery:decomat-core-jvm:4.0.1")
+  //kotlinCompilerPluginClasspath("io.exoquery:decomat-core-jvm:4.0.1")
+
   kotlinNativeCompilerPluginClasspath("io.exoquery:decomat-core-jvm:4.0.1")
 }
