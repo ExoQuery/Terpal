@@ -31,6 +31,10 @@ class GradlePlugin : KotlinCompilerPluginSupportPlugin {
     ): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
 
+        kotlinCompilation.dependencies {
+            api("io.exoquery:terpal-runtime:${BuildConfig.VERSION}")
+        }
+
         return project.provider {
             listOf(SubpluginOption(
                 "projectDir",

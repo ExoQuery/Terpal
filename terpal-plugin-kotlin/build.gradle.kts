@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     kotlin("jvm") version "1.9.22"
-
+    id("maven-publish")
     id("conventions")
     //id("publish")
     kotlin("kapt") version "1.9.22"
@@ -60,7 +60,7 @@ dependencies {
     // Looks like it knows to do a project-dependency even if there is a version attached (i.e. I guess it ignores the version?)
 
     // TODO for now don't expose to the outside since with KMP it's not necessarily the JVM dependency clients will want to pull in
-    implementation("io.exoquery:terpal-runtime:${thisVersion}")
+    api("io.exoquery:terpal-runtime") //:${thisVersion}
 
     compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable")
 

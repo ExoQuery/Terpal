@@ -1,5 +1,13 @@
 pluginManagement {
   includeBuild("terpal-plugin-gradle")
+
+  //resolutionStrategy {
+  //  eachPlugin {
+  //    if (requested.id.id == "io.exoquery.terpal-plugin") {
+  //      useModule("io.exoquery:terpal-runtime:1.9.22-0.3.0")
+  //    }
+  //  }
+  //}
 }
 
 includeBuild("terpal-runtime")
