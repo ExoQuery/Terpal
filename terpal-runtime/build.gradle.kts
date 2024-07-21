@@ -1,14 +1,14 @@
 plugins {
+  // TODO Try to move this BELOW KMP plugin and see if if the unknown identifier issues still happen
   //id("conventions")
   //id("publish")
+  id("maven-publish")
   kotlin("multiplatform") version "1.9.22"
   signing
   id("com.google.devtools.ksp") version "1.9.22-1.0.17"
 }
 
-
 group = "io.exoquery"
-// Everything inherits the version from here
 version = "1.9.22-0.3.0"
 
 repositories {
