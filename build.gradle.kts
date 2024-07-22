@@ -10,7 +10,3 @@ allprojects {
         mavenLocal()
     }
 }
-
-//repositories {
-//    mavenCentral()
-//}
