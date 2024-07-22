@@ -1,7 +1,9 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 repositories {
-    mavenLocal()
+    // Do NOT enable this otherwise all kinds of horror ensues. Not exactly sure why. Maybe something in the local repo interferes with the build. with builds.
+    // Note that this is also used in the publish plugin althought it is not strictly necessary for it to be there.
+    //mavenLocal()
     mavenCentral()
 }
 

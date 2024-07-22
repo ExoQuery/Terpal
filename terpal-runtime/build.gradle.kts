@@ -1,9 +1,10 @@
 plugins {
-  // TODO Try to move this BELOW KMP plugin and see if if the unknown identifier issues still happen
-  //id("conventions")
-  //id("publish")
-  id("maven-publish")
   kotlin("multiplatform") version "1.9.22"
+
+  id("maven-publish")
+  id("conventions")
+  id("publish")
+
   signing
   id("com.google.devtools.ksp") version "1.9.22-1.0.17"
 }
@@ -27,6 +28,10 @@ kotlin {
 
   sourceSets {
     val commonMain by getting {
+      dependencies {
+        //api("org.jebrains.kotlin:kotlin-stdlib:1.9.22")
+      }
+
 //      dependencies {
 //        //api(kotlin("reflect"))
 //        //implementation("io.exoquery:decomat-core:0.3.0")
