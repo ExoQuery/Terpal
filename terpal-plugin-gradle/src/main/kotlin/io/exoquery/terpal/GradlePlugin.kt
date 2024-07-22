@@ -24,22 +24,26 @@ class GradlePlugin : KotlinCompilerPluginSupportPlugin {
         target.plugins.withId("org.jetbrains.kotlin.jvm") {
             target.dependencies.add("implementation", "io.exoquery:terpal-runtime:${BuildConfig.VERSION}")
         }
+
+        // Needed for the plugin classpath
+        target.plugins.withId("org.jetbrains.kotlin.multiplatform") {
+            target.dependencies.add("kotlinNativeCompilerPluginClasspath", "io.exoquery:terpal-runtime:${BuildConfig.VERSION}")
+            target.dependencies.add("kotlinNativeCompilerPluginClasspath", "io.exoquery:decomat-core-jvm:${BuildConfig.DECOMAT_VERSION}")
+        }
     }
 
-    override fun applyToCompilation(
-        kotlinCompilation: KotlinCompilation<*>
-    ): Provider<List<SubpluginOption>> {
+    override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
 
+        // ALSO needed for the plugin classpath
         kotlinCompilation.dependencies {
             api("io.exoquery:terpal-runtime:${BuildConfig.VERSION}")
         }
 
         return project.provider {
-            listOf(SubpluginOption(
-                "projectDir",
-                project.projectDir.path
-            ))
+            listOf(
+                SubpluginOption("projectDir", project.projectDir.path)
+            )
         }
     }
 }

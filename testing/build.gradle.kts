@@ -3,6 +3,7 @@ plugins {
     kotlin("multiplatform") version "1.9.22"
 }
 
+// Interesting that this does not actually help with the plugin classpath issues.
 //buildscript {
 //    dependencies {
 //        classpath("io.exoquery:terpal-runtime:1.9.22-0.3.0")
@@ -65,19 +66,8 @@ repositories {
     mavenLocal()
 }
 
-//configurations["kotlinCompilerPluginClasspath"].attributes.attribute(
-//  org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE,
-//  objects.named(org.gradle.api.attributes.Usage::class.java, "java-runtime")
-//)
-
 dependencies {
-  //kotlinCompilerClasspath("io.exoquery:terpal-runtime:1.9.22-0.3.0")
-  //kotlinCompilerPluginClasspath("io.exoquery:terpal-runtime:1.9.22-0.3.0")
-
-  kotlinNativeCompilerPluginClasspath("io.exoquery:terpal-runtime:1.9.22-0.3.0")
-
-  //kotlinCompilerClasspath("io.exoquery:decomat-core-jvm:4.0.1")
-  //kotlinCompilerPluginClasspath("io.exoquery:decomat-core-jvm:4.0.1")
-
-  kotlinNativeCompilerPluginClasspath("io.exoquery:decomat-core-jvm:4.0.1")
+  // These settings are set in GradlePlugin.kt. Otherwise would need to set them here:
+  //kotlinNativeCompilerPluginClasspath("io.exoquery:terpal-runtime:1.9.22-0.3.0")
+  //kotlinNativeCompilerPluginClasspath("io.exoquery:decomat-core-jvm:0.3.0")
 }
