@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm") version "1.9.22"
     id("maven-publish")
     id("conventions")
-    //id("publish")
+    id("publish")
     kotlin("kapt") version "1.9.22"
 }
 
