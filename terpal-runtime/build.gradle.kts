@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "io.exoquery"
-version = "1.9.22-0.3.0"
+version = "1.9.22-0.3.7"
 
 repositories {
   mavenCentral()
@@ -24,6 +24,7 @@ kotlin {
     jvmToolchain(11)
   }
 
+  // TODO add back the other platforms
   linuxX64()
 
   sourceSets {
@@ -34,7 +35,7 @@ kotlin {
 
 //      dependencies {
 //        //api(kotlin("reflect"))
-//        //implementation("io.exoquery:decomat-core:0.3.0")
+//        //implementation("io.exoquery:decomat-core-jvm:0.3.0")
 //      }
     }
 

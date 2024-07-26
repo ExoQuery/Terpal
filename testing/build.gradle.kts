@@ -6,7 +6,7 @@ plugins {
 // Interesting that this does not actually help with the plugin classpath issues.
 //buildscript {
 //    dependencies {
-//        classpath("io.exoquery:terpal-runtime:1.9.22-0.3.0")
+//        classpath("io.exoquery:terpal-runtime:1.9.22-0.3.7")
 //    }
 //}
 
@@ -22,16 +22,16 @@ kotlin {
             dependencies {
                 //api(kotlin("reflect"))
 
-                //api("io.exoquery:terpal-runtime:1.9.22-0.3.0")
+                //api("io.exoquery:terpal-runtime:1.9.22-0.3.7")
 
-                //implementation("io.exoquery:decomat-core:3.0.0")
+                //implementation("io.exoquery:decomat-core-jvm:3.0.0")
                 //implementation("io.exoquery:pprint-kotlin:2.0.2")
             }
         }
 
         //val linuxX64Main by getting {
         //    dependencies {
-        //        api("io.exoquery:terpal-runtime:1.9.22-0.3.0")
+        //        api("io.exoquery:terpal-runtime:1.9.22-0.3.7")
         //    }
         //}
 
@@ -68,6 +68,6 @@ repositories {
 
 dependencies {
   // These settings are set in GradlePlugin.kt. Otherwise would need to set them here:
-  //kotlinNativeCompilerPluginClasspath("io.exoquery:terpal-runtime:1.9.22-0.3.0")
-  //kotlinNativeCompilerPluginClasspath("io.exoquery:decomat-core-jvm:0.3.0")
+  kotlinNativeCompilerPluginClasspath("io.exoquery:terpal-runtime:1.9.22-0.3.7")
+  kotlinNativeCompilerPluginClasspath("io.exoquery:decomat-core-jvm:0.3.0")
 }
