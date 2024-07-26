@@ -4,7 +4,7 @@ pluginManagement {
   //resolutionStrategy {
   //  eachPlugin {
   //    if (requested.id.id == "io.exoquery.terpal-plugin") {
-  //      useModule("io.exoquery:terpal-runtime:1.9.22-0.3.0")
+  //      useModule("io.exoquery:terpal-runtime:1.9.22-0.3.7")
   //    }
   //  }
   //}
