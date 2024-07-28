@@ -9,9 +9,6 @@ plugins {
   id("com.google.devtools.ksp") version "1.9.22-1.0.17"
 }
 
-group = "io.exoquery"
-version = "1.9.22-0.3.7"
-
 repositories {
   mavenCentral()
   // Including mavenLocal causes all kinds of horror

@@ -22,13 +22,13 @@ class GradlePlugin : KotlinCompilerPluginSupportPlugin {
     override fun apply(target: Project) {
         /* make sure we don't try to add dependency until it has been configured by kotlin plugin */
         target.plugins.withId("org.jetbrains.kotlin.jvm") {
-            target.dependencies.add("implementation", "io.exoquery:terpal-runtime:1.9.22-0.3.7")
+            target.dependencies.add("implementation", "io.exoquery:terpal-runtime:${BuildConfig.VERSION}")
         }
 
         // Needed for the plugin classpath
         target.plugins.withId("org.jetbrains.kotlin.multiplatform") {
-            target.dependencies.add("kotlinNativeCompilerPluginClasspath", "io.exoquery:terpal-runtime:1.9.22-0.3.7")
-            target.dependencies.add("kotlinNativeCompilerPluginClasspath", "io.exoquery:decomat-core-jvm:0.3.0")
+            target.dependencies.add("kotlinNativeCompilerPluginClasspath", "io.exoquery:terpal-runtime:${BuildConfig.VERSION}")
+            target.dependencies.add("kotlinNativeCompilerPluginClasspath", "io.exoquery:decomat-core-jvm:${BuildConfig.DECOMAT_VERSION}")
         }
     }
 
@@ -37,7 +37,7 @@ class GradlePlugin : KotlinCompilerPluginSupportPlugin {
 
         // ALSO needed for the plugin classpath
         kotlinCompilation.dependencies {
-            api("io.exoquery:terpal-runtime:1.9.22-0.3.7")
+            api("io.exoquery:terpal-runtime:${BuildConfig.VERSION}")
         }
 
         return project.provider {
