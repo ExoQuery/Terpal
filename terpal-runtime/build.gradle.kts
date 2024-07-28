@@ -2,42 +2,19 @@ plugins {
   kotlin("multiplatform") version "1.9.22"
 
   id("maven-publish")
-  id("conventions")
+  id("conventions-multiplatform")
   id("publish")
 
   signing
   id("com.google.devtools.ksp") version "1.9.22-1.0.17"
 }
 
-repositories {
-  mavenCentral()
-  // Including mavenLocal causes all kinds of horror
-  // mavenLocal()
-}
-
-
 kotlin {
-  jvm {
-    jvmToolchain(11)
-  }
-
-  // TODO add back the other platforms
-  linuxX64()
-
   sourceSets {
     val commonMain by getting {
-      dependencies {
-        //api("org.jebrains.kotlin:kotlin-stdlib:1.9.22")
-      }
-
-//      dependencies {
-//        //api(kotlin("reflect"))
-//        //implementation("io.exoquery:decomat-core-jvm:0.3.0")
-//      }
     }
 
     val commonTest by getting {
-      //kotlin.srcDir("$buildDir/generated/ksp/metadata/commonMain/kotlin")
       dependencies {
         // Used to ad-hoc some examples but not needed.
         //api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.2")
@@ -49,20 +26,3 @@ kotlin {
     }
   }
 }
-
-//tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-//    kotlinOptions{
-//        freeCompilerArgs = listOf("-Xcontext-receivers")
-//        // Otherwise will have: Could not resolve io.exoquery:pprint-kotlin:2.0.1.
-//        // Incompatible because this component declares a component, compatible with Java 11 and the consumer needed a component, compatible with Java 8
-//    }
-//    kotlinOptions {
-//        jvmTarget = "11"
-//    }
-//}
-
-
-//// Needed for testing
-//tasks.withType<Test>().configureEach {
-//    useJUnitPlatform()
-//}

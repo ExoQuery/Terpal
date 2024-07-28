@@ -1,15 +1,10 @@
 plugins {
     id("io.exoquery.terpal-plugin")
+    id("conventions-multiplatform")
     kotlin("multiplatform") version "1.9.22"
 }
 
 kotlin {
-    jvm {
-        jvmToolchain(11)
-    }
-
-    linuxX64()
-
     sourceSets {
         val commonMain by getting {
         }

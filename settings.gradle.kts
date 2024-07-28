@@ -1,5 +1,6 @@
 pluginManagement {
   includeBuild("terpal-plugin-gradle")
+  includeBuild("build-logic")
 }
 
 includeBuild("terpal-runtime")

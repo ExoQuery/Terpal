@@ -2,7 +2,7 @@ import org.jetbrains.dokka.gradle.AbstractDokkaTask
 
 plugins {
   // Remove for now because unnecessary can add back in order to share settings.
-  //id("conventions")
+  id("conventions")
   `maven-publish`
   signing
   id("io.github.gradle-nexus.publish-plugin")
