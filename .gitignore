@@ -13,3 +13,4 @@ terpal_test.db
 
 build-logic/bin
 bin/
+kotlin-js-store/
