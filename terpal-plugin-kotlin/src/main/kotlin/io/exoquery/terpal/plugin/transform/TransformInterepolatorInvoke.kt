@@ -98,11 +98,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
 
       // Put together an invocation call that would need to be used for the wrapper function (if it exists)
       val wrapperFunctionInvoke = run {
-        val isInterpolatorWithWrapper =
-          caller.type.superTypesRecursive()
-            .find { it.isClassOf<InterpolatorWithWrapper<*, *>>() } != null
-
-        if (isInterpolatorWithWrapper)
+        if (caller.type.isSubclassOf<InterpolatorWithWrapper<*, *>>())
           { expr: IrExpression -> wrapInterpolatedTerm(ctx, caller, expr, interpolateType) }
         else
           null

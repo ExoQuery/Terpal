@@ -7,6 +7,7 @@ import io.exoquery.terpal.plugin.isValidWrapFunction
 import io.exoquery.terpal.plugin.location
 import io.exoquery.terpal.plugin.trees.isSubclassOf
 import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
+import org.jetbrains.kotlin.ir.builders.irTry
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
@@ -36,7 +37,8 @@ fun wrapInterpolatedTerm(ctx: BuilderContext, caller: IrExpression, expr: IrExpr
       caller.type.classOrFail.functions.find { it.isValidWrapFunction(interpolateType) && it.owner.valueParameters.first().type.isSubtypeOfClass(expr.type.classOrFail) }
         ?: Messages.errorFailedToFindWrapper(ctx, caller, expr, interpolateType, annotationMessage)
 
-    val invokeCall = caller.callMethodTyped(invokeFunction).invoke().invoke(expr)
+    val invokeCall = caller.callMethodTyped(invokeFunction)().invoke(expr)
+
     if (Globals.logWrappers) ctx.logger.warn("==== Calling Wrap ${expr.dumpKotlinLike()} with type: ${expr.type.dumpKotlinLike()} - ${invokeCall.dumpKotlinLike()}")
     return invokeCall
   }
