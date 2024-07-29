@@ -65,9 +65,9 @@ publishing {
     artifact(javadocJar)
 
     pom {
-      name.set("decomat")
-      description.set("DecoMat - Deconstructive Pattern Matching for Kotlin")
-      url.set("https://github.com/exoquery/decomat")
+      name.set("terpal")
+      description.set("Terpal - Custom string-interpolation for Kotlin")
+      url.set("https://github.com/exoquery/terpal")
 
       licenses {
         license {
@@ -87,9 +87,9 @@ publishing {
       }
 
       scm {
-        url.set("https://github.com/exoquery/decomat/tree/main")
-        connection.set("scm:git:git://github.com/ExoQuery/DecoMat.git")
-        developerConnection.set("scm:git:ssh://github.com:ExoQuery/DecoMat.git")
+        url.set("https://github.com/exoquery/terpal/tree/main")
+        connection.set("scm:git:git://github.com/ExoQuery/Terpal.git")
+        developerConnection.set("scm:git:ssh://github.com:ExoQuery/Terpal.git")
       }
     }
   }
