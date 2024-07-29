@@ -4,6 +4,7 @@ plugins {
     // No inclusion of `publish` here because this project is not published to maven directly
     id("maven-publish")
     id("conventions")
+    id("publish-jvm")
     id("java-gradle-plugin")
     id("com.gradle.plugin-publish") version "1.1.0"
     id("com.github.gmazzo.buildconfig") version "3.1.0"

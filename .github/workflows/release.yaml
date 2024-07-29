@@ -29,7 +29,7 @@ jobs:
         include:
           - os: ubuntu-latest
             # On ubuntu publish everything you can i.e. the linuxX64 and jvm binaries
-            publish_command: build :terpal-runtime:publishAllPublicationsToOss :terpal-plugin-kotlin:publishAllPublicationsToOss :terpal-plugin-gradle:publishAllPublicationsToOss -PisCI -no-daemon --stacktrace
+            publish_command: build :terpal-runtime:publishAllPublicationsToOss :terpal-plugin-kotlin:publish :terpal-plugin-gradle:publish -PisCI -no-daemon --stacktrace
             platform: linux
           - os: macOS-latest
             # publishTvosX64PublicationToOss publishTvosArm64PublicationToOss publishWatchosX64PublicationToOss publishWatchosArm32PublicationToOss publishWatchosArm64PublicationToOss
