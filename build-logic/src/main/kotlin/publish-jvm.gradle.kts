@@ -151,10 +151,14 @@ publishing {
       artifact(tasks["javadocJar"])
       artifact(tasks["sourcesJar"])
 
+      // The below configuration clause should probably take care of this. Can try to remove it
       pom.configureMavenCentralMetadata()
     }
   }
 
+  // Regular kotlin `kotlin("jvm")` builds need a create<MavenPublication>("mavenJava") while odd ones
+  // like the terpal-plugin-gradle build `id("java-gradle-plugin")` type already has a publication.
+  // that means we need to configuration the licenses/developers/scm for each kind
   publications.withType<MavenPublication>().configureEach {
     pom.configureMavenCentralMetadata()
   }
