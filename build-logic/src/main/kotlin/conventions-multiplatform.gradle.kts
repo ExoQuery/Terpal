@@ -20,8 +20,9 @@ kotlin {
   val isMac = platform == "mac"
   val isWindows = platform == "windows"
 
+  jvmToolchain(11)
+
   jvm {
-    jvmToolchain(11)
   }
 
   if(!isCI) {
