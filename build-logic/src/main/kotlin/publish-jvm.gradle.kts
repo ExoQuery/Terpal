@@ -114,6 +114,35 @@ publishing {
     }
   }
 
+  fun MavenPom.configureMavenCentralMetadata() {
+    name.set("terpal")
+    description.set("Terpal - Custom string-interpolation for Kotlin")
+    url.set("https://github.com/exoquery/terpal")
+
+    licenses {
+      license {
+        name.set("The Apache Software License, Version 2.0")
+        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+        distribution.set("repo")
+      }
+    }
+
+    developers {
+      developer {
+        name.set("Alexander Ioffe")
+        email.set("deusaquilus@gmail.com")
+        organization.set("github")
+        organizationUrl.set("http://www.github.com")
+      }
+    }
+
+    scm {
+      url.set("https://github.com/exoquery/terpal/tree/main")
+      connection.set("scm:git:git://github.com/ExoQuery/Terpal.git")
+      developerConnection.set("scm:git:ssh://github.com:ExoQuery/Terpal.git")
+    }
+  }
+
   publications {
     create<MavenPublication>("mavenJava") {
       from(components["kotlin"])
@@ -122,35 +151,12 @@ publishing {
       artifact(tasks["javadocJar"])
       artifact(tasks["sourcesJar"])
 
-      pom {
-        name.set("terpal")
-        description.set("Terpal - Custom string-interpolation for Kotlin")
-        url.set("https://github.com/exoquery/terpal")
-
-        licenses {
-          license {
-            name.set("The Apache Software License, Version 2.0")
-            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-            distribution.set("repo")
-          }
-        }
-
-        developers {
-          developer {
-            name.set("Alexander Ioffe")
-            email.set("deusaquilus@gmail.com")
-            organization.set("github")
-            organizationUrl.set("http://www.github.com")
-          }
-        }
-
-        scm {
-          url.set("https://github.com/exoquery/terpal/tree/main")
-          connection.set("scm:git:git://github.com/ExoQuery/Terpal.git")
-          developerConnection.set("scm:git:ssh://github.com:ExoQuery/Terpal.git")
-        }
-      }
+      pom.configureMavenCentralMetadata()
     }
+  }
+
+  publications.withType<MavenPublication>().configureEach {
+    pom.configureMavenCentralMetadata()
   }
 }
 
