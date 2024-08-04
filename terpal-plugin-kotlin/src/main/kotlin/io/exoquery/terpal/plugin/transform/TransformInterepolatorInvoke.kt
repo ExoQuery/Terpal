@@ -96,10 +96,19 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
 
     return with(ctx) {
 
+      val currScope = superTransformer.peekCurrentScope() ?: run {
+        compileLogger.error(
+          """|Could not find parent scope of the following expression:
+             |${expression.dumpKotlinLike()}
+          """.trimMargin()
+        )
+        return expression
+      }
+
       // Put together an invocation call that would need to be used for the wrapper function (if it exists)
       val wrapperFunctionInvoke = run {
         if (caller.type.isSubclassOf<InterpolatorWithWrapper<*, *>>())
-          { expr: IrExpression -> wrapInterpolatedTerm(ctx, caller, expr, interpolateType) }
+          { expr: IrExpression, termIndex: Int -> wrapInterpolatedTerm(ctx, caller, expr, interpolateType, currScope, termIndex, paramsRaw.size) }
         else
           null
       }
@@ -109,7 +118,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
           if (comp.type.classOrFail.isSubtypeOfClass(interpolateTypeClass)) {
             comp
           } else if (wrapperFunctionInvoke != null) {
-            wrapperFunctionInvoke(comp)
+            wrapperFunctionInvoke(comp, i + 1)
           } else {
             compileLogger.error(
               """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.dumpKotlinLike()} interpolator.
@@ -130,14 +139,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       val paramsLifted =
         with (lifter) { params.liftExprTyped(interpolateType) }
 
-      val currScope = superTransformer.peekCurrentScope() ?: run {
-        compileLogger.error(
-          """|Could not find parent scope of the following expression:
-             |${expression.dumpKotlinLike()}
-          """.trimMargin()
-        )
-        return expression
-      }
+
       val partsLiftedFun = createLambda0(partsLifted, currScope)
       val paramsLiftedFun = createLambda0(paramsLifted, currScope)
 

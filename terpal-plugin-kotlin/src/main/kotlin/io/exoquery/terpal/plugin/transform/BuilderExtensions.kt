@@ -19,7 +19,27 @@ import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.typeWith
+import org.jetbrains.kotlin.name.CallableId
+import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.name.SpecialNames
+
+class CallGlobalMethod(private val funPath: String, private val funName: String, private val tpe: IrType?) {
+  context(BuilderContext) operator fun invoke(vararg args: IrExpression): IrExpression {
+    val invoke = pluginCtx.referenceFunctions(CallableId(FqName(funPath), Name.identifier(funName))).first()
+    return with (builder) {
+      val invocation = if (tpe != null) irCall(invoke, tpe) else irCall(invoke)
+      invocation.apply {
+        for ((index, expr) in args.withIndex()) {
+          putValueArgument(index, expr)
+        }
+      }
+    }
+  }
+}
+
+fun callGlobalMethod(path: String, name: String) = CallGlobalMethod(path, name, null)
+
 
 class CallMethod(private val host: IrExpression, private val funName: String, private val tpe: IrType?) {
   context(BuilderContext) operator fun invoke(vararg args: IrExpression): IrExpression {
