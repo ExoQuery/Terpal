@@ -20,7 +20,26 @@ import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.constructors
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.ir.util.functions
-import org.jetbrains.kotlin.ir.util.sourceElement
+
+fun plainInterpolatedTerm(ctx: BuilderContext, expr: IrExpression, parent: IrDeclarationParent, spliceTermNumber: Int, totalTerms: Int): IrExpression =
+  with (ctx) {
+    // then we take that and put it into a zero-arg lambda in order to be able to make it lazy
+    // () -> wrapString(person.name)
+    val invokeCallLambda = createLambda0(expr, parent)
+
+    // then we take that and pass it ot he SpliceWrapper.wrapSplice function getting:
+    // wrapSplice(code = "foo ${person.name} bar", spliceTermNumber = 1, () -> wrapString(person.name))
+    val code = ctx.builder.irString(expr.dumpKotlinLike())
+    val termNumber = ctx.builder.irInt(spliceTermNumber)
+    val loc = expr.location(ctx.currentFile.fileEntry)
+    val locationPath = ctx.builder.irString("file://${loc.path}:${loc.line}:${loc.column}")
+    val totalTermsExpr = ctx.builder.irInt(totalTerms)
+    val wrapSpliceCall = callGlobalMethod("io.exoquery.terpal", "wrapSplice")(locationPath, code, termNumber, totalTermsExpr, invokeCallLambda)
+
+    if (Globals.logWrappers) ctx.logger.warn("==== Calling Wrap ${expr.dumpKotlinLike()} with type: ${expr.type.dumpKotlinLike()} - ${expr.dumpKotlinLike()}")
+    return wrapSpliceCall
+  }
+
 
 fun wrapInterpolatedTerm(ctx: BuilderContext, caller: IrExpression, expr: IrExpression, interpolateType: IrType, parent: IrDeclarationParent, spliceTermNumber: Int, totalTerms: Int): IrExpression =
   with (ctx) {
@@ -57,7 +76,7 @@ fun wrapInterpolatedTerm(ctx: BuilderContext, caller: IrExpression, expr: IrExpr
     val code = ctx.builder.irString(expr.dumpKotlinLike())
     val termNumber = ctx.builder.irInt(spliceTermNumber)
     val loc = expr.location(ctx.currentFile.fileEntry)
-    val locationPath = ctx.builder.irString("${loc.path}:${loc.line}:${loc.column}")
+    val locationPath = ctx.builder.irString("file://${loc.path}:${loc.line}:${loc.column}")
     val totalTermsExpr = ctx.builder.irInt(totalTerms)
     val wrapSpliceCall = callGlobalMethod("io.exoquery.terpal", "wrapSplice")(locationPath, code, termNumber, totalTermsExpr, invokeCallLambda)
 

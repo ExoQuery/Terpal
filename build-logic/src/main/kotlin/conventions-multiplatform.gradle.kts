@@ -24,16 +24,15 @@ kotlin {
     jvmToolchain(11)
   }
 
-  if(!isCI) {
-    js {
-      browser()
-      nodejs()
-    }
-
-    linuxX64()
-    macosX64()
-    mingwX64()
-  }
+  //if(!isCI) {
+  //  js {
+  //    browser()
+  //    nodejs()
+  //  }
+  //  linuxX64()
+  //  macosX64()
+  //  mingwX64()
+  //}
 
   // If we are a CI, build all the targets for the specified platform
   if (isLinux && isCI) {

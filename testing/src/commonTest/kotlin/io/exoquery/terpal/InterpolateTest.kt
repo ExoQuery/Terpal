@@ -20,7 +20,7 @@ class InterpolateTest: InterpolateTestBase {
 
   val instanceTerp = InstanceTerp("Dynamic")
 
-  val A = In("A")
+  val A: In by lazy { throw IllegalArgumentException("blah blah blah") }
   val B = In("B")
   val C = In("C")
 

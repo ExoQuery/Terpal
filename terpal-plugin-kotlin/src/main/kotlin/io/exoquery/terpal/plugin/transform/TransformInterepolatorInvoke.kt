@@ -108,7 +108,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       // Put together an invocation call that would need to be used for the wrapper function (if it exists)
       val wrapperFunctionInvoke = run {
         if (caller.type.isSubclassOf<InterpolatorWithWrapper<*, *>>())
-          { expr: IrExpression, termIndex: Int -> wrapInterpolatedTerm(ctx, caller, expr, interpolateType, currScope, termIndex, paramsRaw.size) }
+          { expr: IrExpression, termIndex: Int -> wrapInterpolatedTerm(ctx, caller, expr, interpolateType, currScope, termIndex + 1, paramsRaw.size) }
         else
           null
       }
@@ -116,9 +116,9 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       val params =
         paramsRaw.withIndex().map { (i, comp) ->
           if (comp.type.classOrFail.isSubtypeOfClass(interpolateTypeClass)) {
-            comp
+            plainInterpolatedTerm(ctx, comp, currScope, i + 1, paramsRaw.size)
           } else if (wrapperFunctionInvoke != null) {
-            wrapperFunctionInvoke(comp, i + 1)
+            wrapperFunctionInvoke(comp, i)
           } else {
             compileLogger.error(
               """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.dumpKotlinLike()} interpolator.

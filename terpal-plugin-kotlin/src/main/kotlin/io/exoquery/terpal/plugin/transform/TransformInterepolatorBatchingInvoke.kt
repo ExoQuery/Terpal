@@ -96,6 +96,15 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
 
     return with(ctx) {
 
+      val currScope = superTransformer.peekCurrentScope() ?: run {
+        compileLogger.error(
+          """|Could not find parent scope of the following expression:
+             |${expression.dumpKotlinLike()}
+          """.trimMargin()
+        )
+        return expression
+      }
+
       // Put together an invocation call that would need to be used for the wrapper function (if it exists)
       val wrapperFunctionInvoke = run {
         val isInterpolatorWithWrapper =
@@ -103,7 +112,7 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
             .find { it.isClassOf<InterpolatorBatchingWithWrapper<*>>() } != null
 
         if (isInterpolatorWithWrapper)
-          { expr: IrExpression -> wrapInterpolatedTerm(ctx, caller, expr, interpolateType) }
+          { expr: IrExpression, index: Int -> wrapInterpolatedTerm(ctx, caller, expr, interpolateType, currScope, index + 1, paramsRaw.size) }
         else
           null
       }
@@ -111,9 +120,9 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
       val params =
         paramsRaw.withIndex().map { (i, comp) ->
           if (comp.type.classOrFail.isSubtypeOfClass(interpolateTypeClass)) {
-            comp
+            plainInterpolatedTerm(ctx, comp, currScope, i + 1, paramsRaw.size)
           } else if (wrapperFunctionInvoke != null) {
-            wrapperFunctionInvoke(comp)
+            wrapperFunctionInvoke(comp, i)
           } else {
             compileLogger.error(
               """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.dumpKotlinLike()} interpolator.
@@ -140,14 +149,6 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
       val paramsLifted =
         with (lifter) { params.liftExprTyped(interpolateType) }
 
-      val currScope = superTransformer.peekCurrentScope() ?: run {
-        compileLogger.error(
-          """|Could not find parent scope of the following expression:
-             |${expression.dumpKotlinLike()}
-          """.trimMargin()
-        )
-        return expression
-      }
       val partsLiftedFun = createLambda0(partsLifted, currScope)
       val paramsLiftedFun = createLambdaN(paramsLifted, funExpr.function.valueParameters, currScope)
 
