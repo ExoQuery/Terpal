@@ -1,6 +1,6 @@
 package io.exoquery.terpal
 
-data class WrapException(override val message: String, override val cause: Throwable): RuntimeException(message, cause)
+class WrapException(override val message: String, override val cause: Throwable): RuntimeException(message, cause)
 
 fun <T> wrapSplice(locationPath: String, code: String, spliceTermNumber: Int, totalTerms: Int, splice: () -> T): T =
   try {

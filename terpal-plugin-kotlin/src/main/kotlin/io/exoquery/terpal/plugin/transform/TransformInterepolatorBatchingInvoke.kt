@@ -112,28 +112,31 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
             .find { it.isClassOf<InterpolatorBatchingWithWrapper<*>>() } != null
 
         if (isInterpolatorWithWrapper)
-          { expr: IrExpression, index: Int -> wrapInterpolatedTerm(ctx, caller, expr, interpolateType, currScope, index + 1, paramsRaw.size) }
+          { expr: IrExpression -> wrapInterpolatedTerm(ctx, caller, expr, interpolateType) }
         else
           null
       }
 
       val params =
         paramsRaw.withIndex().map { (i, comp) ->
-          if (comp.type.classOrFail.isSubtypeOfClass(interpolateTypeClass)) {
-            plainInterpolatedTerm(ctx, comp, currScope, i + 1, paramsRaw.size)
-          } else if (wrapperFunctionInvoke != null) {
-            wrapperFunctionInvoke(comp, i)
-          } else {
-            compileLogger.error(
-              """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.dumpKotlinLike()} interpolator.
-                 |(Also no wrapper function has been defined because `${caller.type.classFqName}` is not a subtype of InterpolatorWithWrapper)
-                 |========= The faulty expression was: =========
-                 |${comp.dumpKotlinLike()}
-              """.trimMargin()
-            )
-            // Return the param so logic can continue. In reality a class-cast-exception would happen (because the "... $component..." is not the required type and there's not wrapper function).
-            comp
-          }
+          val possiblyWrappedTerm =
+            if (comp.type.classOrFail.isSubtypeOfClass(interpolateTypeClass)) {
+              comp
+            } else if (wrapperFunctionInvoke != null) {
+              wrapperFunctionInvoke(comp)
+            } else {
+              compileLogger.error(
+                """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.dumpKotlinLike()} interpolator.
+                   |(Also no wrapper function has been defined because `${caller.type.classFqName}` is not a subtype of InterpolatorWithWrapper)
+                   |========= The faulty expression was: =========
+                   |${comp.dumpKotlinLike()}
+                """.trimMargin()
+              )
+              // Return the param so logic can continue. In reality a class-cast-exception would happen (because the "... $component..." is not the required type and there's not wrapper function).
+              comp
+            }
+
+          wrapWithExceptionHandler(ctx, possiblyWrappedTerm, currScope, i, paramsRaw.size)
         }
 
       val lifter = makeLifter()

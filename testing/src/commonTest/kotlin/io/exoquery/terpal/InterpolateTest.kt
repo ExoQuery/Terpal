@@ -32,7 +32,7 @@ class InterpolateTest: InterpolateTestBase {
 
   @Test
   fun simpleStaticTest1() {
-    StaticTerp("foo_${A}${B}${C}_baz") shouldBe
+    StaticTerp("foo_${A}${B}${C}_baz") shouldBe //hello
       Out(listOf("foo_", "", "", "_baz"), listOf(A, B, C), "Static")
   }
 
