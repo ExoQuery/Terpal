@@ -2,6 +2,7 @@ package io.exoquery.terpal.plugin.transform
 
 import io.exoquery.terpal.InterpolatorBatchingWithWrapper
 import io.exoquery.terpal.InterpolatorWithWrapper
+import io.exoquery.terpal.StrictType
 import io.exoquery.terpal.WrapFailureMessage
 import io.exoquery.terpal.plugin.Globals
 import io.exoquery.terpal.plugin.classOrFail
@@ -20,6 +21,7 @@ import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
+import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.constructors
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
@@ -61,8 +63,28 @@ fun wrapInterpolatedTerm(ctx: BuilderContext, caller: IrExpression, expr: IrExpr
       }
       else ""
 
+    //.owner.annotations.find { it.isSubclassOf<WrapFailureMessage>() }
+
+
+
+    fun IrSimpleFunctionSymbol.isWrapForExprType(): Boolean {
+      val func = this
+      val isStrict = func.owner.annotations.any { it.isSubclassOf<StrictType>() }
+      val firstParamType = func.owner.valueParameters.first().type
+      return if (isStrict) {
+        // If strict, just compare the types independently of nullability
+        firstParamType.makeNullable() == expr.type.makeNullable()
+      } else {
+        // Say we've we're wrapping: Sql("... ${expr:FirstName} ...")
+        // where `data class FirstName(...): Name { ... }`
+        // we want a wrap function that is either Sql.wrap(value:FirstName) or Sql.wrap(value:Name)
+        // in the 2nd case, we want the `expr` to be sub-type of the Sql.wrap value (i.e. contravariance).
+        expr.type.isSubtypeOfClass(firstParamType.classOrFail)
+      }
+    }
+
     val invokeFunction =
-      caller.type.classOrFail.functions.find { it.isValidWrapFunction(interpolateType) && it.owner.valueParameters.first().type.isSubtypeOfClass(expr.type.classOrFail) }
+      caller.type.classOrFail.functions.find { it.isValidWrapFunction(interpolateType) && it.isWrapForExprType() }
         ?: Messages.errorFailedToFindWrapper(ctx, caller, expr, interpolateType, annotationMessage)
 
     val invokeCall = caller.callMethodTyped(invokeFunction)().invoke(expr)
