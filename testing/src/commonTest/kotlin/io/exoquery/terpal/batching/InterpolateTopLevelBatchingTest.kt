@@ -65,12 +65,9 @@ class InterpolateTopLevelTest: InterpolateTestBase {
 
   @Test
   fun exceptionTest2() {
-
     class Item {
-      val value: In by lazy { throw IllegalArgumentException("blah") }
+      val value: In by @Suppress("IMPLICIT_NOTHING_TYPE_ARGUMENT_IN_RETURN_POSITION") lazy { throw IllegalArgumentException("blah") }
     }
-    StaticTerp { item: Item -> "foo_${item.value}_baz" }.params(Item())
-
     val ex = assertFailsWith<InterpolationException> {
       StaticTerp { item: Item -> "foo_${item.value}_baz" }.params(Item())
     }
