@@ -191,6 +191,15 @@ signing {
     }
 }
 
+// If not present :terpal-plugin-gradle:publishToMavenLocal is called it will fail with:
+// Execution failed for task ':terpal-plugin-gradle:signPluginMavenPublication'.
+// e.g. if ./deploy-local.sh is called.
+if (isLocal) {
+  tasks.withType<Sign>().configureEach {
+    enabled = false
+  }
+}
+
 // Fix for Kotlin issue: https://youtrack.jetbrains.com/issue/KT-61313
 tasks.withType<Sign>().configureEach {
     val pubName = name.removePrefix("sign").removeSuffix("Publication")
