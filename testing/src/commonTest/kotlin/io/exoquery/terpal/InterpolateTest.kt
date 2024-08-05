@@ -1,6 +1,8 @@
 package io.exoquery.terpal
 
 import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertFailsWith
 
 class InterpolateTest: InterpolateTestBase {
   companion object {
@@ -20,9 +22,10 @@ class InterpolateTest: InterpolateTestBase {
 
   val instanceTerp = InstanceTerp("Dynamic")
 
-  val A: In by lazy { throw IllegalArgumentException("blah blah blah") }
+  val A = In("A")
   val B = In("B")
   val C = In("C")
+  val E: In by lazy { throw IllegalArgumentException("blah") }
 
   @Test
   fun simpleConstantTest() {
@@ -32,8 +35,17 @@ class InterpolateTest: InterpolateTestBase {
 
   @Test
   fun simpleStaticTest1() {
-    StaticTerp("foo_${A}${B}${C}_baz") shouldBe //hello
+    StaticTerp("foo_${A}${B}${C}_baz") shouldBe
       Out(listOf("foo_", "", "", "_baz"), listOf(A, B, C), "Static")
+  }
+
+  @Test
+  fun exceptionTest() {
+    val ex = assertFailsWith<InterpolationException> {
+      StaticTerp("foo_${A}${E}${C}_baz")
+    }
+    assertContains(ex.message, "<this>.<get-E>()")
+    assertContains(ex.message, "Error in spliced term #2 (of 3)")
   }
 
   @Test

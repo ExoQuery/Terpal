@@ -78,7 +78,7 @@ In order to use Terpal in your projects, you need to add the following to your `
 ```kotlin
 plugins {
   kotlin("jvm") version "1.9.22"
-  id("io.exoquery.terpal-plugin") version "1.9.22-1.0.0-RC1"
+  id("io.exoquery.terpal-plugin") version "1.9.22-1.0.0-RC2"
 }
 
 dependencies {
@@ -97,6 +97,25 @@ pluginManagement {
     }
 }
 ```
+
+## Error Handling
+
+If any of the terms spliced into the Terpal string throw an exception, it will be wrapped into an InterpolationException
+and rethrown. The InterpolationException will contain the original exception as well as some context as to
+the splice that caused the error:
+
+```kotlin
+val id by lazy { throw Exception("This is an exception") }
+val name = "Joe"
+Sql("SELECT * FROM users WHERE id = $id AND name = $name")
+/*
+Error in spliced term #1 (of 2) at file:///...:72:38
+The code at this locaiton looks approximately like:
+this.<get-id>()
+ */
+```
+> The exact code string will not be returned, but the line and column number will be accurate.
+> In the future I may add a feature to return the exact code string.
 
 ## Other Features
 

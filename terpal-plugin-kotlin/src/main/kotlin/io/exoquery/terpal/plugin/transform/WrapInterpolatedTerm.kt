@@ -34,7 +34,7 @@ fun wrapWithExceptionHandler(ctx: BuilderContext, expr: IrExpression, parent: Ir
     // then we take that and pass it ot he SpliceWrapper.wrapSplice function getting:
     // wrapSplice(code = "foo ${person.name} bar", spliceTermNumber = 1, () -> wrapString(person.name))
     val code = ctx.builder.irString(expr.dumpKotlinLike())
-    val termNumber = ctx.builder.irInt(spliceTermNumber)
+    val termNumber = ctx.builder.irInt(spliceTermNumber + 1)
     val loc = expr.location(ctx.currentFile.fileEntry)
     val locationPath = ctx.builder.irString("file://${loc.path}:${loc.line}:${loc.column}")
     val totalTermsExpr = ctx.builder.irInt(totalTerms)

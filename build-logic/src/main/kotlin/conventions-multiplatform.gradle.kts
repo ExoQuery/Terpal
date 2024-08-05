@@ -20,19 +20,21 @@ kotlin {
   val isMac = platform == "mac"
   val isWindows = platform == "windows"
 
+  val isLocalMultiplatform = project.hasProperty("isLocalMultiplatform")
+
   jvm {
     jvmToolchain(11)
   }
 
-  //if(!isCI) {
-  //  js {
-  //    browser()
-  //    nodejs()
-  //  }
-  //  linuxX64()
-  //  macosX64()
-  //  mingwX64()
-  //}
+  if(isLocalMultiplatform && !isCI) {
+    js {
+      browser()
+      nodejs()
+    }
+    linuxX64()
+    macosX64()
+    mingwX64()
+  }
 
   // If we are a CI, build all the targets for the specified platform
   if (isLinux && isCI) {

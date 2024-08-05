@@ -3,7 +3,10 @@ package io.exoquery.terpal.batching
 import io.exoquery.terpal.InterpolatorBatching
 import io.exoquery.terpal.InterpolateTestBase
 import io.exoquery.terpal.Messages
+import io.exoquery.terpal.InterpolationException
 import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertFailsWith
 
 data class In(val value: String)
 data class Out<T>(val parts: List<String>, val params: (T) -> List<In>, val info: String) {
@@ -30,6 +33,7 @@ val instanceTerp = InstanceTerp("Dynamic")
 val A = In("A")
 val B = In("B")
 val C = In("C")
+val E: In by lazy { throw IllegalArgumentException("blah") }
 
 class InterpolateTopLevelTest: InterpolateTestBase {
 
@@ -48,6 +52,30 @@ class InterpolateTopLevelTest: InterpolateTestBase {
       OutComps(listOf("foo_", "_bar"), "Static")
     terp.params(Person("A", "B", 1)) shouldBe
       listOf(In("A"))
+  }
+
+  @Test
+  fun exceptionTest() {
+    val ex = assertFailsWith<InterpolationException> {
+      StaticTerp { p: Person -> "foo_${A}${E}${C}_baz" }
+    }
+    assertContains(ex.message, "<this>.<get-E>()")
+    assertContains(ex.message, "Error in spliced term #2 (of 3)")
+  }
+
+  @Test
+  fun exceptionTest2() {
+
+    class Item {
+      val value: In by lazy { throw IllegalArgumentException("blah") }
+    }
+    StaticTerp { item: Item -> "foo_${item.value}_baz" }.params(Item())
+
+    val ex = assertFailsWith<InterpolationException> {
+      StaticTerp { item: Item -> "foo_${item.value}_baz" }.params(Item())
+    }
+    assertContains(ex.message, "item.<get-value>()")
+    assertContains(ex.message, "Error in spliced term #1 (of 1)")
   }
 
   @Test
