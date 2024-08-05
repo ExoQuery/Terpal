@@ -4,13 +4,13 @@ import io.exoquery.terpal.InterpolatorBatchingWithWrapper
 import io.exoquery.terpal.InterpolatorWithWrapper
 import io.exoquery.terpal.StrictType
 import io.exoquery.terpal.WrapFailureMessage
-import io.exoquery.terpal.plugin.Globals
 import io.exoquery.terpal.plugin.classOrFail
 import io.exoquery.terpal.plugin.isValidWrapFunction
 import io.exoquery.terpal.plugin.location
 import io.exoquery.terpal.plugin.trees.isClassOf
 import io.exoquery.terpal.plugin.trees.isSubclassOf
 import io.exoquery.terpal.plugin.trees.superTypesRecursive
+import org.jetbrains.kotlin.config.CompilerConfigurationKey
 import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.builders.irInt
 import org.jetbrains.kotlin.ir.builders.irString
@@ -23,9 +23,7 @@ import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.types.*
-import org.jetbrains.kotlin.ir.util.constructors
-import org.jetbrains.kotlin.ir.util.dumpKotlinLike
-import org.jetbrains.kotlin.ir.util.functions
+import org.jetbrains.kotlin.ir.util.*
 
 fun wrapWithExceptionHandler(ctx: BuilderContext, expr: IrExpression, parent: IrDeclarationParent, spliceTermNumber: Int, totalTerms: Int): IrExpression =
   with (ctx) {
@@ -40,10 +38,7 @@ fun wrapWithExceptionHandler(ctx: BuilderContext, expr: IrExpression, parent: Ir
     val loc = expr.location(ctx.currentFile.fileEntry)
     val locationPath = ctx.builder.irString("file://${loc.path}:${loc.line}:${loc.column}")
     val totalTermsExpr = ctx.builder.irInt(totalTerms)
-    val wrapSpliceCall = callGlobalMethod("io.exoquery.terpal", "wrapSplice")(locationPath, code, termNumber, totalTermsExpr, invokeCallLambda)
-
-    if (Globals.logWrappers) ctx.logger.warn("==== Calling Wrap ${expr.dumpKotlinLike()} with type: ${expr.type.dumpKotlinLike()} - ${expr.dumpKotlinLike()}")
-    return wrapSpliceCall
+    return callGlobalMethod("io.exoquery.terpal", "wrapSplice")(locationPath, code, termNumber, totalTermsExpr, invokeCallLambda)
   }
 
 
@@ -62,10 +57,6 @@ fun wrapInterpolatedTerm(ctx: BuilderContext, caller: IrExpression, expr: IrExpr
         }
       }
       else ""
-
-    //.owner.annotations.find { it.isSubclassOf<WrapFailureMessage>() }
-
-
 
     fun IrSimpleFunctionSymbol.isWrapForExprType(): Boolean {
       val func = this
@@ -89,6 +80,12 @@ fun wrapInterpolatedTerm(ctx: BuilderContext, caller: IrExpression, expr: IrExpr
 
     val invokeCall = caller.callMethodTyped(invokeFunction)().invoke(expr)
 
-    if (Globals.logWrappers) ctx.logger.warn("==== Calling Wrap ${expr.dumpKotlinLike()} with type: ${expr.type.dumpKotlinLike()} - ${invokeCall.dumpKotlinLike()}")
+    if (ctx.options.traceWrappers) ctx.logger.warn("==== Calling wrapper function `${invokeFunction.printInvokeFunctionSignature()}` on the expression `${invokeCall.dumpKotlinLike()}` typed as: `${expr.type.dumpKotlinLike()}`")
     return invokeCall
   }
+
+fun IrSimpleFunctionSymbol.printInvokeFunctionSignature() =
+  owner.dumpKotlinLike(KotlinLikeDumpOptions(bodyPrintingStrategy = BodyPrintingStrategy.NO_BODIES))
+    .replace("/* fake */", "")
+    .trim()
+

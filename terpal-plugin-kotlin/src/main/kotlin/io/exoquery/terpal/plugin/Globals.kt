@@ -1,20 +1,16 @@
 package io.exoquery.terpal.plugin
 
-object Globals {
+import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.CompilerConfigurationKey
 
-  // This needs to be at the top for some reason, even if it is lazy
-  private val cacheMap: MutableMap<String, Any> by lazy { mutableMapOf() }
+data class OptionKey<T>(val name: String) {
+  val compilerKey = CompilerConfigurationKey<Boolean>(name)
+}
 
-  // TODO for KMP use kotlinx.cinterop.* from kotlin-stdlib-common
-  //      see https://stackoverflow.com/a/55002326
-  private fun variable(propName: String, envName: String, default: String) =
-    System.getProperty(propName) ?: System.getenv(envName) ?: default
+object OptionKeys {
+  val TraceWrappers = OptionKey<Boolean>("traceWrappers")
+}
 
-  val logWrappers get() = cache("terpal.trace.wrappers", variable("terpal.trace.wrappers", "terpal_trace_wrappers", "false").toBoolean())
-
-  fun resetCache(): Unit = cacheMap.clear()
-
-  @Suppress("UNCHECKED_CAST")
-  private fun <T> cache(name: String, value: T): T =
-    cacheMap.getOrPut(name, { value as Any }) as T
+class Options(val configuration: CompilerConfiguration) {
+  val traceWrappers = configuration.get(OptionKeys.TraceWrappers.compilerKey) ?: false
 }

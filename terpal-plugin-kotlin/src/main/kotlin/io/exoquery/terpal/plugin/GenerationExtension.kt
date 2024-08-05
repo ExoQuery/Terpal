@@ -9,14 +9,15 @@ import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import java.nio.file.Path
 
 class GenerationExtension(
+    private val options: Options,
     private val config: CompilerConfiguration,
     private val messages: MessageCollector,
-    private val projectDir: Path,
+    private val projectDir: Path
 ) : IrGenerationExtension {
     override fun generate(moduleFragment: IrModuleFragment, pluginContext: IrPluginContext) {
         moduleFragment
             .transform(
-                VisitTransformExpressions(pluginContext, config, projectDir),
+                VisitTransformExpressions(pluginContext, config, projectDir, options),
                 null
             )
     }

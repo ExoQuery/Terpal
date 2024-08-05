@@ -1,5 +1,6 @@
 package io.exoquery.terpal.plugin.transform
 
+import io.exoquery.terpal.plugin.Options
 import io.exoquery.terpal.plugin.location
 import io.exoquery.terpal.plugin.logging.CompileLogger
 import io.exoquery.terpal.plugin.trees.Lifter
@@ -19,7 +20,10 @@ data class BuilderContext(
   val scopeOwner: IrSymbol,
   val logger: CompileLogger,
   val currentFile: IrFile,
-  val currentExpr: IrExpression
+  val currentExpr: IrExpression,
+  // These were initialized with an earlier version of compilerConfig from the registar
+  // that is necessary to get the right compiler options. I am not sure why.
+  val options: Options
 ) {
   val builder = DeclarationIrBuilder(pluginCtx, scopeOwner, currentExpr.startOffset, currentExpr.endOffset)
   fun makeLifter() = Lifter(this)
@@ -34,6 +38,6 @@ data class TransformerOrigin(
   val currentExpr: IrExpression
 ) {
   val logger = CompileLogger(config, currentFile, currentExpr)
-  fun makeBuilderContext(expr: IrExpression, scopeOwner: IrSymbol) =
-    BuilderContext(pluginCtx, config, scopeOwner, logger, currentFile, expr)
+  fun makeBuilderContext(expr: IrExpression, scopeOwner: IrSymbol, options: Options) =
+    BuilderContext(pluginCtx, config, scopeOwner, logger, currentFile, expr, options)
 }

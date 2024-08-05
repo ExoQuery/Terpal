@@ -16,10 +16,13 @@ class Registrar: CompilerPluginRegistrar() {
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
         IrGenerationExtension.registerExtension(
             GenerationExtension(
-            configuration,
-            configuration.getNotNull(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY),
-            Path(configuration.getNotNull(PROJECT_DIR_KEY))
-        )
+              // Need to initialize the config here because later the options info inside the config will be
+              // erased. I am not sure why kotlin does this.
+              Options(configuration),
+              configuration,
+              configuration.getNotNull(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY),
+              Path(configuration.getNotNull(PROJECT_DIR_KEY))
+            )
         )
     }
 }

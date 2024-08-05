@@ -1,9 +1,11 @@
 package io.exoquery.terpal.plugin.transform
 
 import io.exoquery.terpal.ParseError
+import io.exoquery.terpal.plugin.Options
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.CompilerConfigurationKey
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.types.IrSimpleType
@@ -15,7 +17,8 @@ import org.jetbrains.kotlin.ir.util.*
 class VisitTransformExpressions(
   private val context: IrPluginContext,
   private val config: CompilerConfiguration,
-  private val projectDir: Path
+  private val projectDir: Path,
+  private val options: Options
 ) : IrElementTransformerVoidWithContext() {
 
   fun peekCurrentScope() = super.currentDeclarationParent
@@ -36,7 +39,7 @@ class VisitTransformExpressions(
     val transformerCtx = TransformerOrigin(context, config, this.currentFile, expression)
     val compileLogger = transformerCtx.logger
 
-    val builderContext = transformerCtx.makeBuilderContext(expression, scopeOwner)
+    val builderContext = transformerCtx.makeBuilderContext(expression, scopeOwner, options)
     val transformPrint = TransformPrintSource(builderContext)
     val transformInterpolations = TransformInterepolatorInvoke(builderContext)
     val transformInterpolationsBatching = TransformInterepolatorBatchingInvoke(builderContext)
