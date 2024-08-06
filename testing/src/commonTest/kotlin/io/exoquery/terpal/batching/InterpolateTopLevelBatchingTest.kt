@@ -57,9 +57,9 @@ class InterpolateTopLevelTest: InterpolateTestBase {
   @Test
   fun exceptionTest() {
     val ex = assertFailsWith<InterpolationException> {
-      StaticTerp { p: Person -> "foo_${A}${E}${C}_baz" }
+      StaticTerp { p: Person -> "foo_${A}${E}${C}_baz" }.params(Person("AA", "BB", 11))
     }
-    assertContains(ex.message, "<this>.<get-E>()")
+    assertContains(ex.message, "<get-E>")
     assertContains(ex.message, "Error in spliced term #2 (of 3)")
   }
 
