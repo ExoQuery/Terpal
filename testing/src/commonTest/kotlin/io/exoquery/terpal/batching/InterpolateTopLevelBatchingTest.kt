@@ -59,8 +59,8 @@ class InterpolateTopLevelTest: InterpolateTestBase {
     val ex = assertFailsWith<InterpolationException> {
       StaticTerp { p: Person -> "foo_${A}${E}${C}_baz" }.params(Person("AA", "BB", 11))
     }
-    assertContains(ex.message, "<get-E>")
-    assertContains(ex.message, "Error in spliced term #2 (of 3)")
+    assertContains(ex.msg, "<get-E>")
+    assertContains(ex.msg, "Error in spliced term #2 (of 3)")
   }
 
   @Test
@@ -71,8 +71,8 @@ class InterpolateTopLevelTest: InterpolateTestBase {
     val ex = assertFailsWith<InterpolationException> {
       StaticTerp { item: Item -> "foo_${item.value}_baz" }.params(Item())
     }
-    assertContains(ex.message, "item.<get-value>()")
-    assertContains(ex.message, "Error in spliced term #1 (of 1)")
+    assertContains(ex.msg, "item.<get-value>()")
+    assertContains(ex.msg, "Error in spliced term #1 (of 1)")
   }
 
   @Test

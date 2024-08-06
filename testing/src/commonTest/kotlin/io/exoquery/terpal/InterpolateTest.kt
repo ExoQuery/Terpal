@@ -44,8 +44,8 @@ class InterpolateTest: InterpolateTestBase {
     val ex = assertFailsWith<InterpolationException> {
       StaticTerp("foo_${A}${E}${C}_baz")
     }
-    assertContains(ex.message, "<this>.<get-E>()")
-    assertContains(ex.message, "Error in spliced term #2 (of 3)")
+    assertContains(ex.msg, "<this>.<get-E>()")
+    assertContains(ex.msg, "Error in spliced term #2 (of 3)")
   }
 
   @Test

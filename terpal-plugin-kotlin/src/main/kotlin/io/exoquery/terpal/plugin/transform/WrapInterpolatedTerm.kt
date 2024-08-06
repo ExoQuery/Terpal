@@ -1,26 +1,20 @@
 package io.exoquery.terpal.plugin.transform
 
-import io.exoquery.terpal.InterpolatorBatchingWithWrapper
-import io.exoquery.terpal.InterpolatorWithWrapper
 import io.exoquery.terpal.StrictType
 import io.exoquery.terpal.WrapFailureMessage
 import io.exoquery.terpal.plugin.classOrFail
 import io.exoquery.terpal.plugin.isValidWrapFunction
 import io.exoquery.terpal.plugin.location
-import io.exoquery.terpal.plugin.trees.isClassOf
+import io.exoquery.terpal.plugin.source
 import io.exoquery.terpal.plugin.trees.isSubclassOf
-import io.exoquery.terpal.plugin.trees.superTypesRecursive
-import org.jetbrains.kotlin.config.CompilerConfigurationKey
 import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
+import org.jetbrains.kotlin.ir.builders.irBoolean
 import org.jetbrains.kotlin.ir.builders.irInt
 import org.jetbrains.kotlin.ir.builders.irString
-import org.jetbrains.kotlin.ir.builders.irTry
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationParent
-import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
@@ -31,14 +25,16 @@ fun wrapWithExceptionHandler(ctx: BuilderContext, expr: IrExpression, parent: Ir
     // () -> wrapString(person.name)
     val invokeCallLambda = createLambda0(expr, parent)
 
-    // then we take that and pass it ot he SpliceWrapper.wrapSplice function getting:
-    // wrapSplice(code = "foo ${person.name} bar", spliceTermNumber = 1, () -> wrapString(person.name))
-    val code = ctx.builder.irString(expr.dumpKotlinLike())
+    val (code, isApproximate) =
+      with(ctx) { expr.source }?.let { codeStr -> codeStr to false } ?: expr.dumpKotlinLike() to true
+
+    val codeExpr = ctx.builder.irString(code)
+    val codeIsApproximateExpr = ctx.builder.irBoolean(isApproximate)
     val termNumber = ctx.builder.irInt(spliceTermNumber + 1)
     val loc = expr.location(ctx.currentFile.fileEntry)
     val locationPath = ctx.builder.irString("file://${loc.path}:${loc.line}:${loc.column}")
     val totalTermsExpr = ctx.builder.irInt(totalTerms)
-    return callGlobalMethod("io.exoquery.terpal", "wrapSplice")(locationPath, code, termNumber, totalTermsExpr, invokeCallLambda)
+    return callGlobalMethod("io.exoquery.terpal", "wrapSplice")(locationPath, codeExpr, codeIsApproximateExpr, termNumber, totalTermsExpr, invokeCallLambda)
   }
 
 

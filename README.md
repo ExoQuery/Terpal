@@ -108,14 +108,17 @@ the splice that caused the error:
 val id by lazy { throw Exception("This is an exception") }
 val name = "Joe"
 Sql("SELECT * FROM users WHERE id = $id AND name = $name")
-/*
-Error in spliced term #1 (of 2) at file:///...:72:38
-The code at this locaiton looks approximately like:
-this.<get-id>()
- */
+// Error in spliced code `id` expression #1 (of 2) at file:///...:72:38
 ```
-> The exact code string will not be returned, but the line and column number will be accurate.
-> In the future I may add a feature to return the exact code string.
+
+A slightly longer message will be printed if the expression is multiple lines long.
+
+> Note that in some cases the code may not be exactly the same as the original code.
+> In such cases the original code could not be loaded and needed to be retrieved from the kotlin Intermediate Representation.
+> The message would then look like the following:
+> ```
+> // Error in spliced (approximately looking) code `<this>.<get-id>` expression #1 (of 2) at file:///...:72:38
+> ```
 
 ## Other Features
 

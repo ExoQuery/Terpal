@@ -1,15 +1,19 @@
 package io.exoquery.terpal.plugin
 
 import io.decomat.fail.fail
+import io.exoquery.terpal.plugin.transform.BuilderContext
 import org.jetbrains.kotlin.backend.jvm.ir.eraseTypeParameters
+import org.jetbrains.kotlin.backend.jvm.ir.getKtFile
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocationWithRange
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
+import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrFileEntry
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationWithName
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.isPropertyAccessor
+import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
@@ -49,6 +53,19 @@ val IrSymbol.safeName   get() =
   } else {
     "<???>"
   }).replace("$", "")
+
+context(BuilderContext) val IrExpression.source get() = run {
+  val range = TextRange(this.startOffset, this.endOffset)
+  currentFile.getKtFile()?.let { ktFile ->
+    ktFile.textRange.cutOut(range).let { cutOut ->
+      ktFile.text.let { textValue ->
+        cutOut.substring(textValue)
+      }
+    }
+  }
+}
+
+
 
 fun IrElement.location(fileEntry: IrFileEntry): CompilerMessageSourceLocation {
   val irElement = this
