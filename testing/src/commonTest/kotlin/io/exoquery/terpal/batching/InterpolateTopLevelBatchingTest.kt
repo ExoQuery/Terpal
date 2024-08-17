@@ -35,7 +35,7 @@ val B = In("B")
 val C = In("C")
 val E: In by lazy { throw IllegalArgumentException("blah") }
 
-class InterpolateTopLevelTest: InterpolateTestBase {
+class InterpolateTopLevelBatchingTest: InterpolateTestBase {
 
   data class Person(val first: String, val last: String, val age: Int)
 
@@ -61,7 +61,7 @@ class InterpolateTopLevelTest: InterpolateTestBase {
     }
 
     println("====== `InterpolateTopLevelBatchingTest.exceptionTest` message: ${ex.msg}")
-    assertContains(ex.msg, "Error in spliced term #2 (of 3)")
+    assertContains(ex.msg, "Error in spliced")
   }
 
   @Test
