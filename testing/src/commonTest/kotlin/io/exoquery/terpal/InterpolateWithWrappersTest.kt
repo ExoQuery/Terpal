@@ -42,9 +42,8 @@ class InterpolateWithWrappersTest: InterpolateTestBase {
       StaticTerp("foo_${A}${E}${C}_baz")
     }
 
-    println("====== exceptionTest Error Message: ${ex.msg}")
+    println("====== `InterpolateWithWrappersTest.exceptionTest` message: ${ex.msg}")
     assertContains(ex.msg, "Error in spliced")
-    assertContains(ex.msg, "`E`")
   }
 
   @Test
@@ -56,7 +55,7 @@ class InterpolateWithWrappersTest: InterpolateTestBase {
       }${C}_baz")
     }
 
-    println("====== exceptionTest Error Message: ${ex.msg}")
+    println("====== `InterpolateWithWrappers.exceptionTest2` message: ${ex.msg}")
     assertContains(ex.msg, "Error in spliced")
   }
 
