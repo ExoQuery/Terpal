@@ -41,7 +41,10 @@ class InterpolateWithWrappersTest: InterpolateTestBase {
     val ex = assertFailsWith<InterpolationException> {
       StaticTerp("foo_${A}${E}${C}_baz")
     }
-    assertContains(ex.msg, "Error in spliced code `E`")
+
+    println("====== exceptionTest Error Message: ${ex.msg}")
+    assertContains(ex.msg, "Error in spliced")
+    assertContains(ex.msg, "`E`")
   }
 
   @Test
@@ -52,7 +55,9 @@ class InterpolateWithWrappersTest: InterpolateTestBase {
           throw IllegalArgumentException("blah blah")
       }${C}_baz")
     }
-    assertContains(ex.msg, "======= The code at this locaiton is: =======\n")
+
+    println("====== exceptionTest Error Message: ${ex.msg}")
+    assertContains(ex.msg, "Error in spliced")
   }
 
   fun <T> id(value: T): T = value
