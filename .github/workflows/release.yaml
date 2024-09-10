@@ -38,16 +38,16 @@ jobs:
           - os: macOS-latest
             publish_command: >
               build
-              :terpal-runtime:publishMacosX64
-              :terpal-runtime:publishMacosArm64
-              :terpal-runtime:publishIosX64
-              :terpal-runtime:publishIosArm64
-              :terpal-runtime:publishIosSimulatorArm64
-              :terpal-runtime:publishTvosX64
-              :terpal-runtime:publishTvosArm64
-              :terpal-runtime:publishWatchosX64
-              :terpal-runtime:publishWatchosArm32
-              :terpal-runtime:publishWatchosArm64
+              :terpal-runtime:publishMacosX64PublicationToOss
+              :terpal-runtime:publishMacosArm64PublicationToOss
+              :terpal-runtime:publishIosX64PublicationToOss
+              :terpal-runtime:publishIosArm64PublicationToOss
+              :terpal-runtime:publishIosSimulatorArm64PublicationToOss
+              :terpal-runtime:publishTvosX64PublicationToOss
+              :terpal-runtime:publishTvosArm64PublicationToOss
+              :terpal-runtime:publishWatchosX64PublicationToOss
+              :terpal-runtime:publishWatchosArm32PublicationToOss
+              :terpal-runtime:publishWatchosArm64PublicationToOss
             platform: mac
           - os: windows-latest
             publish_command: build :terpal-runtime:publishMingwX64PublicationToOss
