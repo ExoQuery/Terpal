@@ -29,13 +29,15 @@ jobs:
         include:
           - os: ubuntu-latest
             # On ubuntu publish everything you can i.e. the linuxX64 and jvm binaries
-            publish_command: >
+            # (Need to do >- or for some reason it preserves a newline after all the entries)
+            publish_command: >-
               build
               :terpal-runtime:publishAllPublicationsToOss 
               :terpal-plugin-kotlin:publish
               :terpal-plugin-gradle:publish
             platform: linux
           - os: macOS-latest
+            # (Need to do >- or for some reason it preserves a newline after all the entries)
             publish_command: >-
               build
               :terpal-runtime:publishMacosX64PublicationToOss
