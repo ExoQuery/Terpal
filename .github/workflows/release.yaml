@@ -36,7 +36,7 @@ jobs:
               :terpal-plugin-gradle:publish
             platform: linux
           - os: macOS-latest
-            publish_command: >
+            publish_command: >-
               build
               :terpal-runtime:publishMacosX64PublicationToOss
               :terpal-runtime:publishMacosArm64PublicationToOss
@@ -67,6 +67,7 @@ jobs:
           distribution: 'adopt'
       - name: Validate Gradle wrapper
         uses: gradle/wrapper-validation-action@v1
+      - run: echo "*************** PublishCommand ${{ matrix.publish_command }}"
       - run: ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI -no-daemon --stacktrace
 
   # Once all of the Nexus artifacts are published, we can release the plugin to gradle plugin portal
