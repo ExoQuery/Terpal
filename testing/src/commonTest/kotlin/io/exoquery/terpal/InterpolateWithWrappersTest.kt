@@ -4,6 +4,9 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertFailsWith
 
+data class SomeOtherType(val value: String)
+fun StaticTerp.wrap(string: SomeOtherType?): In = In("(SomeOtherType)" + string?.value)
+
 class InterpolateWithWrappersTest: InterpolateTestBase {
   companion object {
     data class In(val value: String)
@@ -29,6 +32,10 @@ class InterpolateWithWrappersTest: InterpolateTestBase {
       fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
         Out(parts(), params(), info)
     }
+
+
+
+    //fun StaticTerp.wrap(string: SomeOtherType?): In = In("(SomeOtherType)" + string?.value)
   }
 
   val instanceTerp = InstanceTerp("Dynamic")
@@ -74,5 +81,12 @@ class InterpolateWithWrappersTest: InterpolateTestBase {
   fun simpleStaticTest3() {
     StaticTerp("foo_${A}${id("str")}${C}") shouldBe
       Out(listOf("foo_", "", "", ""), listOf(A, In("(String)str"), C), "Static")
+  }
+
+  @Test
+  fun staticTestExtensionRecieverWrapper() {
+    val someOther = SomeOtherType("someValue")
+    StaticTerp("foo_${A}${someOther}${C}") shouldBe
+      Out(listOf("foo_", "", "", ""), listOf(A, In("(SomeOtherType)someValue"), C), "Static")
   }
 }

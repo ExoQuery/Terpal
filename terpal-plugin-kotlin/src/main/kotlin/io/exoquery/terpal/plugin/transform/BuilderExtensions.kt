@@ -24,12 +24,21 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.name.SpecialNames
 
-class CallGlobalMethod(private val funPath: String, private val funName: String, private val tpe: IrType?) {
+class CallGlobalMethod(private val invoke: IrSimpleFunctionSymbol, private val tpe: IrType?, private val extReciever: IrExpression?) {
+  companion object {
+    context(BuilderContext) operator fun invoke(callable: CallableId, tpe: IrType?, extReciever: IrExpression?): CallGlobalMethod =
+      CallGlobalMethod(pluginCtx.referenceFunctions(callable).first(), tpe, extReciever)
+    context(BuilderContext) operator fun invoke(funPath: String, funName: String, tpe: IrType?, extReciever: IrExpression?): CallGlobalMethod =
+      CallGlobalMethod(CallableId(FqName(funPath), Name.identifier(funName)), tpe, extReciever)
+  }
+
   context(BuilderContext) operator fun invoke(vararg args: IrExpression): IrExpression {
-    val invoke = pluginCtx.referenceFunctions(CallableId(FqName(funPath), Name.identifier(funName))).first()
     return with (builder) {
       val invocation = if (tpe != null) irCall(invoke, tpe) else irCall(invoke)
       invocation.apply {
+        if (extReciever != null) {
+          extensionReceiver = extReciever
+        }
         for ((index, expr) in args.withIndex()) {
           putValueArgument(index, expr)
         }
@@ -38,7 +47,9 @@ class CallGlobalMethod(private val funPath: String, private val funName: String,
   }
 }
 
-fun callGlobalMethod(path: String, name: String) = CallGlobalMethod(path, name, null)
+context(BuilderContext) fun callGlobalMethod(path: String, name: String, extReciever: IrExpression? = null) = CallGlobalMethod(path, name, null, extReciever)
+context(BuilderContext) fun callGlobalMethod(callable: CallableId, extReciever: IrExpression? = null) = CallGlobalMethod(callable, null, extReciever)
+fun callGlobalMethod(invoke: IrSimpleFunctionSymbol, extReciever: IrExpression? = null) = CallGlobalMethod(invoke, null, extReciever)
 
 
 class CallMethod(private val host: IrExpression, private val funName: String, private val tpe: IrType?) {

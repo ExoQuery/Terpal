@@ -6,6 +6,7 @@ import io.exoquery.terpal.plugin.classOrFail
 import io.exoquery.terpal.plugin.isValidWrapFunction
 import io.exoquery.terpal.plugin.location
 import io.exoquery.terpal.plugin.source
+import io.exoquery.terpal.plugin.trees.Ir
 import io.exoquery.terpal.plugin.trees.isSubclassOf
 import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.builders.irBoolean
@@ -18,6 +19,9 @@ import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
+import org.jetbrains.kotlin.name.CallableId
+import org.jetbrains.kotlin.name.ClassId
+import org.jetbrains.kotlin.name.Name
 
 fun wrapWithExceptionHandler(ctx: BuilderContext, expr: IrExpression, parent: IrDeclarationParent, spliceTermNumber: Int, totalTerms: Int): IrExpression =
   with (ctx) {
@@ -70,11 +74,39 @@ fun wrapInterpolatedTerm(ctx: BuilderContext, caller: IrExpression, expr: IrExpr
       }
     }
 
-    val invokeFunction =
-      caller.type.classOrFail.functions.find { it.isValidWrapFunction(interpolateType) && it.isWrapForExprType() }
-        ?: Messages.errorFailedToFindWrapper(ctx, caller, expr, interpolateType, annotationMessage)
+    // Find all the `wrap(T)` functions in Interpolator class
+    val dispatchWrappers = caller.type.classOrFail.functions
 
-    val invokeCall = caller.callMethodTyped(invokeFunction)().invoke(expr)
+    val (invokeFunction, invokeCall) =
+      // If there is a dispatch `wrap` function (i.e. defined directly in the interpolator class) then try to invoke that
+      dispatchWrappers.find { it.isValidWrapFunction(interpolateType) && it.isWrapForExprType() }?.let { dispatchFunction ->
+        dispatchFunction to caller.callMethodTyped(dispatchFunction)().invoke(expr)
+      } ?: run {
+        // Find all the `wrap(T)` defined as extensions of the interpolator class
+        val extensionWrappers = caller.type.classFqName?.parent()?.let { parentPackage ->
+          // is the parent a package or a class?
+          ctx.logger.error("==== Looking for extension functions in package: ${parentPackage}")
+          // TODO need to find actual package, not companion object
+
+          ctx.pluginCtx.referenceFunctions(CallableId(parentPackage, Name.identifier("wrap")))
+            .filter {
+              val extension = it.owner.extensionReceiverParameter
+              // e.g. the extension reciever of the wrapper class has to be the same or a subtype of the interpolator class
+              // e.g. `fun Interpolator<Foo, Bar>.wrap(value: T) = ...` would be a valid extension function
+              // for some class `FooBarInterpolator: Interpolator<Foo, Bar>`
+              // Typically they should be the same thing e.g. the wrapper function would be defined as
+              // `fun FooBarInterpolator.wrap(value: Foo) = ...`
+              extension != null && caller.type.isSubtypeOfClass(extension.type.classOrFail)
+            }
+        }
+        // If there is no dispatch `wrap` function then try to find an extension `wrap` function
+        extensionWrappers?.find { it.isValidWrapFunction(interpolateType) && it.isWrapForExprType() }?.let { extensionFunction ->
+          // I.e. in this case use the caller as the extension reciever
+          extensionFunction to callGlobalMethod(extensionFunction, caller)(expr)
+        }
+      } ?:
+      Messages.errorFailedToFindWrapper(ctx, caller, expr, interpolateType, annotationMessage)
+
 
     if (ctx.options.traceWrappers) ctx.logger.warn("==== Calling wrapper function `${invokeFunction.printInvokeFunctionSignature()}` on the expression `${invokeCall.dumpKotlinLike()}` typed as: `${expr.type.dumpKotlinLike()}`")
     return invokeCall
