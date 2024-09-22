@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
+import org.jetbrains.kotlin.ir.util.functions
 
 class TransformInterepolatorInvoke(val ctx: BuilderContext) {
   private val compileLogger = ctx.logger
@@ -142,17 +143,21 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       val partsLiftedFun = createLambda0(partsLifted, currScope)
       val paramsLiftedFun = createLambda0(paramsLifted, currScope)
 
+      val interpolatorBackend =
+        caller.type.classOrFail.functions.find { it.isInterpolatorBackend() }
+          ?: parseError("Could not find the interpolator backend function (i.e. a function annotated with @InterpolatorBackend) in the interpolator class: ${caller.type.dumpKotlinLike()}")
+
       val callOutput =
         when (specialReciever) {
           // In a normal case just put in parts and params
           is Call.InterpolatorFunctionInvoke.SpecialReciever.DoesNotExist ->
-            caller.callMethodWithType("interpolate", interpolateReturn)(
+            caller.callMethodWithType(interpolatorBackend, interpolateReturn)(
               partsLiftedFun,
               paramsLiftedFun
             )
           // If there is a special reciever then treat that as a third parameter
           is Call.InterpolatorFunctionInvoke.SpecialReciever.Exists ->
-            caller.callMethodWithType("interpolate", interpolateReturn)(
+            caller.callMethodWithType(interpolatorBackend, interpolateReturn)(
               partsLiftedFun,
               paramsLiftedFun,
               specialReciever.reciever

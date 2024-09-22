@@ -11,6 +11,7 @@ data class MyConext(val stuff: String)
 
 object McTerp: ProtoInterpolator<Wrapped, Wrapped> {
   operator fun MyConext.invoke(string: String): Wrapped = Messages.throwPluginNotExecuted()
+  @InterpolatorBackend
   fun interpolate(parts: () -> List<String>, params: () -> List<Wrapped>, ctx: MyConext): Wrapped =
     Wrapped(parts(), params(), ctx)
 }

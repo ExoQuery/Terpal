@@ -59,28 +59,12 @@ fun wrapInterpolatedTerm(ctx: BuilderContext, caller: IrExpression, expr: IrExpr
       }
       else ""
 
-    fun IrSimpleFunctionSymbol.isWrapForExprType(): Boolean {
-      val func = this
-      val isStrict = func.owner.annotations.any { it.isSubclassOf<StrictType>() }
-      val firstParamType = func.owner.valueParameters.first().type
-      return if (isStrict) {
-        // If strict, just compare the types independently of nullability
-        firstParamType.makeNullable() == expr.type.makeNullable()
-      } else {
-        // Say we've we're wrapping: Sql("... ${expr:FirstName} ...")
-        // where `data class FirstName(...): Name { ... }`
-        // we want a wrap function that is either Sql.wrap(value:FirstName) or Sql.wrap(value:Name)
-        // in the 2nd case, we want the `expr` to be sub-type of the Sql.wrap value (i.e. contravariance).
-        expr.type.isSubtypeOfClass(firstParamType.classOrFail)
-      }
-    }
-
     // Find all the `wrap(T)` functions in Interpolator class
     val dispatchWrappers = caller.type.classOrFail.functions
 
     val (invokeFunction, invokeCall) =
       // If there is a dispatch `wrap` function (i.e. defined directly in the interpolator class) then try to invoke that
-      dispatchWrappers.find { it.isValidWrapFunction(interpolateType) && it.isWrapForExprType() }?.let { dispatchFunction ->
+      dispatchWrappers.find { it.isValidWrapFunction(interpolateType) && it.isWrapForExprType(expr) }?.let { dispatchFunction ->
         dispatchFunction to caller.callMethodTyped(dispatchFunction)().invoke(expr)
       } ?: run {
         // Find all the `wrap(T)` defined as extensions of the interpolator class
@@ -106,7 +90,7 @@ fun wrapInterpolatedTerm(ctx: BuilderContext, caller: IrExpression, expr: IrExpr
             }
         }
         // If there is no dispatch `wrap` function then try to find an extension `wrap` function
-        extensionWrappers?.find { it.isValidWrapFunction(interpolateType) && it.isWrapForExprType() }?.let { extensionFunction ->
+        extensionWrappers?.find { it.isValidWrapFunction(interpolateType) && it.isWrapForExprType(expr) }?.let { extensionFunction ->
           // I.e. in this case use the caller as the extension reciever
           extensionFunction to callGlobalMethod(extensionFunction, caller)(expr)
         }

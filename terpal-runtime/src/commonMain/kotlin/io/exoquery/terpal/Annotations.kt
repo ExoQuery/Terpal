@@ -13,3 +13,7 @@ annotation class WrapFailureMessage(val msg: String)
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.BINARY)
 annotation class StrictType
+
+@Target(AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.BINARY)
+annotation class InterpolatorBackend

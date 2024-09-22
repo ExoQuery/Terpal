@@ -13,6 +13,7 @@ interface InterpolatorWithWrapper<T, R>: ProtoInterpolator<T, R> {
 
 interface Interpolator<T, R>: ProtoInterpolator<T, R> {
   operator fun invoke(string: String): R = Messages.throwPluginNotExecuted()
+  @InterpolatorBackend
   fun interpolate(parts: () -> List<String>, params: () -> List<T>): R
 }
 

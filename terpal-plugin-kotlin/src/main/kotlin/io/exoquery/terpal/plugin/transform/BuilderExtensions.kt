@@ -52,9 +52,13 @@ context(BuilderContext) fun callGlobalMethod(callable: CallableId, extReciever: 
 fun callGlobalMethod(invoke: IrSimpleFunctionSymbol, extReciever: IrExpression? = null) = CallGlobalMethod(invoke, null, extReciever)
 
 
-class CallMethod(private val host: IrExpression, private val funName: String, private val tpe: IrType?) {
+class CallMethod(private val host: IrExpression, private val lambdaInvoke: IrSimpleFunctionSymbol, private val tpe: IrType?) {
+  companion object {
+    operator fun invoke(host: IrExpression, funName: String, tpe: IrType?): CallMethod =
+      CallMethod(host, host.type.findMethodOrFail(funName), tpe)
+  }
+
   context(BuilderContext) operator fun invoke(vararg args: IrExpression): IrExpression {
-    val lambdaInvoke = host.type.findMethodOrFail(funName)
     return with (builder) {
       val invocation = if (tpe != null) irCall(lambdaInvoke, tpe) else irCall(lambdaInvoke)
       invocation.apply {
@@ -69,7 +73,8 @@ class CallMethod(private val host: IrExpression, private val funName: String, pr
 
 fun IrExpression.callMethod(name: String) = CallMethod(this, name, null)
 fun IrExpression.callMethodWithType(name: String, tpe: IrType) = CallMethod(this, name, tpe)
-
+fun IrExpression.callMethod(function: IrSimpleFunctionSymbol) = CallMethod(this, function, null)
+fun IrExpression.callMethodWithType(function: IrSimpleFunctionSymbol, tpe: IrType) = CallMethod(this, function, tpe)
 
 class CallMethodTypedArgs(private val host: IrExpression, private val function: IrSimpleFunctionSymbol, private val tpe: IrType?) {
   companion object {

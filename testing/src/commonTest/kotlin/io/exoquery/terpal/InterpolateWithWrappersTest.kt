@@ -16,6 +16,7 @@ class InterpolateWithWrappersTest: InterpolateTestBase {
 
     object StaticTerp: InterpolatorWithWrapper<In, Out> {
       operator fun invoke(string: String): Out = Messages.throwPluginNotExecuted()
+      @InterpolatorBackend
       fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
         Out(parts(), params(), "Static")
 

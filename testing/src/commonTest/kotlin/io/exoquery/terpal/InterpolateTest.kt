@@ -11,12 +11,14 @@ class InterpolateTest: InterpolateTestBase {
 
     object StaticTerp: ProtoInterpolator<In, Out> {
       operator fun invoke(string: String): Out = Messages.throwPluginNotExecuted()
+      @InterpolatorBackend
       fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
         Out(parts(), params(), "Static")
     }
 
     class InstanceTerp(val info: String): ProtoInterpolator<In, Out> {
       operator fun invoke(string: String): Out = Messages.throwPluginNotExecuted()
+      @InterpolatorBackend
       fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
         Out(parts(), params(), info)
     }
