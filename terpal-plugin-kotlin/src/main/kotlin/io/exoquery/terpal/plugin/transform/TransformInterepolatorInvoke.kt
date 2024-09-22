@@ -3,19 +3,14 @@ package io.exoquery.terpal.plugin.transform
 import io.decomat.Is
 import io.decomat.case
 import io.decomat.on
-import io.exoquery.terpal.UnzipPartsParams
-import io.exoquery.terpal.Interpolator
-import io.exoquery.terpal.InterpolatorWithWrapper
-import io.exoquery.terpal.parseError
+import io.exoquery.terpal.*
 import io.exoquery.terpal.plugin.classOrFail
-import io.exoquery.terpal.plugin.isValidWrapFunction
 import io.exoquery.terpal.plugin.printing.dumpSimple
 import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
 import io.exoquery.terpal.plugin.trees.isClassOf
 import io.exoquery.terpal.plugin.trees.isSubclassOf
 import io.exoquery.terpal.plugin.trees.simpleTypeArgs
 import io.exoquery.terpal.plugin.trees.superTypesRecursive
-import org.jetbrains.kotlin.config.CompilerConfigurationKey
 import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.expressions.IrCall
@@ -24,7 +19,6 @@ import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
-import org.jetbrains.kotlin.ir.util.functions
 
 class TransformInterepolatorInvoke(val ctx: BuilderContext) {
   private val compileLogger = ctx.logger
@@ -74,6 +68,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       // Interpolator is looked up as (parentCaller:Interpolator).simpleTypeArgs you will get back T,R instead of Fragment,Statement.
       superTypes.find { it.isClassOf<InterpolatorWithWrapper<*, *>>() }
         ?: superTypes.find { it.isClassOf<Interpolator<*, *>>() }
+        ?: superTypes.find { it.isClassOf<ProtoInterpolator<*, *>>() }
         ?: parseError("Could not isolate the parent type Interpolator<T, R>. This shuold be impossible.")
 
     // TODO need to catch parseError externally (i.e. in VisitTransformExpressions) & not transform the expressions

@@ -4,19 +4,17 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertFailsWith
 
-class InterpolateTest: InterpolateTestBase {
+class InterpolateSimpleTest: InterpolateTestBase {
   companion object {
     data class In(val value: String)
     data class Out(val parts: List<String>, val params: List<In>, val info: String)
 
-    object StaticTerp: ProtoInterpolator<In, Out> {
-      operator fun invoke(string: String): Out = Messages.throwPluginNotExecuted()
+    object StaticTerp: Interpolator<In, Out> {
       override fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
         Out(parts(), params(), "Static")
     }
 
-    class InstanceTerp(val info: String): ProtoInterpolator<In, Out> {
-      operator fun invoke(string: String): Out = Messages.throwPluginNotExecuted()
+    class InstanceTerp(val info: String): Interpolator<In, Out> {
       override fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
         Out(parts(), params(), info)
     }

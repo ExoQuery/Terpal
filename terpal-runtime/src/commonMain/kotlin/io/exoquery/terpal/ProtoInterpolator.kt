@@ -1,8 +1,6 @@
 package io.exoquery.terpal
 
-import kotlin.reflect.KClass
-
-interface InterpolatorWithWrapper<T, R>: Interpolator<T, R> {
+interface InterpolatorWithWrapper<T, R>: ProtoInterpolator<T, R> {
   fun wrap(value: String?): T
   fun wrap(value: Int?): T
   fun wrap(value: Long?): T
@@ -13,7 +11,11 @@ interface InterpolatorWithWrapper<T, R>: Interpolator<T, R> {
   fun wrap(value: Boolean?): T
 }
 
-interface Interpolator<T, R> {
+interface Interpolator<T, R>: ProtoInterpolator<T, R> {
+  operator fun invoke(string: String): R = Messages.throwPluginNotExecuted()
+}
+
+interface ProtoInterpolator<T, R> {
   fun interpolate(parts: () -> List<String>, params: () -> List<T>): R
 
   companion object {

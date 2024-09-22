@@ -1,7 +1,7 @@
 package io.exoquery.terpal.plugin.trees
 
 import io.decomat.*
-import io.exoquery.terpal.Interpolator
+import io.exoquery.terpal.ProtoInterpolator
 import io.exoquery.terpal.InterpolatorBatching
 import io.exoquery.terpal.InterpolatorFunction
 import io.exoquery.terpal.plugin.logging.CompileLogger
@@ -49,7 +49,7 @@ object ExtractorsDomain {
       context (CompileLogger) fun matchesMethod(it: IrCall): Boolean {
         // if (it.symbol.safeName == "invoke")
         //   warn("------------ `invoke` Reciver Super Types: ${it.dispatchReceiver?.type?.superTypesRecursive()?.toList()?.map { it.dumpKotlinLike() }}")
-        return it.reciverIs<Interpolator<*, *>>("invoke") //&& it.simpleValueArgsCount == 2 && it.valueArguments.all{ it != null }
+        return it.reciverIs<ProtoInterpolator<*, *>>("invoke") //&& it.simpleValueArgsCount == 2 && it.valueArguments.all{ it != null }
       }
 
       context (CompileLogger) operator fun <AP: Pattern<IrExpression>, BP: Pattern<List<IrExpression>>> get(reciver: AP, terpComps: BP) =
@@ -162,7 +162,7 @@ object ExtractorsDomain {
         // The parent-type of the interpolator e.g. for StaticTerp it will be Interpolator<In, Out>
         val interpolatorImplementation =
           interpolatorType.superTypes().find {
-            it.isSubclassOf<Interpolator<*, *>>()
+            it.isSubclassOf<ProtoInterpolator<*, *>>()
           } ?: return null
 
         // The return-type of the interpolation function e.g. Out for StaticTerp (also frequently Stmt, or String)

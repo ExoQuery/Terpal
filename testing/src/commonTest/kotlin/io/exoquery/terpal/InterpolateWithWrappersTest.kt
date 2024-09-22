@@ -24,7 +24,7 @@ class InterpolateWithWrappersTest: InterpolateTestBase {
       override fun wrap(value: Boolean?): In = In("(Boolean)" + value.toString())
     }
 
-    class InstanceTerp(val info: String): Interpolator<In, Out> {
+    class InstanceTerp(val info: String): ProtoInterpolator<In, Out> {
       operator fun invoke(string: String): Out = Messages.throwPluginNotExecuted()
       override fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
         Out(parts(), params(), info)
