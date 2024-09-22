@@ -10,9 +10,7 @@ import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrFileEntry
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationWithName
-import org.jetbrains.kotlin.ir.declarations.IrFunction
-import org.jetbrains.kotlin.ir.declarations.isPropertyAccessor
+import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -21,6 +19,8 @@ import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.isSubtypeOfClass
 import org.jetbrains.kotlin.ir.util.*
+import org.jetbrains.kotlin.name.ClassId
+import org.jetbrains.kotlin.name.FqName
 import kotlin.reflect.KClass
 
 val KClass<*>.qualifiedNameForce get(): String =
@@ -90,3 +90,7 @@ fun IrSimpleFunctionSymbol.isValidWrapFunction(interpolateOutputType: IrType) = 
   val wrapReturnType = this.owner.returnType.eraseTypeParameters()
   this.safeName == "wrap" && this.owner.valueParameters.size == 1 && wrapReturnType.isSubtypeOfClass(interpolateOutputType.classOrFail)
 }
+
+// Compat function for kotlin 1.9.22 from 2.0.0 API
+val IrDeclaration.parentsCompat: Sequence<IrDeclarationParent>
+  get() = generateSequence(parent) { (it as? IrDeclaration)?.parent }

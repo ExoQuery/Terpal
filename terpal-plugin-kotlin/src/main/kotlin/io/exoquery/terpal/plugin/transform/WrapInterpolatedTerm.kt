@@ -7,12 +7,15 @@ import io.exoquery.terpal.plugin.classOrFail
 import io.exoquery.terpal.plugin.isValidWrapFunction
 import io.exoquery.terpal.plugin.trees.Ir
 import io.exoquery.terpal.plugin.trees.isSubclassOf
+import org.jetbrains.kotlin.analysis.decompiler.stub.ref
 import org.jetbrains.kotlin.backend.jvm.ir.eraseTypeParameters
+import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.builders.irBoolean
 import org.jetbrains.kotlin.ir.builders.irInt
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationParent
+import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -23,6 +26,9 @@ import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.renderer.render
+import org.jetbrains.kotlin.resolve.source.getPsi
+import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.isUnderKotlinPackage
 
 fun wrapWithExceptionHandler(ctx: BuilderContext, expr: IrExpression, parent: IrDeclarationParent, spliceTermNumber: Int, totalTerms: Int): IrExpression =
   with (ctx) {
@@ -67,15 +73,9 @@ fun wrapInterpolatedTerm(ctx: BuilderContext, caller: IrExpression, expr: IrExpr
       dispatchWrappers.find { it.isValidWrapFunction(interpolateType) && it.isWrapForExprType(expr) }?.let { dispatchFunction ->
         dispatchFunction to caller.callMethodTyped(dispatchFunction)().invoke(expr)
       } ?: run {
-        // Find all the `wrap(T)` defined as extensions of the interpolator class
-        val extensionWrappers = caller.type.classFqName?.parent()?.let { parentEntity ->
-          // is the parent a package or a class?
-          tailrec fun findFirstRealPackage(fqName: FqName): FqName =
-            if (fqName.isRoot == null) fqName
-            else if (!ctx.pluginCtx.moduleDescriptor.getPackage(fqName).isEmpty()) fqName
-            else findFirstRealPackage(fqName.parent())
-          val parentPackage = findFirstRealPackage(parentEntity)
-          //ctx.logger.error("==== Looking for extension functions in package: ${parentPackage} - ${ctx.pluginCtx.moduleDescriptor.getPackage(parentPackage).isEmpty()}")
+        // Find the base package that the interpolator class is defined in. I.e. that will be the FqName of the file
+        val extensionWrappers = caller.type.classOrFail.owner.parentsCompat.toList().find { it is IrFile }?.kotlinFqName?.let { parentPackage ->
+          // Find all the `wrap(T)` defined as extensions of the interpolator class
           ctx.pluginCtx.referenceFunctions(CallableId(parentPackage, Name.identifier("wrap")))
             .filter {
               val extension = it.owner.extensionReceiverParameter
