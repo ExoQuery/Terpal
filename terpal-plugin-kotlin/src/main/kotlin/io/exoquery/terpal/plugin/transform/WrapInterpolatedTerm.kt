@@ -2,12 +2,12 @@ package io.exoquery.terpal.plugin.transform
 
 import io.exoquery.terpal.StrictType
 import io.exoquery.terpal.WrapFailureMessage
+import io.exoquery.terpal.plugin.*
 import io.exoquery.terpal.plugin.classOrFail
 import io.exoquery.terpal.plugin.isValidWrapFunction
-import io.exoquery.terpal.plugin.location
-import io.exoquery.terpal.plugin.source
 import io.exoquery.terpal.plugin.trees.Ir
 import io.exoquery.terpal.plugin.trees.isSubclassOf
+import org.jetbrains.kotlin.backend.jvm.ir.eraseTypeParameters
 import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.builders.irBoolean
 import org.jetbrains.kotlin.ir.builders.irInt
@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.ClassId
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 
 fun wrapWithExceptionHandler(ctx: BuilderContext, expr: IrExpression, parent: IrDeclarationParent, spliceTermNumber: Int, totalTerms: Int): IrExpression =
@@ -83,11 +84,14 @@ fun wrapInterpolatedTerm(ctx: BuilderContext, caller: IrExpression, expr: IrExpr
         dispatchFunction to caller.callMethodTyped(dispatchFunction)().invoke(expr)
       } ?: run {
         // Find all the `wrap(T)` defined as extensions of the interpolator class
-        val extensionWrappers = caller.type.classFqName?.parent()?.let { parentPackage ->
+        val extensionWrappers = caller.type.classFqName?.parent()?.let { parentEntity ->
           // is the parent a package or a class?
-          ctx.logger.error("==== Looking for extension functions in package: ${parentPackage}")
-          // TODO need to find actual package, not companion object
-
+          tailrec fun findFirstRealPackage(fqName: FqName): FqName =
+            if (fqName.isRoot == null) fqName
+            else if (!ctx.pluginCtx.moduleDescriptor.getPackage(fqName).isEmpty()) fqName
+            else findFirstRealPackage(fqName.parent())
+          val parentPackage = findFirstRealPackage(parentEntity)
+          //ctx.logger.error("==== Looking for extension functions in package: ${parentPackage} - ${ctx.pluginCtx.moduleDescriptor.getPackage(parentPackage).isEmpty()}")
           ctx.pluginCtx.referenceFunctions(CallableId(parentPackage, Name.identifier("wrap")))
             .filter {
               val extension = it.owner.extensionReceiverParameter
@@ -96,7 +100,9 @@ fun wrapInterpolatedTerm(ctx: BuilderContext, caller: IrExpression, expr: IrExpr
               // for some class `FooBarInterpolator: Interpolator<Foo, Bar>`
               // Typically they should be the same thing e.g. the wrapper function would be defined as
               // `fun FooBarInterpolator.wrap(value: Foo) = ...`
-              extension != null && caller.type.isSubtypeOfClass(extension.type.classOrFail)
+              val useIt = extension != null && caller.type.isSubtypeOfClass(extension.type.classOrFail)
+              //error("------------- Looking at extension function: ${it.owner.dumpKotlinLike()} (use: ${useIt}, ${it.owner.returnType.eraseTypeParameters().dumpKotlinLike()}<-${interpolateType.classOrFail.safeName} ${it.owner.returnType.eraseTypeParameters().isSubtypeOfClass(interpolateType.classOrFail)}, ${it.isValidWrapFunction(interpolateType)}, ${it.isWrapForExprType()}) ----------")
+              useIt
             }
         }
         // If there is no dispatch `wrap` function then try to find an extension `wrap` function

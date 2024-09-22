@@ -5,7 +5,9 @@ import kotlin.test.assertContains
 import kotlin.test.assertFailsWith
 
 data class SomeOtherType(val value: String)
-fun StaticTerp.wrap(string: SomeOtherType?): In = In("(SomeOtherType)" + string?.value)
+// Note, the name `In` is used in another test so using it here will cuase this wrapper not to be found
+fun InterpolateWithWrappersTest.Companion.StaticTerp.wrap(string: SomeOtherType?): InterpolateWithWrappersTest.Companion.In =
+  InterpolateWithWrappersTest.Companion.In("(SomeOtherType)" + string?.value)
 
 class InterpolateWithWrappersTest: InterpolateTestBase {
   companion object {
