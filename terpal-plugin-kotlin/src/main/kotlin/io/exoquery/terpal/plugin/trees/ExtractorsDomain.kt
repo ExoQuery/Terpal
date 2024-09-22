@@ -9,6 +9,7 @@ import io.exoquery.terpal.plugin.qualifiedNameForce
 import io.exoquery.terpal.plugin.safeName
 import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.expressions.IrCall
+import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
@@ -117,7 +118,12 @@ object ExtractorsDomain {
       val interpolatorFunctionName =
         InterpolatorFunction::class.qualifiedName ?: throw IllegalStateException("Fatal Error: InterpolatorFunction qualified name was not found")
 
-      data class Match(val interpolatorType: IrType, val interpolatorClass: IrClassSymbol)
+      sealed interface SpecialReciever {
+        data class Exists(val reciever: IrExpression): SpecialReciever
+        data object DoesNotExist: SpecialReciever
+      }
+
+      data class Match(val interpolatorType: IrType, val interpolatorClass: IrClassSymbol, val specialReciever: SpecialReciever)
 
       context (CompileLogger) fun matchesMethod(call: IrCall): Boolean =
         extractComponents(call) != null
@@ -128,24 +134,48 @@ object ExtractorsDomain {
             it.type.classFqName?.asString() == interpolatorFunctionName
           } ?: return null
 
-        // E.g. StaticTerp
-        val interpolatorType =
-          matchingAnnotationConstructor.valueArguments.let { args ->
-            if (args.size != 1) {
-              error("Fatal Error: Invalid interpolation expression by `${matchingAnnotationConstructor.dumpKotlinLike()}`. The expression shuold have only one arg but found: ${args.map { it?.dumpKotlinLike() }.toList()}")
-              null
-            } else {
-              val first = args.first()
-              when {
-                first == null -> {
-                  error("Fatal Error: First constructor type arg of  ")
-                  null
-                }
-                // argument StaticTerp from the KClass<StaticTerp> in the annotation constructor
-                else          -> first.type.simpleTypeArgs.first()
-              }
-            } ?: return null
+        val (arg1, arg2) = matchingAnnotationConstructor.valueArguments.let { args ->
+          if (args.size != 2) {
+            error("Fatal Error: Invalid interpolation expression by `${matchingAnnotationConstructor.dumpKotlinLike()}`. The expression shuold exactly 2 arguments but found: ${args.map { it?.dumpKotlinLike() }.toList()}")
+            null
+          } else {
+            args.get(0) to args.get(1)
           }
+        } ?: return null
+
+        // interpolatorType: E.g. StaticTerp
+        // hasSpecialReciever: This denotes a case where we're using the reciever as a specialized type to pass into the interpolate function e.g. (and we're using ProtoInterpolator<In, Out> as the type)
+        // For example if we would want to use a builder context with something like:
+        // @InterpolatorFunction(JsonTerp::class, hasSpecialReciever = true)
+        // fun JsonBuilder.json(jsonString: String): T = Messages.throwPluginNotExecuted()
+        // Then it's wired to:
+        // object JsonTerp: ProtoInterpolator<JsonBuilder, T> {
+        //   fun JsonBuilder.interpolate(parts: () -> List<String>, params: () -> List<JsonBuilder>): T = ...
+        // }
+        // See an example of this in InterpolateFunctionContextTest
+        val (interpolatorType, hasSpecialReciever) =
+          when {
+            arg1 == null -> {
+              error("Fatal Error: First constructor argument null in: ${matchingAnnotationConstructor.dumpKotlinLike()}"); null
+            }
+            // argument StaticTerp from the KClass<StaticTerp> in the annotation constructor
+            else -> {
+              val firstTypeArg = arg1.type.simpleTypeArgs.first()
+              when {
+                // Despite the fact that the default value of the 2nd argument is null, in the Kotlin AST it will still be null since it's not specified, so we need ot return its value as false
+                arg2 == null ->
+                  (firstTypeArg to false)
+
+                // When the 2nd argument is specified return its value
+                arg2 is IrConst<*> && arg2.value is Boolean ->
+                  (firstTypeArg to arg2.value as Boolean)
+
+                else -> {
+                  error("Fatal Error: The second argument of the annotation constructor `${matchingAnnotationConstructor.dumpKotlinLike()}` was not a boolean."); null
+                }
+              }
+            }
+          } ?: return null
 
         val interpolatorClassSymbol =
           interpolatorType.classOrNull ?: run {
@@ -179,15 +209,26 @@ object ExtractorsDomain {
         if (!interpolatorReturnType.isSubtypeOfClass(returnTypeClass))
           error("The type that the interpolation function `${call.symbol.safeName}` returns `${interpolatorReturnType.dumpKotlinLike()}` is not a subtype of `${call.symbol.owner.returnType.dumpKotlinLike()}` which the ${interpolatorType.dumpKotlinLike()} interpolator returns. This will result in a class-cast error and is therefore not allowed.")
 
-
+        val extensionReceiver = call.extensionReceiver
         // either it has the form of `fun String.unaryPlus():Result` or `fun staticTerp(str: String):Result`
         // it it has a extension reciver it must be a `fun String.unaryPlus():Result`
-        if (call.extensionReceiver != null) {
-          if (!(call.extensionReceiver?.isSubclassOf<kotlin.String>() ?: false))
+        if (
+          // If there exists a reciever, and it's not a string, and we haven't marked it specifically as a special reciever (see note above about hasSpecialReciever)
+          extensionReceiver != null &&
+          !(extensionReceiver.isSubclassOf<kotlin.String>()) &&
+          !hasSpecialReciever
+          ) {
             error("A InterpolatorFunction must be an extension reciever on a String, ${if (call.extensionReceiver == null) "but no reciver was found" else "but it was a `${call.extensionReceiver?.type?.dumpKotlinLike()}` reciver."}")
         }
+
+        val specialReciever =
+          if (hasSpecialReciever)
+            SpecialReciever.Exists(extensionReceiver ?: run { error("Fatal Error: The InterpolatorFunction marked as having a special reciever but no reciever was found."); return null })
+          else
+            SpecialReciever.DoesNotExist
+
         // Otherwise it has the form of `fun staticTerp(str: String):Result`
-        return Match(interpolatorType, interpolatorClassSymbol)
+        return Match(interpolatorType, interpolatorClassSymbol, specialReciever)
       }
 
       context (CompileLogger) operator fun <AP: Pattern<InterpolatorFunctionInvoke.Match>, BP: Pattern<List<IrExpression>>> get(reciver: AP, terpComps: BP) =
@@ -196,7 +237,8 @@ object ExtractorsDomain {
           if (match != null) {
             val concatExpr =
               // If it's an function or operator e.g. `+"foo ${bar} baz"` then the reciver is supposed to be the string-concatenation
-              if (call.extensionReceiver != null) {
+              // (also make sure the reciever is not a special one (i.e. a builder context))
+              if (call.extensionReceiver != null && match.specialReciever !is SpecialReciever.Exists) {
                 call.extensionReceiver
               } else {
                 // otherwise it's an argument to a function e.g. `staticTerp("foo ${bar} baz")`

@@ -13,11 +13,10 @@ interface InterpolatorWithWrapper<T, R>: ProtoInterpolator<T, R> {
 
 interface Interpolator<T, R>: ProtoInterpolator<T, R> {
   operator fun invoke(string: String): R = Messages.throwPluginNotExecuted()
+  fun interpolate(parts: () -> List<String>, params: () -> List<T>): R
 }
 
 interface ProtoInterpolator<T, R> {
-  fun interpolate(parts: () -> List<String>, params: () -> List<T>): R
-
   companion object {
     fun <T> interlace(parts: List<String>, params: List<T>, empty: () -> T, lift: (String) -> T, combine: (T, T) -> T): T {
       val partsIter = parts.iterator()

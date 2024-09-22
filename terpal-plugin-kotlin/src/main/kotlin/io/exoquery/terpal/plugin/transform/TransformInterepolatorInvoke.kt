@@ -29,15 +29,15 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
     }
 
   fun transform(expression: IrCall, superTransformer: VisitTransformExpressions): IrExpression {
-    val (caller, compsRaw) =
+    val (caller, compsRaw, specialReciever) =
       with(compileLogger) {
         on(expression).match(
           // interpolatorSubclass.invoke(.. { stuff } ...)
           case(Call.InterpolateInvoke[Is(), Is()]).then { caller, comps ->
-            caller to comps
+            Triple(caller, comps, Call.InterpolatorFunctionInvoke.SpecialReciever.DoesNotExist)
           },
           case(Call.InterpolatorFunctionInvoke[Is(), Is()]).then { callerData, comps ->
-            ctx.builder.irGetObject(callerData.interpolatorClass) to comps
+            Triple(ctx.builder.irGetObject(callerData.interpolatorClass), comps, callerData.specialReciever)
           }
         )
       } ?: run {
@@ -143,10 +143,21 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       val paramsLiftedFun = createLambda0(paramsLifted, currScope)
 
       val callOutput =
-        caller.callMethodWithType("interpolate", interpolateReturn)(
-          partsLiftedFun,
-          paramsLiftedFun
-        )
+        when (specialReciever) {
+          // In a normal case just put in parts and params
+          is Call.InterpolatorFunctionInvoke.SpecialReciever.DoesNotExist ->
+            caller.callMethodWithType("interpolate", interpolateReturn)(
+              partsLiftedFun,
+              paramsLiftedFun
+            )
+          // If there is a special reciever then treat that as a third parameter
+          is Call.InterpolatorFunctionInvoke.SpecialReciever.Exists ->
+            caller.callMethodWithType("interpolate", interpolateReturn)(
+              partsLiftedFun,
+              paramsLiftedFun,
+              specialReciever.reciever
+            )
+        }
 
       callOutput
     }

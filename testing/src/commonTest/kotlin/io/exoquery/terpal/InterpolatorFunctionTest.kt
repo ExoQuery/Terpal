@@ -13,7 +13,7 @@ class InterpolatorFunctionTest: InterpolateTestBase {
 
   object StaticTerp: ProtoInterpolator<Stmt, Stmt> {
     operator fun invoke(string: String): Stmt = Messages.throwPluginNotExecuted()
-    override fun interpolate(parts: () -> List<String>, params: () -> List<Stmt>): Stmt =
+    fun interpolate(parts: () -> List<String>, params: () -> List<Stmt>): Stmt =
       Stmt(parts(), params())
   }
 

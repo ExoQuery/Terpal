@@ -11,7 +11,7 @@ class InterpolateWithWrappersTest: InterpolateTestBase {
 
     object StaticTerp: InterpolatorWithWrapper<In, Out> {
       operator fun invoke(string: String): Out = Messages.throwPluginNotExecuted()
-      override fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
+      fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
         Out(parts(), params(), "Static")
 
       override fun wrap(value: String?): In = In("(String)" + value.toString())
@@ -26,7 +26,7 @@ class InterpolateWithWrappersTest: InterpolateTestBase {
 
     class InstanceTerp(val info: String): ProtoInterpolator<In, Out> {
       operator fun invoke(string: String): Out = Messages.throwPluginNotExecuted()
-      override fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
+      fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
         Out(parts(), params(), info)
     }
   }
