@@ -14,7 +14,6 @@ interface InterpolatorWithWrapper<T, R>: Interpolator<T, R> {
 }
 
 interface Interpolator<T, R> {
-  operator fun invoke(string: String): R = Messages.throwPluginNotExecuted()
   fun interpolate(parts: () -> List<String>, params: () -> List<T>): R
 
   companion object {

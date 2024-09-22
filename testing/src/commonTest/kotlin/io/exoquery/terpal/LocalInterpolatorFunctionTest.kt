@@ -6,6 +6,7 @@ class LocalInterpolatorFunctionTest: InterpolateTestBase {
   data class Stmt(val parts: List<String>, val params: List<Stmt>, val info: String)
 
   object StaticTerp: Interpolator<Stmt, Stmt> {
+    operator fun invoke(string: String): Stmt = Messages.throwPluginNotExecuted()
     override fun interpolate(parts: () -> List<String>, params: () -> List<Stmt>): Stmt =
       Stmt(parts(), params(), "local")
   }

@@ -8,6 +8,7 @@ class InterpolateNullable: InterpolateTestBase {
     data class Out(val parts: List<String>, val params: List<In?>, val info: String)
 
     object StaticTerp: Interpolator<In?, Out> {
+      operator fun invoke(string: String): Out = Messages.throwPluginNotExecuted()
       override fun interpolate(parts: () -> List<String>, params: () -> List<In?>): Out =
         Out(parts(), params(), "Static")
     }

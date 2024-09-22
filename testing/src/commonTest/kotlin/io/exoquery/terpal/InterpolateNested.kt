@@ -7,6 +7,7 @@ class InterpolateNested: InterpolateTestBase {
 
   companion object {
     object StaticTerp: Interpolator<Stmt, Stmt> {
+      operator fun invoke(string: String): Stmt = Messages.throwPluginNotExecuted()
       override fun interpolate(parts: () -> List<String>, params: () -> List<Stmt>): Stmt =
         Stmt(parts(), params())
     }
