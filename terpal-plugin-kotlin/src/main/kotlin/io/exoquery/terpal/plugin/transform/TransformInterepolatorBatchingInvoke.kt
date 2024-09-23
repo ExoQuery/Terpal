@@ -105,6 +105,10 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
         return expression
       }
 
+      // Create the factory that will wrap interpolated terms (if needed). There are some initialization steps in here but they are lazy.
+      // this class should not do anything if there is nothing to wrap.
+      val wrapper = WrapperMaker(ctx, caller, interpolateType)
+
       // Put together an invocation call that would need to be used for the wrapper function (if it exists)
       val wrapperFunctionInvoke = run {
         val isInterpolatorWithWrapper =
@@ -112,7 +116,7 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
             .find { it.isClassOf<InterpolatorBatchingWithWrapper<*>>() } != null
 
         if (isInterpolatorWithWrapper)
-          { expr: IrExpression -> wrapInterpolatedTerm(ctx, caller, expr, interpolateType) }
+          { expr: IrExpression -> wrapper.wrapInterpolatedTerm(expr) }
         else
           null
       }

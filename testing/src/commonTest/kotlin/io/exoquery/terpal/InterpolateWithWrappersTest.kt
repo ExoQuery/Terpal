@@ -36,8 +36,7 @@ class InterpolateWithWrappersTest: InterpolateTestBase {
         Out(parts(), params(), info)
     }
 
-
-
+    // Not doing extension functions for wrappers inside the companion object. This is defined on a package level.
     //fun StaticTerp.wrap(string: SomeOtherType?): In = In("(SomeOtherType)" + string?.value)
   }
 
