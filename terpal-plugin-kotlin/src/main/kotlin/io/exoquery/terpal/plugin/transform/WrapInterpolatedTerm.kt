@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.ir.builders.irBoolean
 import org.jetbrains.kotlin.ir.builders.irInt
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationParent
+import org.jetbrains.kotlin.ir.declarations.IrExternalPackageFragment
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
@@ -19,6 +20,7 @@ import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.isDenotable
 
 
 fun wrapWithExceptionHandler(ctx: BuilderContext, expr: IrExpression, parent: IrDeclarationParent, spliceTermNumber: Int, totalTerms: Int): IrExpression =
@@ -44,7 +46,11 @@ class WrapperMaker(val ctx: BuilderContext, val caller: IrExpression, val interp
   // Pre-compute several values (of the interpolator package, wrapper functions available etc... so that we don't need to do that over and over again)
   private val classAnnotationsOpt by lazy { caller.type.classOrFail.owner.annotations.find { it.isSubclassOf<WrapFailureMessage>() } }
   // Find the base package that the interpolator class is defined in. I.e. that will be the FqName of the file
-  private val parentPackageOpt by lazy { caller.type.classOrFail.owner.parentsCompat.toList().find { it is IrFile }?.kotlinFqName }
+  // (if it's coming from another package it will be IrExternalPackageFragment)
+  private val parentPackageOpt by lazy { caller.type.classOrFail.owner.parentsCompat.toList().find { it is IrFile || it is IrExternalPackageFragment }?.kotlinFqName ?: run {
+    ctx.logger.error("No valid package found in owner chain for: ${caller.type.classOrFail.owner.parentsCompat.toList().map { it.dumpKotlinLike() }.joinToString("/")}")
+    null
+  } }
   // Find all the `wrap(T)` defined as extensions of the interpolator class
   private val wrapExtensionFunctions by lazy {
     parentPackageOpt?.let { parentPackage ->
@@ -74,6 +80,8 @@ class WrapperMaker(val ctx: BuilderContext, val caller: IrExpression, val interp
         dispatchWrappers.find { it.isValidWrapFunction(interpolateType) && it.isWrapForExprType(expr) }?.let { dispatchFunction ->
           dispatchFunction to caller.callMethodTyped(dispatchFunction)().invoke(expr)
         } ?: run {
+          val subtypeWarnings = mutableListOf<String>()
+
           val possibleExtensionWrappers = wrapExtensionFunctions?.filter {
             val extension = it.owner.extensionReceiverParameter
             // e.g. the extension reciever of the wrapper class has to be the same or a subtype of the interpolator class
@@ -84,7 +92,7 @@ class WrapperMaker(val ctx: BuilderContext, val caller: IrExpression, val interp
             val useIt = extension != null && run {
               val isSubtype = caller.type.isSubtypeOfClass(extension.type.classOrFail)
               // If `wrap` functions were found but they could not be used because the caller type was wrong we should warn the user
-              if (!isSubtype) ctx.logger.warn("Found a wrap extension function in the package ${parentPackageOpt} but it's type ${caller.type.dumpKotlinLike()} is not a subtype of the extension reciever ${extension.type.dumpKotlinLike()}")
+              if (!isSubtype) subtypeWarnings.add("Found a wrap extension function in the package ${parentPackageOpt} but it's type ${caller.type.dumpKotlinLike()} is not a subtype of the extension reciever ${extension.type.dumpKotlinLike()}")
               isSubtype
             }
             useIt
@@ -94,7 +102,10 @@ class WrapperMaker(val ctx: BuilderContext, val caller: IrExpression, val interp
             // I.e. in this case use the caller as the extension reciever
             extensionFunction to callGlobalMethod(extensionFunction, caller)(expr)
           }
-        } ?: Messages.errorFailedToFindWrapper(ctx, caller, expr, interpolateType, annotationMessage)
+          ?: Messages.errorFailedToFindWrapper(ctx, caller, expr, interpolateType,
+            "(Also, no extension ${caller.type.classFqName ?: caller.type.dumpKotlinLike()}.wrap(${expr.type.classFqName ?: expr.type.dumpKotlinLike()}) function could be found in the package: ${parentPackageOpt}.)\n" +
+            annotationMessage + (if (subtypeWarnings.isNotEmpty()) "\n-----------------------------------" + subtypeWarnings.joinToString("\n") else ""))
+        }
 
 
       if (ctx.options.traceWrappers) ctx.logger.warn("==== Calling wrapper function `${invokeFunction.printInvokeFunctionSignature()}` on the expression `${invokeCall.dumpKotlinLike()}` typed as: `${expr.type.dumpKotlinLike()}`")
