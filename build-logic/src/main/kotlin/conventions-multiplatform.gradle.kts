@@ -69,6 +69,10 @@ kotlin {
     watchosArm32()
     watchosArm64()
 
+    watchosDeviceArm64()
+    tvosSimulatorArm64()
+    watchosSimulatorArm64()
+
     mingwX64()
   }
 
@@ -83,6 +87,10 @@ kotlin {
     watchosX64()
     watchosArm32()
     watchosArm64()
+
+    watchosDeviceArm64()
+    tvosSimulatorArm64()
+    watchosSimulatorArm64()
   }
   if (isWindows && isCI) {
     mingwX64()
