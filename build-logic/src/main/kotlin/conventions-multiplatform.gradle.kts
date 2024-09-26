@@ -9,6 +9,7 @@ plugins {
 }
 
 
+
 kotlin {
   val isCI = project.hasProperty("isCI")
   val platform =
@@ -20,13 +21,12 @@ kotlin {
   val isMac = platform == "mac"
   val isWindows = platform == "windows"
 
-  val isLocalMultiplatform = project.hasProperty("isLocalMultiplatform")
+  jvmToolchain(11)
 
   jvm {
-    jvmToolchain(11)
   }
 
-  if(isLocalMultiplatform && !isCI) {
+  if(!isCI) {
     js {
       browser()
       nodejs()
@@ -69,6 +69,10 @@ kotlin {
     watchosArm32()
     watchosArm64()
 
+    watchosDeviceArm64()
+    tvosSimulatorArm64()
+    watchosSimulatorArm64()
+
     mingwX64()
   }
 
@@ -83,6 +87,10 @@ kotlin {
     watchosX64()
     watchosArm32()
     watchosArm64()
+
+    watchosDeviceArm64()
+    tvosSimulatorArm64()
+    watchosSimulatorArm64()
   }
   if (isWindows && isCI) {
     mingwX64()
