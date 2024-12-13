@@ -97,6 +97,6 @@ fun IrSimpleFunctionSymbol.isInlinedFunction(interpolateOutputType: IrType) = ru
   this.safeName == "inlined" && this.owner.valueParameters.size == 1 && wrapReturnType.isSubtypeOfClass(interpolateOutputType.classOrFail)
 }
 
-// Compat function for kotlin 1.9.22 from 2.0.0 API
+// Compat function for kotlin 2.1.0 from 2.0.0 API
 val IrDeclaration.parentsCompat: Sequence<IrDeclarationParent>
   get() = generateSequence(parent) { (it as? IrDeclaration)?.parent }

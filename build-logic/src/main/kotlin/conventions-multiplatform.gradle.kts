@@ -20,10 +20,10 @@ kotlin {
   val isMac = platform == "mac"
   val isWindows = platform == "windows"
 
+  jvmToolchain(11)
   val isLocalMultiplatform = project.hasProperty("isLocalMultiplatform")
 
   jvm {
-    jvmToolchain(11)
   }
 
   if(isLocalMultiplatform && !isCI) {
@@ -46,9 +46,9 @@ kotlin {
     linuxX64()
     linuxArm64()
 
-    @OptIn(ExperimentalWasmDsl::class)
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
     wasmWasi()
-    @OptIn(ExperimentalWasmDsl::class)
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
     wasmJs()
 
     androidNativeX64()
