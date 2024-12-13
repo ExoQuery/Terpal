@@ -100,6 +100,21 @@ class InterpolateTopLevelBatchingTest: InterpolateTestBase {
   }
 
   @Test
+  fun multiPartStaticMultiline_WithTrim() {
+    val terp = StaticTerp { p: Person ->
+      """
+      one
+      foo_${In(p.first)}${In(p.last)}${In("${p.age}")}_bar
+      two
+      """.trimIndent()
+    }
+    terp.comps shouldBe
+      OutComps(listOf("\n      one\n      foo_", "", "", "_bar\n      two\n      "), "Static")
+    terp.params(Person("A", "B", 1)) shouldBe
+      listOf(In("A"), In("B"), In("1"))
+  }
+
+  @Test
   fun onePartTestInstance() {
     val terp = instanceTerp { p: Person -> "foo_${In(p.first)}_bar" }
     terp.comps shouldBe

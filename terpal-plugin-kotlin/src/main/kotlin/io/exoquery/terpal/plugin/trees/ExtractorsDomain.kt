@@ -76,9 +76,6 @@ object ExtractorsDomain {
             on(x).match(
               case(InterpolationString[Is()]).then { components ->
                 Components2(caller, components)
-              },
-              case(Ir.Call.NamedExtensionFunctionZeroArg[Is("kotlin.text.trimIndent"), InterpolationString[Is()]]).then { str, (components) ->
-                Components2(caller, components)
               }
             )
           } else {
@@ -103,6 +100,27 @@ object ExtractorsDomain {
         customPattern1(reciver) { expr: IrExpression ->
           on(expr).match(
             case(Ir.StringConcatenation[Is()]).then { components ->
+              Components1(components)
+            },
+            case(Ir.Call.NamedExtensionFunctionZeroArg[Is("kotlin.text.trimIndent"), Ir.StringConcatenation[Is()]]).then { str, (components) ->
+              Components1(components)
+            },
+            // it's a single string-const in this case
+            case(Ir.Const[Is()]).then { const ->
+              Components1(listOf(const))
+            }
+          )
+        }
+    }
+
+    object InterpolationStringPossibleTrim {
+      context (CompileLogger) operator fun <AP : Pattern<List<IrExpression>>> get(reciver: AP) =
+        customPattern1(reciver) { expr: IrExpression ->
+          on(expr).match(
+            case(Ir.StringConcatenation[Is()]).then { components ->
+              Components1(components)
+            },
+            case( Ir.StringConcatenation[Is()]).then { components ->
               Components1(components)
             },
             // it's a single string-const in this case
