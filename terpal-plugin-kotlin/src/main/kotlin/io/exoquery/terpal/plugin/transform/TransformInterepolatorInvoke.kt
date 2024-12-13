@@ -6,6 +6,7 @@ import io.decomat.match
 import io.decomat.on
 import io.exoquery.terpal.*
 import io.exoquery.terpal.plugin.classOrFail
+import io.exoquery.terpal.plugin.logging.CompileLogger
 import io.exoquery.terpal.plugin.printing.dumpSimple
 import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
 import io.exoquery.terpal.plugin.trees.isClassOf
@@ -14,10 +15,12 @@ import io.exoquery.terpal.plugin.trees.simpleTypeArgs
 import io.exoquery.terpal.plugin.trees.superTypesRecursive
 import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.builders.irString
+import org.jetbrains.kotlin.ir.declarations.IrDeclarationParent
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.ir.util.functions
@@ -103,60 +106,18 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
         return expression
       }
 
-      // Create the factory that will wrap interpolated terms (if needed). There are some initialization steps in here but they are lazy.
-      // this class should not do anything if there is nothing to wrap.
-      val wrapper = WrapperMaker(ctx, caller, interpolateType)
+      val parametersWrapper = ParametersWrapper(
+        interpolateTypeClass,
+        interpolateType,
+        ctx,
+        caller,
+        compileLogger,
+        currScope,
+        { type -> type.isSubclassOf<InterpolatorWithWrapper<*, *>>() }
+      )
 
-      // Put together an invocation call that would need to be used for the wrapper function (if it exists)
-      val wrapperFunctionInvoke = run {
-        if (caller.type.isSubclassOf<InterpolatorWithWrapper<*, *>>())
-          { expr: IrExpression, termIndex: Int -> wrapper.wrapInterpolatedTerm(expr) }
-        else
-          null
-      }
-
-      val params =
-        paramsRaw.withIndex().map { (i, comp) ->
-          val possiblyWrappedParam =
-            // If the component is already the correct type then just return it
-            if (comp.type.classOrFail.isSubtypeOfClass(interpolateTypeClass)) {
-              comp
-            }
-            else {
-              // If it is a string directly passed via the `inject` function then just return it
-              comp.match(
-                case(Call.InlineInjectionFunction[Is()]).then { inlineArg ->
-                  if (inlineArg is IrConst<*> && inlineArg.kind == IrConstKind.String) {
-                    val dol = '$'
-                    compileLogger.error(
-                      """Found a constant-string passed to an invocation of `inline(...)`. Do not do that.
-                        |If you want to actually use a static string here, use it directly e.g. "foo$dol{inline("bar")}baz" -> "foobarbaz"
-                        |If you want to use a static string here then write it into a variable first e.g. val bar = "bar"; "foo$dol{bar}baz"
-                      """.trimMargin()
-                    )
-                  }
-                  wrapper.wrapInlineTerm(inlineArg)
-                }
-              ) ?: run {
-                // Otherwise we need to try to get a wrapper function for the component
-                if (wrapperFunctionInvoke != null) {
-                  wrapperFunctionInvoke(comp, i)
-                } else {
-                  compileLogger.error(
-                    """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.dumpKotlinLike()} interpolator.
-                   |(Also no wrapper function has been defined because `${caller.type.classFqName}` is not a subtype of InterpolatorWithWrapper)
-                   |========= The faulty expression was: =========
-                   |${comp.dumpKotlinLike()}
-                """.trimMargin()
-                  )
-                  // Return the param so logic can continue. In reality a class-cast-exception would happen (because the "... $component..." is not the required type and there's not wrapper function).
-                  comp
-                }
-              }
-            }
-
-          wrapWithExceptionHandler(ctx, possiblyWrappedParam, currScope, i, paramsRaw.size)
-        }
+      // Wrap the parameters either in the correct wrapper-function from the Interpolator or an infix-wrapper or skip wrapping if it is not a subtype of InterpolatorWithWrapper
+      val params = parametersWrapper.wrapParams(paramsRaw)
 
       val lifter = makeLifter()
       val partsLifted =
@@ -192,5 +153,73 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
 
       callOutput
     }
+  }
+}
+
+class ParametersWrapper(
+  private val interpolateTypeClass: IrClassSymbol,
+  private val interpolateType: IrType,
+  private val ctx: BuilderContext,
+  private val caller: IrExpression,
+  private val compileLogger: CompileLogger,
+  private val currScope: IrDeclarationParent,
+  private val isInterpolatorCorrect: (IrType) -> Boolean
+) {
+  fun wrapParams(params: List<IrExpression>) =
+    params.withIndex().map { (i, comp) ->
+      wrapParameter(comp, i, params.size)
+    }
+
+  // Create the factory that will wrap interpolated terms (if needed). There are some initialization steps in here but they are lazy.
+  // this class should not do anything if there is nothing to wrap.
+  private val wrapper = WrapperMaker(ctx, caller, interpolateType)
+
+  // Put together an invocation call that would need to be used for the wrapper function (if it exists)
+  private val wrapperFunctionInvoke: ((IrExpression, Int) -> IrExpression)? = run {
+    if (isInterpolatorCorrect(caller.type))
+      { expr: IrExpression, termIndex: Int -> wrapper.wrapInterpolatedTerm(expr) }
+    else
+      null
+  }
+
+  private fun wrapParameter(comp: IrExpression, i: Int, totalParams: Int): IrExpression {
+    val possiblyWrappedParam =
+      // If the component is already the correct type then just return it
+      if (comp.type.classOrFail.isSubtypeOfClass(interpolateTypeClass)) {
+        comp
+      } else {
+        // If it is a string directly passed via the `inject` function then just return it
+        comp.match(
+          case(Call.InlineInjectionFunction[Is()]).then { inlineArg ->
+            if (inlineArg is IrConst<*> && inlineArg.kind == IrConstKind.String) {
+              val dol = '$'
+              compileLogger.error(
+                """Found a constant-string passed to an invocation of `inline(...)`. Do not do that.
+                        |If you want to actually use a static string here, use it directly e.g. "foo$dol{inline("bar")}baz" -> "foobarbaz"
+                        |If you want to use a static string here then write it into a variable first e.g. val bar = "bar"; "foo$dol{bar}baz"
+                      """.trimMargin()
+              )
+            }
+            wrapper.wrapInlineTerm(inlineArg)
+          }
+        ) ?: run {
+          // Otherwise we need to try to get a wrapper function for the component
+          if (wrapperFunctionInvoke != null) {
+            wrapperFunctionInvoke.invoke(comp, i)
+          } else {
+            compileLogger.error(
+              """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.dumpKotlinLike()} interpolator.
+                   |(Also no wrapper function has been defined because `${caller.type.classFqName}` is not a subtype of InterpolatorWithWrapper)
+                   |========= The faulty expression was: =========
+                   |${comp.dumpKotlinLike()}
+                """.trimMargin()
+            )
+            // Return the param so logic can continue. In reality a class-cast-exception would happen (because the "... $component..." is not the required type and there's not wrapper function).
+            comp
+          }
+        }
+      }
+
+    return wrapWithExceptionHandler(ctx, possiblyWrappedParam, currScope, i, totalParams)
   }
 }

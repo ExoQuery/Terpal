@@ -105,43 +105,17 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
         return expression
       }
 
-      // Create the factory that will wrap interpolated terms (if needed). There are some initialization steps in here but they are lazy.
-      // this class should not do anything if there is nothing to wrap.
-      val wrapper = WrapperMaker(ctx, caller, interpolateType)
-
-      // Put together an invocation call that would need to be used for the wrapper function (if it exists)
-      val wrapperFunctionInvoke = run {
-        val isInterpolatorWithWrapper =
-          caller.type.superTypesRecursive()
-            .find { it.isClassOf<InterpolatorBatchingWithWrapper<*>>() } != null
-
-        if (isInterpolatorWithWrapper)
-          { expr: IrExpression -> wrapper.wrapInterpolatedTerm(expr) }
-        else
-          null
-      }
-
-      val params =
-        paramsRaw.withIndex().map { (i, comp) ->
-          val possiblyWrappedTerm =
-            if (comp.type.classOrFail.isSubtypeOfClass(interpolateTypeClass)) {
-              comp
-            } else if (wrapperFunctionInvoke != null) {
-              wrapperFunctionInvoke(comp)
-            } else {
-              compileLogger.error(
-                """|"The #${i} interpolated block had a type of `${comp.type.dumpKotlinLike()}` (${comp.type.classFqName}) but a type `${interpolateType.dumpKotlinLike()}` (${interpolateType.classFqName}) was expected by the ${caller.type.dumpKotlinLike()} interpolator.
-                   |(Also no wrapper function has been defined because `${caller.type.classFqName}` is not a subtype of InterpolatorWithWrapper)
-                   |========= The faulty expression was: =========
-                   |${comp.dumpKotlinLike()}
-                """.trimMargin()
-              )
-              // Return the param so logic can continue. In reality a class-cast-exception would happen (because the "... $component..." is not the required type and there's not wrapper function).
-              comp
-            }
-
-          wrapWithExceptionHandler(ctx, possiblyWrappedTerm, currScope, i, paramsRaw.size)
-        }
+      // Wrap the parameters either in the correct wrapper-function from the Interpolator or an infix-wrapper or skip wrapping if it is not a subtype of InterpolatorWithWrapper
+      val parametersWrapper = ParametersWrapper(
+        interpolateTypeClass,
+        interpolateType,
+        ctx,
+        caller,
+        compileLogger,
+        currScope,
+        { type -> type.isSubclassOf<InterpolatorBatchingWithWrapper<*>>() }
+      )
+      val params = parametersWrapper.wrapParams(paramsRaw)
 
       val lifter = makeLifter()
       val partsLifted =

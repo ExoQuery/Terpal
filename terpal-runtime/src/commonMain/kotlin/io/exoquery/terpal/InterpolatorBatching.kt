@@ -4,8 +4,7 @@ import kotlin.reflect.KClass
 
 
 interface InterpolatorBatchingWithWrapper<T>: InterpolatorBatching<T> {
-  fun <V> wrap(value: V, cls: KClass<*>): T
-
+  fun inlined(value: String?): T
   fun wrap(value: String?): T
   fun wrap(value: Int?): T
   fun wrap(value: Long?): T
