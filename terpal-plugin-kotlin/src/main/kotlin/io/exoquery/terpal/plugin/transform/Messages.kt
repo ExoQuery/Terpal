@@ -49,4 +49,15 @@ else ""
     abortTransform()
   }
 
+  fun errorFailedToInterpolator(ctx: BuilderContext, caller: IrExpression, expr: IrExpression): Nothing {
+    val error =
+"""
+The interpolator ${caller.type.dumpKotlinLike()} does not have a `inlined(String)` function so the following expression is invalid:
+${expr.dumpKotlinLike()}
+""".trimLeft()
+
+    ctx.logger.error(error)
+    abortTransform()
+  }
+
 }

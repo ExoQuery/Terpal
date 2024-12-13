@@ -17,3 +17,6 @@ annotation class StrictType
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.BINARY)
 annotation class InterpolatorBackend
+
+@RequiresOptIn("Use the `inline` function in an interpolator can possibly introduce the possibility of SQL injection errors. USE WITH CAUTION.", level = RequiresOptIn.Level.ERROR)
+annotation class PotentiallyDangerous

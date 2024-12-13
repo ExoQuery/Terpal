@@ -20,6 +20,7 @@ class InterpolateWithWrappersTest: InterpolateTestBase {
       fun interpolate(parts: () -> List<String>, params: () -> List<In>): Out =
         Out(parts(), params(), "Static")
 
+      override fun inlined(value: String?): In = In("(String-inline)" + value.toString())
       override fun wrap(value: String?): In = In("(String)" + value.toString())
       override fun wrap(value: Int?): In = In("(Int)" + value.toString())
       override fun wrap(value: Long?): In = In("(Long)" + value.toString())
@@ -71,6 +72,14 @@ class InterpolateWithWrappersTest: InterpolateTestBase {
   }
 
   fun <T> id(value: T): T = value
+
+  @PotentiallyDangerous
+  @Test
+  fun simpleStaticTest_WithInline() {
+    val middle = "str"
+    StaticTerp("foo_${A}${inline(middle)}${C}") shouldBe
+      Out(listOf("foo_", "", "", ""), listOf(A, In("(String-inline)str"), C), "Static")
+  }
 
   @Test
   fun simpleStaticTest2() {

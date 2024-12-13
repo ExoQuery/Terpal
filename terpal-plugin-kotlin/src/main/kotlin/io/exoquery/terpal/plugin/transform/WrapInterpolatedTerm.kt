@@ -112,6 +112,23 @@ class WrapperMaker(val ctx: BuilderContext, val caller: IrExpression, val interp
       return invokeCall
     }
 
+  fun wrapInlineTerm(expr: IrExpression): IrExpression =
+    with(ctx) {
+
+      // Find all the `wrap(T)` functions in Interpolator class
+      val dispatchWrappers = caller.type.classOrFail.functions
+
+      val (invokeFunction, invokeCall) =
+        // If there is a dispatch `wrap` function (i.e. defined directly in the interpolator class) then try to invoke that
+        dispatchWrappers.find { it.isInlinedFunction(interpolateType) }?.let { dispatchFunction ->
+          dispatchFunction to caller.callMethodTyped(dispatchFunction)().invoke(expr)
+        } ?:
+          Messages.errorFailedToInterpolator(ctx, caller, expr)
+
+      if (ctx.options.traceWrappers) ctx.logger.warn("==== Calling `inline` function `${invokeFunction.printInvokeFunctionSignature()}` on the expression `${invokeCall.dumpKotlinLike()}` typed as: `${expr.type.dumpKotlinLike()}`")
+      return invokeCall
+    }
+
 }
 
 fun IrSimpleFunctionSymbol.printInvokeFunctionSignature() =

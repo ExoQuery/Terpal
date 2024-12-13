@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.util.capitalizeDecapitalize.toLowerCaseAsciiOnly
 import org.jetbrains.kotlin.utils.addIfNotNull
 import org.jetbrains.kotlin.utils.addToStdlib.ifTrue
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
+import org.jetbrains.kotlin.ir.util.kotlinFqName
 
 fun IrElement.render() =
   accept(RenderIrElementVisitorSimple(), null)
@@ -86,7 +87,7 @@ class RenderIrElementVisitorSimple(normalizeNames: Boolean = false, private val 
 
     override fun visitFunction(declaration: IrFunction, data: Nothing?) =
       buildTrimEnd {
-        append("Fun(${declaration.symbol.safeName.toString()})", "")
+        append("Fun(${declaration.symbol.owner.kotlinFqName})", "")
       }
 
     private fun StringBuilder.renderTypeParameters(declaration: IrTypeParametersContainer) {

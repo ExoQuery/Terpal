@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.types.*
+import org.jetbrains.kotlin.ir.util.kotlinFqName
 
 val IrCall.simpleValueArgsCount get() = this.valueArgumentsCount - this.contextReceiversCount
 val IrCall.simpleValueArgs get() =
@@ -63,6 +64,18 @@ object Ir {
           val reciever = it.extensionReceiver ?: it.dispatchReceiver
           if (reciever == null && it.simpleValueArgs.size == 1 && it.simpleValueArgs.all { it != null }) {
             Components1(it.simpleValueArgs.first())
+          } else {
+            null
+          }
+        }
+    }
+
+    object NamedExtensionFunctionZeroArg {
+      context (CompileLogger) operator fun <AP : Pattern<String>, BP : Pattern<E>, E: IrExpression> get(name: AP, reciever: BP): Pattern2<AP, BP, String, E, IrCall> =
+        customPattern2(name, reciever) { it: IrCall ->
+          val reciever = it.extensionReceiver
+          if (reciever != null && it.simpleValueArgs.size == 0) {
+            Components2(it.symbol.owner.kotlinFqName.asString(), reciever)
           } else {
             null
           }

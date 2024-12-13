@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.isSubtypeOfClass
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.ir.util.isObject
+import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.ir.util.superTypes
 
 inline fun <reified T> IrExpression.isSubclassOf(): Boolean {
@@ -46,6 +47,20 @@ inline fun <reified T> IrCall.reciverIs(methodName: String) =
 
 object ExtractorsDomain {
   object Call {
+    object InlineInjectionFunction {
+      fun matchesMethod(it: IrCall): Boolean =
+        it.symbol.owner.kotlinFqName.asString() == "io.exoquery.terpal.inline"
+
+      operator fun <AP: Pattern<IrExpression>> get(reciever: AP) =
+        customPattern1(reciever) { call: IrCall ->
+          if (matchesMethod(call)) {
+            call.simpleValueArgs.first().let { firstArg -> Components1(firstArg) }
+          } else {
+            null
+          }
+        }
+    }
+
     object InterpolateInvoke {
       context (CompileLogger) fun matchesMethod(it: IrCall): Boolean {
         // if (it.symbol.safeName == "invoke")
@@ -61,11 +76,25 @@ object ExtractorsDomain {
             on(x).match(
               case(InterpolationString[Is()]).then { components ->
                 Components2(caller, components)
+              },
+              case(Ir.Call.NamedExtensionFunctionZeroArg[Is("kotlin.text.trimIndent"), InterpolationString[Is()]]).then { str, (components) ->
+                Components2(caller, components)
               }
             )
           } else {
             null
           }
+        }
+    }
+
+    object OptionalTrimMargin {
+      context (CompileLogger) operator fun <AP : Pattern<List<IrExpression>>> get(reciver: AP) =
+        customPattern1(reciver) { expr: IrExpression ->
+          expr.match(
+            case(Ir.Call.FunctionUntethered1[Is()]).then { components ->
+              Components1(components)
+            }
+          )
         }
     }
 

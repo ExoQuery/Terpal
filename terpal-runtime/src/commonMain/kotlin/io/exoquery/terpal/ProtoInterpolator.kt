@@ -1,6 +1,7 @@
 package io.exoquery.terpal
 
 interface InterpolatorWithWrapper<T, R>: ProtoInterpolator<T, R> {
+  fun inlined(value: String?): T
   fun wrap(value: String?): T
   fun wrap(value: Int?): T
   fun wrap(value: Long?): T
@@ -10,6 +11,12 @@ interface InterpolatorWithWrapper<T, R>: ProtoInterpolator<T, R> {
   fun wrap(value: Double?): T
   fun wrap(value: Boolean?): T
 }
+
+// TODO also detect static constants in SQL(...) and warn about them
+
+@PotentiallyDangerous
+fun inline(value: String): String =
+  throw IllegalStateException("This function can only be used inside of a Terpal interpolator invocation.")
 
 interface Interpolator<T, R>: ProtoInterpolator<T, R> {
   operator fun invoke(string: String): R = Messages.throwPluginNotExecuted()

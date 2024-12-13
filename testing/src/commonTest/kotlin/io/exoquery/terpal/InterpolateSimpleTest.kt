@@ -40,6 +40,28 @@ class InterpolateSimpleTest: InterpolateTestBase {
   }
 
   @Test
+  fun simpleMultilineTest() {
+    StaticTerp(
+      """
+      one
+      foo_${A}${B}${C}_baz
+      two
+      """) shouldBe
+      Out(listOf("\n      one\n      foo_", "", "", "_baz\n      two\n      "), listOf(A, B, C), "Static")
+  }
+
+  @Test
+  fun simpleMultilineTest_Trim() {
+    StaticTerp(
+      """
+      one
+      foo_${A}${B}${C}_baz
+      two
+      """.trimIndent()) shouldBe
+      Out(listOf("\n      one\n      foo_", "", "", "_baz\n      two\n      "), listOf(A, B, C), "Static")
+  }
+
+  @Test
   fun exceptionTest() {
     val ex = assertFailsWith<InterpolationException> {
       StaticTerp("foo_${A}${E}${C}_baz")

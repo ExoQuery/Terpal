@@ -2,6 +2,7 @@ package io.exoquery.terpal.plugin
 
 import io.decomat.fail.fail
 import io.exoquery.terpal.plugin.transform.BuilderContext
+import io.exoquery.terpal.plugin.trees.isSubclassOf
 import org.jetbrains.kotlin.backend.jvm.ir.eraseTypeParameters
 import org.jetbrains.kotlin.backend.jvm.ir.getKtFile
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocationWithRange
@@ -89,6 +90,11 @@ val IrType.classOrFail get() = this.classOrNull ?: fail("Type ${this.dumpKotlinL
 fun IrSimpleFunctionSymbol.isValidWrapFunction(interpolateOutputType: IrType) = run {
   val wrapReturnType = this.owner.returnType.eraseTypeParameters()
   this.safeName == "wrap" && this.owner.valueParameters.size == 1 && wrapReturnType.isSubtypeOfClass(interpolateOutputType.classOrFail)
+}
+
+fun IrSimpleFunctionSymbol.isInlinedFunction(interpolateOutputType: IrType) = run {
+  val wrapReturnType = this.owner.returnType.eraseTypeParameters()
+  this.safeName == "inlined" && this.owner.valueParameters.size == 1 && wrapReturnType.isSubtypeOfClass(interpolateOutputType.classOrFail)
 }
 
 // Compat function for kotlin 1.9.22 from 2.0.0 API
