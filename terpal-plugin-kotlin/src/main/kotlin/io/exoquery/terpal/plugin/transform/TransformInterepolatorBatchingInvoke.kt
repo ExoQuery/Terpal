@@ -91,7 +91,7 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
       }
 
     val (parts, paramsRaw) =
-      UnzipPartsParams<IrExpression>({ it.isSubclassOf<String>() && it is IrConst<*> && it.kind == IrConstKind.String }, concatStringExprs, { ctx.builder.irString("") })
+      UnzipPartsParams<IrExpression>({ it.isSubclassOf<String>() && it is IrConst && it.kind == IrConstKind.String }, concatStringExprs, { ctx.builder.irString("") })
         .invoke(comps)
 
     return with(ctx) {

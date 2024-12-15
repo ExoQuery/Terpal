@@ -12,10 +12,10 @@ import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.kotlinFqName
 
-val IrCall.simpleValueArgsCount get() = this.valueArgumentsCount - this.contextReceiversCount
+val IrCall.simpleValueArgsCount get() = this.valueArgumentsCount - this.symbol.owner.contextReceiverParametersCount
 val IrCall.simpleValueArgs get() =
-  if (this.contextReceiversCount > 0)
-    this.valueArguments.drop(this.contextReceiversCount)
+  if (this.symbol.owner.contextReceiverParametersCount > 0)
+    this.valueArguments.drop(this.symbol.owner.contextReceiverParametersCount)
   else
     this.valueArguments
 
@@ -50,8 +50,8 @@ object Ir {
   }
 
   object Const {
-    operator fun get(value: Pattern0<IrConst<*>>) =
-      customPattern1(value) { it: IrConst<*> ->
+    operator fun get(value: Pattern0<IrConst>) =
+      customPattern1(value) { it: IrConst ->
         Components1(it)
       }
   }

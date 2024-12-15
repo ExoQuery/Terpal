@@ -64,7 +64,7 @@ class WrapperMaker(val ctx: BuilderContext, val caller: IrExpression, val interp
         if (classAnnotationsOpt != null) {
           val arg = classAnnotationsOpt!!.valueArguments[0]
           when {
-            arg is IrConst<*> && arg.kind == IrConstKind.String -> arg.value as String
+            arg is IrConst && arg.kind == IrConstKind.String -> arg.value as String
             else -> {
               ctx.logger.warn("Annotation WrapFailureMessage must have a Static-constant string argument but found: ${arg?.dumpKotlinLike()}. Will not be able to use this user-defined message in wrapping errors.")
               ""

@@ -9,7 +9,6 @@ import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.ir.util.functions
-import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.asSimpleType
 
 fun String.trimLeft() = this.dropWhile { it.isWhitespace() }
 

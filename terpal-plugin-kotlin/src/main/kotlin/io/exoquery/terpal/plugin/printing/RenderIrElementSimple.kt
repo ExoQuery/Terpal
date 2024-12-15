@@ -10,7 +10,6 @@ import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.*
-import org.jetbrains.kotlin.ir.types.impl.originalKotlinType
 import org.jetbrains.kotlin.ir.util.parentAsClass
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
 import org.jetbrains.kotlin.renderer.DescriptorRenderer
@@ -279,7 +278,7 @@ class RenderIrElementVisitorSimple(normalizeNames: Boolean = false, private val 
   override fun visitExpression(expression: IrExpression, data: Nothing?): String =
     "[IrExpression] ${expression::class.java.simpleName} type=${expression.type.render()}"
 
-  override fun visitConst(expression: IrConst<*>, data: Nothing?): String =
+  override fun visitConst(expression: IrConst, data: Nothing?): String =
     "[IrConst] ${expression.value?.escapeIfRequired()}: ${expression.type.render()}"
 
   private fun Any.escapeIfRequired() =
@@ -775,7 +774,7 @@ private fun StringBuilder.renderAsAnnotationArgument(irElement: IrElement?, rend
   when (irElement) {
     null -> append("<null>")
     is IrConstructorCall -> renderAsAnnotation(irElement, renderer, verboseErrorTypes)
-    is IrConst<*> -> {
+    is IrConst -> {
       append('\'')
       append(irElement.value.toString())
       append('\'')

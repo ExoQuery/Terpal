@@ -214,7 +214,7 @@ object ExtractorsDomain {
                   (firstTypeArg to false)
 
                 // When the 2nd argument is specified return its value
-                arg2 is IrConst<*> && arg2.value is Boolean ->
+                arg2 is IrConst && arg2.value is Boolean ->
                   (firstTypeArg to arg2.value as Boolean)
 
                 else -> {

@@ -92,7 +92,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
       }
 
     val (parts, paramsRaw) =
-      UnzipPartsParams<IrExpression>({ it.isSubclassOf<String>() && it is IrConst<*> && it.kind == IrConstKind.String }, concatStringExprs, { ctx.builder.irString("") })
+      UnzipPartsParams<IrExpression>({ it.isSubclassOf<String>() && it is IrConst && it.kind == IrConstKind.String }, concatStringExprs, { ctx.builder.irString("") })
         .invoke(comps)
 
     return with(ctx) {
@@ -191,7 +191,7 @@ class ParametersWrapper(
         // If it is a string directly passed via the `inject` function then just return it
         comp.match(
           case(Call.InlineInjectionFunction[Is()]).then { inlineArg ->
-            if (inlineArg is IrConst<*> && inlineArg.kind == IrConstKind.String) {
+            if (inlineArg is IrConst && inlineArg.kind == IrConstKind.String) {
               val dol = '$'
               compileLogger.error(
                 """Found a constant-string passed to an invocation of `inline(...)`. Do not do that.
