@@ -1,12 +1,12 @@
 plugins {
-  kotlin("multiplatform") version "2.1.0"
+  kotlin("multiplatform") version "2.1.20"
 
   id("maven-publish")
   id("conventions-multiplatform")
   id("publish")
 
   signing
-  id("com.google.devtools.ksp") version "2.1.0-1.0.29"
+  id("com.google.devtools.ksp") version "2.1.20-1.0.32"
 }
 
 kotlin {

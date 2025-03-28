@@ -3,30 +3,24 @@ package io.exoquery.terpal.plugin.transform
 import io.decomat.Is
 import io.decomat.case
 import io.decomat.on
-import io.exoquery.terpal.*
-import io.exoquery.terpal.plugin.classOrFail
+import io.exoquery.terpal.InterpolatorBatching
+import io.exoquery.terpal.InterpolatorBatchingWithWrapper
+import io.exoquery.terpal.UnzipPartsParams
+import io.exoquery.terpal.parseError
 import io.exoquery.terpal.plugin.printing.dumpSimple
 import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
 import io.exoquery.terpal.plugin.trees.isClassOf
 import io.exoquery.terpal.plugin.trees.isSubclassOf
 import io.exoquery.terpal.plugin.trees.simpleTypeArgs
 import io.exoquery.terpal.plugin.trees.superTypesRecursive
-import org.jetbrains.kotlin.backend.jvm.ir.kClassReference
-import org.jetbrains.kotlin.codegen.Callable
-import org.jetbrains.kotlin.ir.builders.irFunctionReference
-import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.types.*
-import org.jetbrains.kotlin.ir.util.IdSignature
+import org.jetbrains.kotlin.ir.types.classOrNull
+import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
-import org.jetbrains.kotlin.ir.util.referenceFunction
-import org.jetbrains.kotlin.name.CallableId
-import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.name.StandardClassIds
 
 class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
   private val compileLogger = ctx.logger

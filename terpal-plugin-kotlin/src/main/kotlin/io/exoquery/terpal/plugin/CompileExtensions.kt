@@ -2,8 +2,6 @@ package io.exoquery.terpal.plugin
 
 import io.decomat.fail.fail
 import io.exoquery.terpal.plugin.transform.BuilderContext
-import io.exoquery.terpal.plugin.trees.isSubclassOf
-import org.jetbrains.kotlin.backend.jvm.ir.eraseTypeParameters
 import org.jetbrains.kotlin.backend.jvm.ir.getKtFile
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocationWithRange
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
@@ -18,10 +16,7 @@ import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classOrNull
-import org.jetbrains.kotlin.ir.types.isSubtypeOfClass
 import org.jetbrains.kotlin.ir.util.*
-import org.jetbrains.kotlin.name.ClassId
-import org.jetbrains.kotlin.name.FqName
 import kotlin.reflect.KClass
 
 val KClass<*>.qualifiedNameForce get(): String =
@@ -97,6 +92,6 @@ fun IrSimpleFunctionSymbol.isInlinedFunction(interpolateOutputType: IrType) = ru
   this.safeName == "inlined" && this.owner.valueParameters.size == 1 && wrapReturnType.isSubtypeOfClass(interpolateOutputType.classOrFail)
 }
 
-// Compat function for kotlin 2.1.0 from 2.0.0 API
+// Compat function for kotlin 2.1.20 from 2.0.0 API
 val IrDeclaration.parentsCompat: Sequence<IrDeclarationParent>
   get() = generateSequence(parent) { (it as? IrDeclaration)?.parent }

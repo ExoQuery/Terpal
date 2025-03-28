@@ -3,7 +3,6 @@ package io.exoquery.terpal.plugin.transform
 import io.exoquery.terpal.WrapFailureMessage
 import io.exoquery.terpal.plugin.*
 import io.exoquery.terpal.plugin.classOrFail
-import io.exoquery.terpal.plugin.isValidWrapFunction
 import io.exoquery.terpal.plugin.trees.isSubclassOf
 import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.builders.irBoolean
@@ -16,11 +15,23 @@ import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
+import org.jetbrains.kotlin.ir.util.isSubtypeOfClass
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.isDenotable
+import kotlin.Int
+import kotlin.String
+import kotlin.collections.find
+import kotlin.getValue
+import kotlin.lazy
+import kotlin.let
+import kotlin.run
+import kotlin.sequences.find
+import kotlin.text.replace
+import kotlin.text.trim
+import kotlin.to
+import kotlin.with
 
 
 fun wrapWithExceptionHandler(ctx: BuilderContext, expr: IrExpression, parent: IrDeclarationParent, spliceTermNumber: Int, totalTerms: Int): IrExpression =
