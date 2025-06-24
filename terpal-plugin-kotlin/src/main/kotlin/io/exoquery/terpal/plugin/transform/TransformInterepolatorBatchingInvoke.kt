@@ -7,7 +7,7 @@ import io.exoquery.terpal.InterpolatorBatching
 import io.exoquery.terpal.InterpolatorBatchingWithWrapper
 import io.exoquery.terpal.UnzipPartsParams
 import io.exoquery.terpal.parseError
-import io.exoquery.terpal.plugin.printing.dumpSimple
+import io.exoquery.terpal.plugin.regularParams
 import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
 import io.exoquery.terpal.plugin.trees.isClassOf
 import io.exoquery.terpal.plugin.trees.isSubclassOf
@@ -20,6 +20,7 @@ import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.defaultType
+import org.jetbrains.kotlin.ir.util.dump
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 
 class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
@@ -51,7 +52,7 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
            |==== However, the following was found: ====
            |${expression.dumpKotlinLike()}
            |======= IR: =======
-           |${expression.dumpSimple()}"
+           |${expression.dump()}"
         """.trimMargin()
         )
       }
@@ -125,7 +126,7 @@ class TransformInterepolatorBatchingInvoke(val ctx: BuilderContext) {
         with (lifter) { params.liftExprTyped(interpolateType) }
 
       val partsLiftedFun = createLambda0(partsLifted, currScope)
-      val paramsLiftedFun = createLambdaN(paramsLifted, funExpr.function.valueParameters, currScope)
+      val paramsLiftedFun = createLambdaN(paramsLifted, funExpr.function.regularParams, currScope)
 
 
 

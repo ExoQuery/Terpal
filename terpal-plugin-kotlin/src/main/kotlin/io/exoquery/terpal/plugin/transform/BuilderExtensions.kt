@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.name.SpecialNames
+import kotlin.collections.plus
 
 class CallGlobalMethod(private val invoke: IrSimpleFunctionSymbol, private val tpe: IrType?, private val extReciever: IrExpression?) {
   companion object {
@@ -35,12 +36,10 @@ class CallGlobalMethod(private val invoke: IrSimpleFunctionSymbol, private val t
   context(BuilderContext) operator fun invoke(vararg args: IrExpression): IrExpression {
     return with (builder) {
       val invocation = if (tpe != null) irCall(invoke, tpe) else irCall(invoke)
+      val allArgs = (extReciever?.let { listOf(it) } ?: emptyList()) + args.toList()
       invocation.apply {
-        if (extReciever != null) {
-          extensionReceiver = extReciever
-        }
-        for ((index, expr) in args.withIndex()) {
-          putValueArgument(index, expr)
+        for ((index, expr) in allArgs.withIndex()) {
+          arguments[index] = expr
         }
       }
     }
@@ -61,10 +60,10 @@ class CallMethod(private val host: IrExpression, private val lambdaInvoke: IrSim
   context(BuilderContext) operator fun invoke(vararg args: IrExpression): IrExpression {
     return with (builder) {
       val invocation = if (tpe != null) irCall(lambdaInvoke, tpe) else irCall(lambdaInvoke)
+      val allArgs = listOf(host) + args.toList()
       invocation.apply {
-        dispatchReceiver = host
-        for ((index, expr) in args.withIndex()) {
-          putValueArgument(index, expr)
+        for ((index, expr) in allArgs.withIndex()) {
+          arguments[index] = expr
         }
       }
     }
@@ -86,7 +85,7 @@ class CallMethodTypedArgs(private val host: IrExpression, private val function: 
     CallMethodTyped(host, function, types.toList(), tpe)
 }
 
-class CallMethodTyped(private val host: IrExpression, private val function: IrSimpleFunctionSymbol, private val types: List<IrType>, private val tpe: IrType?) {
+class CallMethodTyped(private val dispatchArg: IrExpression, private val function: IrSimpleFunctionSymbol, private val types: List<IrType>, private val tpe: IrType?) {
   companion object {
     operator fun invoke(host: IrExpression, functionName: String, types: List<IrType>, tpe: IrType?): CallMethodTyped =
       CallMethodTyped(host, host.type.findMethodOrFail(functionName), types, tpe)
@@ -96,12 +95,9 @@ class CallMethodTyped(private val host: IrExpression, private val function: IrSi
     return with (builder) {
       val invocation = if (tpe != null) irCall(function, tpe) else irCall(function)
       invocation.apply {
-        dispatchReceiver = host
-        for ((index, tpe) in types.withIndex()) {
-          putTypeArgument(index, tpe)
-        }
-        for ((index, expr) in args.withIndex()) {
-          putValueArgument(index, expr)
+        val allArgs = listOf(dispatchArg) + args.toList()
+        for ((index, expr) in allArgs.withIndex()) {
+          arguments[index] = expr
         }
       }
     }
@@ -142,7 +138,7 @@ context (BuilderContext) fun createLambdaClosure(functionBody: IrExpression, par
       parent = functionParent
 
       if (params.size > 0) {
-        valueParameters = params
+        parameters = params
       }
       /*
       VERY important here to create a new irBuilder from the symbol i.e. createIrBuilder because

@@ -10,6 +10,8 @@ import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrFileEntry
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.expressions.IrCall
+import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -18,6 +20,31 @@ import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.util.*
 import kotlin.reflect.KClass
+
+val IrCall.extensionArg get() = run {
+  val firstExtArg = this.symbol.owner.parameters.firstOrNull { it.kind == IrParameterKind.ExtensionReceiver }
+  firstExtArg?.let { this.arguments[it] }
+}
+
+val IrCall.dispatchArg get() = run {
+  val firstDispatchArg = this.symbol.owner.parameters.firstOrNull { it.kind == IrParameterKind.DispatchReceiver }
+  firstDispatchArg?.let { this.arguments[it] }
+}
+
+val IrFunction.extensionParam get() =
+  parameters.firstOrNull { it.kind == IrParameterKind.ExtensionReceiver }
+
+val IrFunction.regularParams get() = this.parameters.filter { it.kind == IrParameterKind.Regular }
+val IrCall.regularArgs get() = run {
+  val params = this.symbol.owner.regularParams
+  val args = this.arguments
+  params.filter { param -> param.kind == IrParameterKind.Regular }.map { args[it] }
+}
+val IrConstructorCall.regularArgs get() = run {
+  val params = this.symbol.owner.regularParams
+  val args = this.arguments
+  params.filter { param -> param.kind == IrParameterKind.Regular }.map { args[it] }
+}
 
 val KClass<*>.qualifiedNameForce get(): String =
   if (this.qualifiedName == null) fail("Qualified name of the class ${this} was null")
@@ -34,7 +61,7 @@ fun IrClassSymbol.isDataClass() = this.owner.isData
 
 fun IrClassSymbol.dataClassProperties() =
   if (this.isDataClass()) {
-    val constructorParams = this.constructors.firstOrNull()?.owner?.valueParameters?.map { it.name }?.toSet() ?: setOf()
+    val constructorParams = this.constructors.firstOrNull()?.owner?.regularParams?.map { it.name }?.toSet() ?: setOf()
     this.owner.properties
       .filter { constructorParams.contains(it.name) && it.getter != null }
       .map { it.name.toString() to it.getter!!.returnType }
@@ -84,12 +111,12 @@ val IrType.classOrFail get() = this.classOrNull ?: fail("Type ${this.dumpKotlinL
 
 fun IrSimpleFunctionSymbol.isValidWrapFunction(interpolateOutputType: IrType) = run {
   val wrapReturnType = this.owner.returnType.eraseTypeParameters()
-  this.safeName == "wrap" && this.owner.valueParameters.size == 1 && wrapReturnType.isSubtypeOfClass(interpolateOutputType.classOrFail)
+  this.safeName == "wrap" && this.owner.regularParams.size == 1 && wrapReturnType.isSubtypeOfClass(interpolateOutputType.classOrFail)
 }
 
 fun IrSimpleFunctionSymbol.isInlinedFunction(interpolateOutputType: IrType) = run {
   val wrapReturnType = this.owner.returnType.eraseTypeParameters()
-  this.safeName == "inlined" && this.owner.valueParameters.size == 1 && wrapReturnType.isSubtypeOfClass(interpolateOutputType.classOrFail)
+  this.safeName == "inlined" && this.owner.regularParams.size == 1 && wrapReturnType.isSubtypeOfClass(interpolateOutputType.classOrFail)
 }
 
 // Compat function for kotlin 2.1.20 from 2.0.0 API

@@ -4,10 +4,12 @@ import io.decomat.*
 import io.exoquery.terpal.ProtoInterpolator
 import io.exoquery.terpal.InterpolatorBatching
 import io.exoquery.terpal.InterpolatorFunction
+import io.exoquery.terpal.plugin.dispatchArg
+import io.exoquery.terpal.plugin.extensionArg
 import io.exoquery.terpal.plugin.logging.CompileLogger
 import io.exoquery.terpal.plugin.qualifiedNameForce
+import io.exoquery.terpal.plugin.regularArgs
 import io.exoquery.terpal.plugin.safeName
-import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -43,7 +45,7 @@ inline fun <reified T> IrType.isClassOf(): Boolean {
 }
 
 inline fun <reified T> IrCall.reciverIs(methodName: String) =
-  this.dispatchReceiver?.isSubclassOf<T>() ?: false && this.symbol.safeName == methodName
+  this.dispatchArg?.isSubclassOf<T>() ?: false && this.symbol.safeName == methodName
 
 object ExtractorsDomain {
   object Call {
@@ -54,7 +56,7 @@ object ExtractorsDomain {
       operator fun <AP: Pattern<IrExpression>> get(reciever: AP) =
         customPattern1(reciever) { call: IrCall ->
           if (matchesMethod(call)) {
-            call.simpleValueArgs.first().let { firstArg -> Components1(firstArg) }
+            call.regularArgs.first().let { firstArg -> Components1(firstArg) }
           } else {
             null
           }
@@ -64,15 +66,15 @@ object ExtractorsDomain {
     object InterpolateInvoke {
       context (CompileLogger) fun matchesMethod(it: IrCall): Boolean {
         // if (it.symbol.safeName == "invoke")
-        //   warn("------------ `invoke` Reciver Super Types: ${it.dispatchReceiver?.type?.superTypesRecursive()?.toList()?.map { it.dumpKotlinLike() }}")
-        return it.reciverIs<ProtoInterpolator<*, *>>("invoke") //&& it.simpleValueArgsCount == 2 && it.valueArguments.all{ it != null }
+        //   warn("------------ `invoke` Reciver Super Types: ${it.dispatchArg?.type?.superTypesRecursive()?.toList()?.map { it.dumpKotlinLike() }}")
+        return it.reciverIs<ProtoInterpolator<*, *>>("invoke")
       }
 
       context (CompileLogger) operator fun <AP: Pattern<IrExpression>, BP: Pattern<List<IrExpression>>> get(reciver: AP, terpComps: BP) =
         customPattern2(reciver, terpComps) { call: IrCall ->
           if (matchesMethod(call)) {
-            val caller = call.dispatchReceiver.also { if (it == null) error("Dispatch reciver of the Interpolator invocation `${call.dumpKotlinLike()}` was null. This should not be possible.") }
-            val x = call.simpleValueArgs.first()
+            val caller = call.dispatchArg.also { if (it == null) error("Dispatch reciver of the Interpolator invocation `${call.dumpKotlinLike()}` was null. This should not be possible.") }
+            val x = call.regularArgs.first()
             on(x).match(
               case(InterpolationString[Is()]).then { components ->
                 Components2(caller, components)
@@ -134,8 +136,8 @@ object ExtractorsDomain {
     object InterpolateBatchingInvoke {
       context (CompileLogger) fun matchesMethod(it: IrCall): Boolean {
         // if (it.symbol.safeName == "invoke")
-        //   warn("------------ `invoke` Reciver Super Types: ${it.dispatchReceiver?.type?.superTypesRecursive()?.toList()?.map { it.dumpKotlinLike() }}")
-        return it.reciverIs<InterpolatorBatching<*>>("invoke") //&& it.simpleValueArgsCount == 2 && it.valueArguments.all{ it != null }
+        //   warn("------------ `invoke` Reciver Super Types: ${it.dispatchArg?.type?.superTypesRecursive()?.toList()?.map { it.dumpKotlinLike() }}")
+        return it.reciverIs<InterpolatorBatching<*>>("invoke")
       }
 
       data class Data(val caller: IrExpression, val components: List<IrExpression>, val funExpr: IrFunctionExpression)
@@ -143,8 +145,8 @@ object ExtractorsDomain {
       context (CompileLogger) operator fun <AP: Pattern<Data>> get(callData: AP) =
         customPattern1(callData) { call: IrCall ->
           if (matchesMethod(call)) {
-            val caller = call.dispatchReceiver ?: throw IllegalStateException("Dispatch reciver of the Interpolator invocation `${call.dumpKotlinLike()}` was null. This should not be possible.")
-            val x = call.simpleValueArgs.first()
+            val caller = call.dispatchArg ?: throw IllegalStateException("Dispatch reciver of the Interpolator invocation `${call.dumpKotlinLike()}` was null. This should not be possible.")
+            val x = call.regularArgs.first()
             on(x).match(
               case(Ir.FunctionExpression.withReturnOnlyBlock[InterpolationString[Is()]]).then { (components) ->
                 // TODO this was only included in the latest decomat versions need to rebase-master on it
@@ -181,9 +183,9 @@ object ExtractorsDomain {
             it.type.classFqName?.asString() == interpolatorFunctionName
           } ?: return null
 
-        val (arg1, arg2) = matchingAnnotationConstructor.valueArguments.let { args ->
+        val (arg1, arg2) = matchingAnnotationConstructor.regularArgs.let { args ->
           if (args.size != 2) {
-            error("Fatal Error: Invalid interpolation expression by `${matchingAnnotationConstructor.dumpKotlinLike()}`. The expression shuold exactly 2 arguments but found: ${args.map { it?.dumpKotlinLike() }.toList()}")
+            error("Fatal Error: Invalid interpolation expression by `${matchingAnnotationConstructor.dumpKotlinLike()}`. The expression shuold have exactly 2 arguments but found: ${args.map { it?.dumpKotlinLike() }.toList()}")
             null
           } else {
             args.get(0) to args.get(1)
@@ -256,21 +258,21 @@ object ExtractorsDomain {
         if (!interpolatorReturnType.isSubtypeOfClass(returnTypeClass))
           error("The type that the interpolation function `${call.symbol.safeName}` returns `${interpolatorReturnType.dumpKotlinLike()}` is not a subtype of `${call.symbol.owner.returnType.dumpKotlinLike()}` which the ${interpolatorType.dumpKotlinLike()} interpolator returns. This will result in a class-cast error and is therefore not allowed.")
 
-        val extensionReceiver = call.extensionReceiver
+        val extensionArg = call.extensionArg
         // either it has the form of `fun String.unaryPlus():Result` or `fun staticTerp(str: String):Result`
         // it it has a extension reciver it must be a `fun String.unaryPlus():Result`
         if (
           // If there exists a reciever, and it's not a string, and we haven't marked it specifically as a special reciever (see note above about hasSpecialReciever)
-          extensionReceiver != null &&
-          !(extensionReceiver.isSubclassOf<kotlin.String>()) &&
+          extensionArg != null &&
+          !(extensionArg.isSubclassOf<kotlin.String>()) &&
           !hasSpecialReciever
           ) {
-            error("A InterpolatorFunction must be an extension reciever on a String, ${if (call.extensionReceiver == null) "but no reciver was found" else "but it was a `${call.extensionReceiver?.type?.dumpKotlinLike()}` reciver."}")
+            error("A InterpolatorFunction must be an extension reciever on a String, ${if (call.extensionArg == null) "but no reciver was found" else "but it was a `${call.extensionArg?.type?.dumpKotlinLike()}` reciver."}")
         }
 
         val specialReciever =
           if (hasSpecialReciever)
-            SpecialReciever.Exists(extensionReceiver ?: run { error("Fatal Error: The InterpolatorFunction marked as having a special reciever but no reciever was found."); return null })
+            SpecialReciever.Exists(extensionArg ?: run { error("Fatal Error: The InterpolatorFunction marked as having a special reciever but no reciever was found."); return null })
           else
             SpecialReciever.DoesNotExist
 
@@ -285,11 +287,11 @@ object ExtractorsDomain {
             val concatExpr =
               // If it's an function or operator e.g. `+"foo ${bar} baz"` then the reciver is supposed to be the string-concatenation
               // (also make sure the reciever is not a special one (i.e. a builder context))
-              if (call.extensionReceiver != null && match.specialReciever !is SpecialReciever.Exists) {
-                call.extensionReceiver
+              if (call.extensionArg != null && match.specialReciever !is SpecialReciever.Exists) {
+                call.extensionArg
               } else {
                 // otherwise it's an argument to a function e.g. `staticTerp("foo ${bar} baz")`
-                call.simpleValueArgs.first()
+                call.regularArgs.first()
               }
 
             on(concatExpr).match(

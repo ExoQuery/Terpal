@@ -3,6 +3,7 @@ package io.exoquery.terpal.plugin.transform
 import io.exoquery.terpal.InterpolatorBackend
 import io.exoquery.terpal.StrictType
 import io.exoquery.terpal.plugin.classOrFail
+import io.exoquery.terpal.plugin.regularParams
 import io.exoquery.terpal.plugin.trees.isSubclassOf
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -17,7 +18,7 @@ import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 fun IrSimpleFunctionSymbol.isWrapForExprType(expr: IrExpression): Boolean {
   val func = this
   val isStrict = func.owner.annotations.any { it.isSubclassOf<StrictType>() }
-  val firstParamType = func.owner.valueParameters.first().type
+  val firstParamType = func.owner.regularParams.first().type
   return if (isStrict) {
     // If strict, just compare the types independently of nullability
     firstParamType.makeNullable() == expr.type.makeNullable()

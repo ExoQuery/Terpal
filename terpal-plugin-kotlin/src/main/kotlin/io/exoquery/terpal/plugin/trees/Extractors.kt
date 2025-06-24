@@ -5,26 +5,15 @@ package io.exoquery.terpal.plugin.trees
 import io.decomat.*
 import io.exoquery.terpal.plugin.logging.CompileLogger
 import io.exoquery.terpal.parseError
+import io.exoquery.terpal.plugin.dispatchArg
+import io.exoquery.terpal.plugin.extensionArg
+import io.exoquery.terpal.plugin.regularArgs
+import io.exoquery.terpal.plugin.regularParams
 import org.jetbrains.kotlin.ir.IrStatement
-import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.kotlinFqName
-
-val IrCall.simpleValueArgsCount get() = this.valueArgumentsCount - this.symbol.owner.contextReceiverParametersCount
-val IrCall.simpleValueArgs get() =
-  if (this.symbol.owner.contextReceiverParametersCount > 0)
-    this.valueArguments.drop(this.symbol.owner.contextReceiverParametersCount)
-  else
-    this.valueArguments
-
-val IrFunction.simpleValueParamsCount get() = this.valueParameters.size - this.contextReceiverParametersCount
-val IrFunction.simpleValueParams get() =
-  if (this.contextReceiverParametersCount > 0)
-    this.valueParameters.drop(this.contextReceiverParametersCount)
-  else
-    this.valueParameters
 
 val IrType.simpleTypeArgs: List<IrType> get() =
   when (this) {
@@ -61,9 +50,9 @@ object Ir {
     object FunctionUntethered1 {
       context (CompileLogger) operator fun <AP : Pattern<E>, E: IrExpression> get(x: AP): Pattern1<AP, E, IrCall> =
         customPattern1(x) { it: IrCall ->
-          val reciever = it.extensionReceiver ?: it.dispatchReceiver
-          if (reciever == null && it.simpleValueArgs.size == 1 && it.simpleValueArgs.all { it != null }) {
-            Components1(it.simpleValueArgs.first())
+          val reciever = it.extensionArg?: it.dispatchArg
+          if (reciever == null && it.regularArgs.size == 1 && it.regularArgs.all { it != null }) {
+            Components1(it.regularArgs.first())
           } else {
             null
           }
@@ -73,8 +62,8 @@ object Ir {
     object NamedExtensionFunctionZeroArg {
       context (CompileLogger) operator fun <AP : Pattern<String>, BP : Pattern<E>, E: IrExpression> get(name: AP, reciever: BP): Pattern2<AP, BP, String, E, IrCall> =
         customPattern2(name, reciever) { it: IrCall ->
-          val reciever = it.extensionReceiver
-          if (reciever != null && it.simpleValueArgs.size == 0) {
+          val reciever = it.extensionArg
+          if (reciever != null && it.regularArgs.size == 0) {
             Components2(it.symbol.owner.kotlinFqName.asString(), reciever)
           } else {
             null
@@ -154,7 +143,7 @@ object Ir {
         it.body?.let { bodyVal ->
           when (val body = it.body) {
             // Ignore context-parameters here
-            is IrBlockBody -> Components2(it.simpleValueParams, body)
+            is IrBlockBody -> Components2(it.regularParams, body)
             else -> parseError("The function ${it.name} body was not a blockBody")
           }
 

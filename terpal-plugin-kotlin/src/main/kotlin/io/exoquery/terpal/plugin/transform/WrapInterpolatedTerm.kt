@@ -4,7 +4,6 @@ import io.exoquery.terpal.WrapFailureMessage
 import io.exoquery.terpal.plugin.*
 import io.exoquery.terpal.plugin.classOrFail
 import io.exoquery.terpal.plugin.trees.isSubclassOf
-import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.builders.irBoolean
 import org.jetbrains.kotlin.ir.builders.irInt
 import org.jetbrains.kotlin.ir.builders.irString
@@ -73,7 +72,7 @@ class WrapperMaker(val ctx: BuilderContext, val caller: IrExpression, val interp
     with(ctx) {
       val annotationMessage =
         if (classAnnotationsOpt != null) {
-          val arg = classAnnotationsOpt!!.valueArguments[0]
+          val arg = classAnnotationsOpt!!.arguments[0]
           when {
             arg is IrConst && arg.kind == IrConstKind.String -> arg.value as String
             else -> {
@@ -94,7 +93,7 @@ class WrapperMaker(val ctx: BuilderContext, val caller: IrExpression, val interp
           val subtypeWarnings = mutableListOf<String>()
 
           val possibleExtensionWrappers = wrapExtensionFunctions?.filter {
-            val extension = it.owner.extensionReceiverParameter
+            val extension = it.owner.extensionParam
             // e.g. the extension reciever of the wrapper class has to be the same or a subtype of the interpolator class
             // e.g. `fun Interpolator<Foo, Bar>.wrap(value: T) = ...` would be a valid extension function
             // for some class `FooBarInterpolator: Interpolator<Foo, Bar>`

@@ -7,7 +7,6 @@ import io.exoquery.terpal.parseError
 import io.exoquery.terpal.plugin.trees.Ir
 import io.exoquery.terpal.plugin.logging.CompileLogger
 import io.exoquery.terpal.plugin.logging.CompileMessages
-import io.exoquery.terpal.plugin.printing.dumpSimple
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -15,6 +14,7 @@ import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
+import org.jetbrains.kotlin.ir.util.dump
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.name.CallableId
@@ -40,7 +40,7 @@ class TransformPrintSource(
             args
           }
         )
-      } ?: parseError("Parsing Failed\n================== The expresson was not a Global Function (with one argument-block): ==================\n" + expression.dumpKotlinLike() + "\n--------------------------\n" + expression.dumpSimple())
+      } ?: parseError("Parsing Failed\n================== The expresson was not a Global Function (with one argument-block): ==================\n" + expression.dumpKotlinLike() + "\n--------------------------\n" + expression.dump())
 
     val printSourceExpr = context.pluginCtx
       .referenceFunctions(
@@ -53,7 +53,7 @@ class TransformPrintSource(
 
     return with(context.builder) {
       this.irCall(printSourceExpr).apply {
-        putValueArgument(0, irString(message))
+        arguments[0] = irString(message)
       }
     }
   }

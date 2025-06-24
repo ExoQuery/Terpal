@@ -2,6 +2,7 @@ package io.exoquery.terpal.plugin.transform
 
 import io.exoquery.terpal.plugin.classOrFail
 import io.exoquery.terpal.plugin.isValidWrapFunction
+import io.exoquery.terpal.plugin.regularParams
 import io.exoquery.terpal.plugin.safeName
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.types.IrType
@@ -15,7 +16,7 @@ fun String.trimLeft() = this.dropWhile { it.isWhitespace() }
 object Messages {
   fun errorFailedToFindWrapper(ctx: BuilderContext, caller: IrExpression, expr: IrExpression, interpolateClass: IrType, userSpecificError: String): Nothing {
     val validWrapFunctions =
-      caller.type.classOrFail.functions.filter { it.isValidWrapFunction(interpolateClass) }.map { it.owner.valueParameters.first().type.classOrNull?.safeName }.toList()
+      caller.type.classOrFail.functions.filter { it.isValidWrapFunction(interpolateClass) }.map { it.owner.regularParams.first().type.classOrNull?.safeName }.toList()
     val invalidWrapFunctions =
       caller.type.classOrFail.functions.filter { it.safeName == "wrap" && !it.isValidWrapFunction(interpolateClass) }.map { it.owner.dumpKotlinLike() }.toList()
     val dol = '$'

@@ -1,7 +1,7 @@
 plugins {
     id("io.exoquery.terpal-plugin")
     id("conventions-multiplatform")
-    kotlin("multiplatform") version "2.1.20"
+    kotlin("multiplatform") version "2.2.0"
 }
 
 kotlin {
@@ -10,7 +10,6 @@ kotlin {
         }
 
         val commonTest by getting {
-            kotlin.srcDir("$buildDir/generated/ksp/metadata/commonMain/kotlin")
             dependencies {
                 // Used to ad-hoc some examples but not needed.
                 //api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.2")
@@ -23,9 +22,9 @@ kotlin {
     }
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    kotlinOptions{
-        freeCompilerArgs = listOf(
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        freeCompilerArgs.addAll(
             "-Xcontext-receivers",
             "-P",
             "plugin:io.exoquery.terpal-plugin:traceWrappers=true"

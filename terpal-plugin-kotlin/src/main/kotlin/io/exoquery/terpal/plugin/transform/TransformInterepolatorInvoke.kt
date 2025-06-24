@@ -7,7 +7,6 @@ import io.decomat.on
 import io.exoquery.terpal.*
 import io.exoquery.terpal.plugin.classOrFail
 import io.exoquery.terpal.plugin.logging.CompileLogger
-import io.exoquery.terpal.plugin.printing.dumpSimple
 import io.exoquery.terpal.plugin.trees.ExtractorsDomain.Call
 import io.exoquery.terpal.plugin.trees.isClassOf
 import io.exoquery.terpal.plugin.trees.isSubclassOf
@@ -22,6 +21,7 @@ import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.types.*
+import org.jetbrains.kotlin.ir.util.dump
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.ir.util.functions
 
@@ -55,7 +55,7 @@ class TransformInterepolatorInvoke(val ctx: BuilderContext) {
            |==== However, the following was found: ====
            |${expression.dumpKotlinLike()}
            |======= IR: =======
-           |${expression.dumpSimple()}"
+           |${expression.dump()}"
         """.trimMargin()
         )
       }

@@ -1,7 +1,6 @@
 package io.exoquery.terpal.plugin.logging
 
 import io.exoquery.terpal.plugin.dataClassProperties
-import io.exoquery.terpal.plugin.printing.dumpSimple
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrReturn
@@ -17,7 +16,7 @@ $parsedCode
 ================ IR: ================
 ${ir?.dumpKotlinLike()}
 ================= Ast: ========================
-${ir?.dumpSimple()}
+${ir?.dump()}
 """.trimIndent()
 
 
@@ -26,7 +25,7 @@ ${ir?.dumpSimple()}
 ================ Kotlin-Like: ================
 ${ir?.dumpKotlinLike()}
 ================= IR: ========================
-${ir?.dumpSimple()}
+${ir?.dump()}
 """.trimIndent()
 
 
@@ -55,7 +54,7 @@ return """
 ================ Kotlin-Like: ================
 ${ir?.map { it.dumpKotlinLike() }?.joinToString("\n")}
 ================= IR: ========================
-${ir?.map { it.dumpSimple() }?.joinToString("\n")}
+${ir?.map { it.dump() }?.joinToString("\n")}
 ================= Output Type: ========================
 ${ir?.map { writeOutput(it) }?.joinToString("\n")}
 """.trimIndent()
