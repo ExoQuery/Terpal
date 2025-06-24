@@ -27,14 +27,14 @@ import kotlin.collections.plus
 
 class CallGlobalMethod(private val invoke: IrSimpleFunctionSymbol, private val tpe: IrType?, private val extReciever: IrExpression?) {
   companion object {
-    context(BuilderContext) operator fun invoke(callable: CallableId, tpe: IrType?, extReciever: IrExpression?): CallGlobalMethod =
-      CallGlobalMethod(pluginCtx.referenceFunctions(callable).first(), tpe, extReciever)
-    context(BuilderContext) operator fun invoke(funPath: String, funName: String, tpe: IrType?, extReciever: IrExpression?): CallGlobalMethod =
+    context(bc: BuilderContext) operator fun invoke(callable: CallableId, tpe: IrType?, extReciever: IrExpression?): CallGlobalMethod =
+      CallGlobalMethod(bc.pluginCtx.referenceFunctions(callable).first(), tpe, extReciever)
+    context(_: BuilderContext) operator fun invoke(funPath: String, funName: String, tpe: IrType?, extReciever: IrExpression?): CallGlobalMethod =
       CallGlobalMethod(CallableId(FqName(funPath), Name.identifier(funName)), tpe, extReciever)
   }
 
-  context(BuilderContext) operator fun invoke(vararg args: IrExpression): IrExpression {
-    return with (builder) {
+  context(bc: BuilderContext) operator fun invoke(vararg args: IrExpression): IrExpression {
+    return with (bc.builder) {
       val invocation = if (tpe != null) irCall(invoke, tpe) else irCall(invoke)
       val allArgs = (extReciever?.let { listOf(it) } ?: emptyList()) + args.toList()
       invocation.apply {
@@ -46,8 +46,8 @@ class CallGlobalMethod(private val invoke: IrSimpleFunctionSymbol, private val t
   }
 }
 
-context(BuilderContext) fun callGlobalMethod(path: String, name: String, extReciever: IrExpression? = null) = CallGlobalMethod(path, name, null, extReciever)
-context(BuilderContext) fun callGlobalMethod(callable: CallableId, extReciever: IrExpression? = null) = CallGlobalMethod(callable, null, extReciever)
+context(_: BuilderContext) fun callGlobalMethod(path: String, name: String, extReciever: IrExpression? = null) = CallGlobalMethod(path, name, null, extReciever)
+context(_: BuilderContext) fun callGlobalMethod(callable: CallableId, extReciever: IrExpression? = null) = CallGlobalMethod(callable, null, extReciever)
 fun callGlobalMethod(invoke: IrSimpleFunctionSymbol, extReciever: IrExpression? = null) = CallGlobalMethod(invoke, null, extReciever)
 
 
@@ -57,8 +57,8 @@ class CallMethod(private val host: IrExpression, private val lambdaInvoke: IrSim
       CallMethod(host, host.type.findMethodOrFail(funName), tpe)
   }
 
-  context(BuilderContext) operator fun invoke(vararg args: IrExpression): IrExpression {
-    return with (builder) {
+  context(bc: BuilderContext) operator fun invoke(vararg args: IrExpression): IrExpression {
+    return with (bc.builder) {
       val invocation = if (tpe != null) irCall(lambdaInvoke, tpe) else irCall(lambdaInvoke)
       val allArgs = listOf(host) + args.toList()
       invocation.apply {
@@ -91,8 +91,8 @@ class CallMethodTyped(private val dispatchArg: IrExpression, private val functio
       CallMethodTyped(host, host.type.findMethodOrFail(functionName), types, tpe)
   }
 
-  context(BuilderContext) operator fun invoke(vararg args: IrExpression): IrExpression {
-    return with (builder) {
+  context(bc: BuilderContext) operator fun invoke(vararg args: IrExpression): IrExpression {
+    return with (bc.builder) {
       val invocation = if (tpe != null) irCall(function, tpe) else irCall(function)
       invocation.apply {
         val allArgs = listOf(dispatchArg) + args.toList()
@@ -109,24 +109,24 @@ fun IrExpression.callMethodTyped(name: String): CallMethodTypedArgs = CallMethod
 fun IrExpression.callMethodTyped(function: IrSimpleFunctionSymbol): CallMethodTypedArgs = CallMethodTypedArgs(this, function, null)
 fun IrExpression.callMethodTypedWithType(name: String, tpe: IrType): CallMethodTypedArgs = CallMethodTypedArgs(this, name, tpe)
 
-context (BuilderContext) fun createLambda0(functionBody: IrExpression, functionParent: IrDeclarationParent): IrFunctionExpression =
+context(_: BuilderContext) fun createLambda0(functionBody: IrExpression, functionParent: IrDeclarationParent): IrFunctionExpression =
   createLambdaN(functionBody, listOf(), functionParent)
 
-context (BuilderContext) fun createLambdaN(functionBody: IrExpression, params: List<IrValueParameter>, functionParent: IrDeclarationParent): IrFunctionExpression =
-  with(builder) {
+context(bc: BuilderContext) fun createLambdaN(functionBody: IrExpression, params: List<IrValueParameter>, functionParent: IrDeclarationParent): IrFunctionExpression =
+  with(bc.builder) {
     val functionClosure = createLambdaClosure(functionBody, params, functionParent)
 
     val typeWith = params.map { it.type } + functionClosure.returnType
     val functionType =
-      pluginCtx.symbols.functionN(params.size)
+      bc.pluginCtx.symbols.functionN(params.size)
         // Remember this is FunctionN<InputA, InputB, ... Output> so these input/output args need to be both specified here
         .typeWith(typeWith)
 
     IrFunctionExpressionImpl(startOffset, endOffset, functionType, functionClosure, IrStatementOrigin.LAMBDA)
   }
 
-context (BuilderContext) fun createLambdaClosure(functionBody: IrExpression, params: List<IrValueParameter>, functionParent: IrDeclarationParent): IrSimpleFunction {
-  return with(pluginCtx) {
+context(bc: BuilderContext) fun createLambdaClosure(functionBody: IrExpression, params: List<IrValueParameter>, functionParent: IrDeclarationParent): IrSimpleFunction {
+  return with(bc.pluginCtx) {
     irFactory.buildFun {
       origin = IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
       name = SpecialNames.NO_NAME_PROVIDED
@@ -148,7 +148,7 @@ context (BuilderContext) fun createLambdaClosure(functionBody: IrExpression, par
       and since the return-type is wrong it will fail with a very large error that ultimately says:
       RETURN: Incompatible return type
        */
-      body = pluginCtx.createIrBuilder(symbol).run {
+      body = bc.pluginCtx.createIrBuilder(symbol).run {
         // don't use expr body, coroutine codegen can't generate for it.
         irBlockBody {
           +irReturn(functionBody)

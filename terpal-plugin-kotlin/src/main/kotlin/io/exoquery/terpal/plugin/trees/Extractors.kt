@@ -28,7 +28,7 @@ object Ir {
     // Can't do just get(components: Pattern<List<IrExpression>) need to do:
     // <AP: Pattern<List<IrExpression>>> get(components: AP) or it doesn't work because
     // it needs to have a concrete pattern instance
-    context(CompileLogger) operator fun <AP: Pattern<List<IrExpression>>> get(components: AP) =
+    context(_: CompileLogger) operator fun <AP: Pattern<List<IrExpression>>> get(components: AP) =
       customPattern1(components) { it: IrExpression ->
         if (it is IrStringConcatenation) {
           Components1(it.arguments)
@@ -48,7 +48,7 @@ object Ir {
   object Call {
     // not a function on an object or class i.e. top-level
     object FunctionUntethered1 {
-      context (CompileLogger) operator fun <AP : Pattern<E>, E: IrExpression> get(x: AP): Pattern1<AP, E, IrCall> =
+      context (_: CompileLogger) operator fun <AP : Pattern<E>, E: IrExpression> get(x: AP): Pattern1<AP, E, IrCall> =
         customPattern1(x) { it: IrCall ->
           val reciever = it.extensionArg?: it.dispatchArg
           if (reciever == null && it.regularArgs.size == 1 && it.regularArgs.all { it != null }) {
@@ -60,7 +60,7 @@ object Ir {
     }
 
     object NamedExtensionFunctionZeroArg {
-      context (CompileLogger) operator fun <AP : Pattern<String>, BP : Pattern<E>, E: IrExpression> get(name: AP, reciever: BP): Pattern2<AP, BP, String, E, IrCall> =
+      context (_: CompileLogger) operator fun <AP : Pattern<String>, BP : Pattern<E>, E: IrExpression> get(name: AP, reciever: BP): Pattern2<AP, BP, String, E, IrCall> =
         customPattern2(name, reciever) { it: IrCall ->
           val reciever = it.extensionArg
           if (reciever != null && it.regularArgs.size == 0) {

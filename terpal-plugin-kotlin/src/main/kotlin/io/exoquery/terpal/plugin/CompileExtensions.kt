@@ -77,9 +77,9 @@ val IrSymbol.safeName   get() =
     "<???>"
   }).replace("$", "")
 
-context(BuilderContext) val IrExpression.source get() = run {
+context(BC: BuilderContext) val IrExpression.source get() = run {
   val range = TextRange(this.startOffset, this.endOffset)
-  currentFile.getKtFile()?.let { ktFile ->
+  BC.currentFile.getKtFile()?.let { ktFile ->
     ktFile.textRange.cutOut(range).let { cutOut ->
       ktFile.text.let { textValue ->
         cutOut.substring(textValue)

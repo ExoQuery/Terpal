@@ -64,13 +64,13 @@ object ExtractorsDomain {
     }
 
     object InterpolateInvoke {
-      context (CompileLogger) fun matchesMethod(it: IrCall): Boolean {
+      context (_: CompileLogger) fun matchesMethod(it: IrCall): Boolean {
         // if (it.symbol.safeName == "invoke")
         //   warn("------------ `invoke` Reciver Super Types: ${it.dispatchArg?.type?.superTypesRecursive()?.toList()?.map { it.dumpKotlinLike() }}")
         return it.reciverIs<ProtoInterpolator<*, *>>("invoke")
       }
 
-      context (CompileLogger) operator fun <AP: Pattern<IrExpression>, BP: Pattern<List<IrExpression>>> get(reciver: AP, terpComps: BP) =
+      context (_: CompileLogger) operator fun <AP: Pattern<IrExpression>, BP: Pattern<List<IrExpression>>> get(reciver: AP, terpComps: BP) =
         customPattern2(reciver, terpComps) { call: IrCall ->
           if (matchesMethod(call)) {
             val caller = call.dispatchArg.also { if (it == null) error("Dispatch reciver of the Interpolator invocation `${call.dumpKotlinLike()}` was null. This should not be possible.") }
@@ -87,7 +87,7 @@ object ExtractorsDomain {
     }
 
     object OptionalTrimMargin {
-      context (CompileLogger) operator fun <AP : Pattern<List<IrExpression>>> get(reciver: AP) =
+      context (_: CompileLogger) operator fun <AP : Pattern<List<IrExpression>>> get(reciver: AP) =
         customPattern1(reciver) { expr: IrExpression ->
           expr.match(
             case(Ir.Call.FunctionUntethered1[Is()]).then { components ->
@@ -98,7 +98,7 @@ object ExtractorsDomain {
     }
 
     object InterpolationString {
-      context (CompileLogger) operator fun <AP : Pattern<List<IrExpression>>> get(reciver: AP) =
+      context (_: CompileLogger) operator fun <AP : Pattern<List<IrExpression>>> get(reciver: AP) =
         customPattern1(reciver) { expr: IrExpression ->
           on(expr).match(
             case(Ir.StringConcatenation[Is()]).then { components ->
@@ -116,7 +116,7 @@ object ExtractorsDomain {
     }
 
     object InterpolationStringPossibleTrim {
-      context (CompileLogger) operator fun <AP : Pattern<List<IrExpression>>> get(reciver: AP) =
+      context (_: CompileLogger) operator fun <AP : Pattern<List<IrExpression>>> get(reciver: AP) =
         customPattern1(reciver) { expr: IrExpression ->
           on(expr).match(
             case(Ir.StringConcatenation[Is()]).then { components ->
@@ -134,7 +134,7 @@ object ExtractorsDomain {
     }
 
     object InterpolateBatchingInvoke {
-      context (CompileLogger) fun matchesMethod(it: IrCall): Boolean {
+      context (_: CompileLogger) fun matchesMethod(it: IrCall): Boolean {
         // if (it.symbol.safeName == "invoke")
         //   warn("------------ `invoke` Reciver Super Types: ${it.dispatchArg?.type?.superTypesRecursive()?.toList()?.map { it.dumpKotlinLike() }}")
         return it.reciverIs<InterpolatorBatching<*>>("invoke")
@@ -142,7 +142,7 @@ object ExtractorsDomain {
 
       data class Data(val caller: IrExpression, val components: List<IrExpression>, val funExpr: IrFunctionExpression)
 
-      context (CompileLogger) operator fun <AP: Pattern<Data>> get(callData: AP) =
+      context (_: CompileLogger) operator fun <AP: Pattern<Data>> get(callData: AP) =
         customPattern1(callData) { call: IrCall ->
           if (matchesMethod(call)) {
             val caller = call.dispatchArg ?: throw IllegalStateException("Dispatch reciver of the Interpolator invocation `${call.dumpKotlinLike()}` was null. This should not be possible.")
@@ -174,10 +174,10 @@ object ExtractorsDomain {
 
       data class Match(val interpolatorType: IrType, val interpolatorClass: IrClassSymbol, val specialReciever: SpecialReciever)
 
-      context (CompileLogger) fun matchesMethod(call: IrCall): Boolean =
+      context (_: CompileLogger) fun matchesMethod(call: IrCall): Boolean =
         extractComponents(call) != null
 
-      context (CompileLogger) fun extractComponents(call: IrCall): Match? {
+      context (_: CompileLogger) fun extractComponents(call: IrCall): Match? {
         val matchingAnnotationConstructor =
           call.symbol.owner.annotations.find {
             it.type.classFqName?.asString() == interpolatorFunctionName
@@ -280,7 +280,7 @@ object ExtractorsDomain {
         return Match(interpolatorType, interpolatorClassSymbol, specialReciever)
       }
 
-      context (CompileLogger) operator fun <AP: Pattern<InterpolatorFunctionInvoke.Match>, BP: Pattern<List<IrExpression>>> get(reciver: AP, terpComps: BP) =
+      context (_: CompileLogger) operator fun <AP: Pattern<InterpolatorFunctionInvoke.Match>, BP: Pattern<List<IrExpression>>> get(reciver: AP, terpComps: BP) =
         customPattern2(reciver, terpComps) { call: IrCall ->
           val match = extractComponents(call)
           if (match != null) {
