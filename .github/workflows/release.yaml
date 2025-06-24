@@ -17,7 +17,7 @@ jobs:
           password: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}
           staging_profile_id: ${{ secrets.SONATYPE_PROFILE_ID }}
           # Defaults to the https://oss.sonatype.org, not https://s01.oss.sonatype.org
-          base_url: https://s01.oss.sonatype.org/service/local/
+          base_url: https://ossrh-staging-api.central.sonatype.com/service/local/
           description: ${{ github.repository }}/${{ github.workflow }}#${{ github.run_number }}
 
   release:
@@ -68,7 +68,7 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
       - name: Validate Gradle wrapper
-        uses: gradle/wrapper-validation-action@v1
+        uses: gradle/actions/wrapper-validation@v3
       - run: echo "*************** PublishCommand ${{ matrix.publish_command }}"
       - run: ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI -no-daemon --stacktrace
 
