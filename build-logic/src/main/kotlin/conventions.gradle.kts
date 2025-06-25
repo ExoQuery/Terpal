@@ -124,6 +124,15 @@ val startSonatypeStaging by tasks.registering {
 }
 
 
+data class Repo(
+  val key: String,
+  val state: String,
+  val description: String? = null,
+  val portal_deployment_id: String? = null
+) {
+  val encodedKey get() = java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8)
+}
+
 val publishSonatypeStaging by tasks.registering {
   description = "Creates a new OSSRH staging repository and records its ID"
 
@@ -147,25 +156,17 @@ val publishSonatypeStaging by tasks.registering {
 
     println("HTTP Response Code: ${response.statusCode()}:\n${response.body()}")
 
-    /* ── 1.  Sanity-check the HTTP call ───────────────────────────────────── */
+    /* 1.  Sanity-check the HTTP call */
     if (response.statusCode() !in 200..299) {
       logger.error("OSS RH search failed:\nHTTP ${response.statusCode()}\n${response.body()}")
       throw GradleException("Search request was not successful")
     }
 
-    /* ── 2.  Parse the JSON payload ───────────────────────────────────────── */
-    data class Repo(
-      val key: String,
-      val state: String,
-      val description: String? = null,
-      val portal_deployment_id: String? = null
-    ) {
-      val encodedKey get() = java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8)
-    }
+    /* 2.  Parse the JSON payload */
     data class Wrapper(val repositories: List<Repo>)
     val payload: Wrapper = jacksonObjectMapper().readValue<Wrapper>(response.body())
 
-    /* ── 3.  Pick the repositories whose description matches `desc` ───────── */
+    /* 3.  Pick the repositories whose description matches `desc` */
     val matching = payload.repositories.filter { it.description == desc }
 
     if (matching.isEmpty()) {
@@ -188,16 +189,11 @@ val publishSonatypeStaging by tasks.registering {
         .build()
 
       val promoteResp = http.send(promoteRequest, HttpResponse.BodyHandlers.ofString())
-
       if (promoteResp.statusCode() in 200..299) {
-        logger.lifecycle("✓  Promoted staging repo ${repo.key}")
+        println("=============== Promoted staging repo ${repo.key} ===============")
         ok++
       } else {
-        logger.error(
-          """✗  Failed to promote repo ${repo.key}
-                HTTP ${promoteResp.statusCode()}
-                ${promoteResp.body()}
-          """.trimIndent())
+        println("""=============== Failed to promote repo ${repo.key} - HTTP Code ${promoteResp.statusCode()}: ===============\n${promoteResp.body()}""".trimIndent())
         failed++
       }
     }
