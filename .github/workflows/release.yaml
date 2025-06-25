@@ -32,6 +32,9 @@ jobs:
             echo "::error ::Central API did not return a repository id"
             exit 1
           fi
+          
+          echo "::group::Repo Id"; echo "repo_id"; echo "::endgroup::"
+          
           echo "repository_id=$repo_id" >> "$GITHUB_OUTPUT"
 
 #      - id: create
