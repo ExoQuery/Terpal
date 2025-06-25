@@ -72,6 +72,21 @@ jobs:
       - run: echo "*************** PublishCommand ${{ matrix.publish_command }}"
       - run: ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI -no-daemon --stacktrace
 
+  upload_to_central:
+    needs: [release]
+    runs-on: ubuntu-latest
+    env:
+      SONATYPE_REPOSITORY_ID: ${{ needs.create_staging_repository.outputs.repository_id }}
+    steps:
+      - name: Hand repo to Central Portal
+        uses: ./.github/actions/central-upload
+        with:
+          username: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
+          password: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}
+          repository_id: ${{ env.SONATYPE_REPOSITORY_ID }}
+          # optional – automatic publishes as soon as validation passes
+          publishing_type: user_managed
+
   # Once all of the Nexus artifacts are published, we can release the plugin to gradle plugin portal
   release_plugin:
     needs: [release]

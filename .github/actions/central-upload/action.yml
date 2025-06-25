@@ -1,0 +1,62 @@
+name: "Central – Upload Staging Repo"
+description: |
+  Close/hand-off an OSSRH staging repository to the Central
+  Publishing Portal (compatibility API).
+author: "you"
+
+inputs:
+  username:
+    description: "Portal token username (first string from Generate user token)"
+    required: true
+  password:
+    description: "Portal token password (second string)"
+    required: true
+  repository_id:
+    description: |
+      Full repo key, e.g.
+      slH8OTtC/172.176.174.146/io.exoquery--e1c61cd3-05a6-48fd-842b-9f86bcb7fc65
+    required: true
+  publishing_type:
+    description: '"user_managed" (default) or "automatic"'
+    required: false
+    default: user_managed
+
+outputs:
+  uploaded:
+    description: "true if the server returned HTTP 2xx"
+    value: ${{ steps.upload.outputs.ok }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: encode
+      shell: bash
+      run: |
+        repo="${{ inputs.repository_id }}"
+        enc=$(printf '%s' "$repo" | jq -sRr @uri)
+        echo "enc_repo=$enc" >> "$GITHUB_OUTPUT"
+
+    - id: upload
+      shell: bash
+      env:
+        USER: ${{ inputs.username }}
+        PASS: ${{ inputs.password }}
+        ENC:  ${{ steps.encode.outputs.enc_repo }}
+        TYPE: ${{ inputs.publishing_type }}
+      run: |
+        set -eo pipefail
+        response=$(curl -sS -w '%{http_code}' -o /tmp/out \
+          -u "$USER:$PASS" \
+          -H 'Content-Type: application/json' \
+          -H 'Accept: application/json' \
+          -X POST -d '{}' \
+          "https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/$ENC?publishing_type=$TYPE")
+
+        if [[ "$response" =~ ^2 ]]; then
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+          echo "Hand-off succeeded."
+        else
+          echo "::error ::Central upload failed (HTTP $response)"
+          cat /tmp/out
+          exit 1
+        fi
