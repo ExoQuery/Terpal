@@ -209,4 +209,10 @@ tasks.withType<Sign>().configureEach {
 tasks.withType<AbstractPublishToMaven>().configureEach {
     val signingTasks = tasks.withType<Sign>()
     mustRunAfter(signingTasks)
+
+    // Make sure startSonatypeStaging runs before any publishing task
+    // This ensures stagingRepoId is set before it's used
+    rootProject.tasks.findByName("startSonatypeStaging")?.let {
+        dependsOn(it)
+    }
 }
