@@ -89,7 +89,7 @@ publishing {
     maven {
       name = "Oss"
       setUrl {
-        val repositoryId = project.extra["stagingRepoId"].toString()
+        val repositoryId = extra["stagingRepoId"].toString()
         if (repositoryId.trim().isEmpty() || repositoryId.trim() == "") error("SONATYPE_REPOSITORY_ID is empty")
         "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deployByRepositoryId/$repositoryId/"
       }

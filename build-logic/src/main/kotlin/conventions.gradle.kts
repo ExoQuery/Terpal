@@ -119,7 +119,8 @@ val startSonatypeStaging by tasks.registering {
       throw GradleException("========= Failed to parse staging repository ID from response: =========\n${response.body()}")
 
     // 1. Expose as a Gradle extra property
-    project.extra["stagingRepoId"] = repoId
+    println("-------------- Exposing Repo ID: $repoId --------------")
+    extra["stagingRepoId"] = repoId
   }
 }
 
@@ -151,20 +152,31 @@ val publishSonatypeStaging by tasks.registering {
       .GET()
       .build()
 
+    val mapper = jacksonObjectMapper()
+
+    fun tryPrintJson(json: String) {
+      try {
+        mapper.writerWithDefaultPrettyPrinter().writeValueAsString(mapper.readTree(json))
+      } catch (e: Exception) {
+        json
+      }
+    }
+
     val http = HttpClient.newHttpClient()
     val response = http.send(request, HttpResponse.BodyHandlers.ofString())
 
-    println("HTTP Response Code: ${response.statusCode()}:\n${response.body()}")
+    println("================ /manual/search/repositories Response Code: ${response.statusCode()}: ================\n${tryPrintJson(response.body())}")
 
     /* 1.  Sanity-check the HTTP call */
     if (response.statusCode() !in 200..299) {
-      logger.error("OSS RH search failed:\nHTTP ${response.statusCode()}\n${response.body()}")
-      throw GradleException("Search request was not successful")
+      val msg = "================ OSS RH search failed Code:${response.statusCode()} ================\n${response.body()}"
+      logger.error(msg)
+      throw GradleException("Search request was not successful because of:\n${msg}")
     }
 
     /* 2.  Parse the JSON payload */
     data class Wrapper(val repositories: List<Repo>)
-    val payload: Wrapper = jacksonObjectMapper().readValue<Wrapper>(response.body())
+    val payload: Wrapper = mapper.readValue<Wrapper>(response.body())
 
     /* 3.  Pick the repositories whose description matches `desc` */
     val matching = payload.repositories.filter { it.description == desc }
