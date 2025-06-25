@@ -1,4 +1,5 @@
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -96,8 +97,7 @@ val startSonatypeStaging by tasks.registering {
     val auth     = Base64.getEncoder().encodeToString("$user:$pass".toByteArray())
 
     val request  = HttpRequest.newBuilder()
-      .uri(URI.create(
-        "https://ossrh-staging-api.central.sonatype.com/service/local/staging/profiles/$pid/start"))
+      .uri(URI.create("https://ossrh-staging-api.central.sonatype.com/service/local/staging/profiles/$pid/start"))
       .header("Content-Type", "application/json")
       .header("Authorization", "Basic $auth")
       .POST(HttpRequest.BodyPublishers.ofString(bodyJson))
@@ -105,8 +105,7 @@ val startSonatypeStaging by tasks.registering {
 
     val response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString())
 
-    println("HTTP ${response.statusCode()}")
-    println(response.body())
+    println("HTTP Response Code: ${response.statusCode()}:\n${response.body()}")
 
     if (response.statusCode() !in 200..299)
       throw GradleException("Failed to start staging repository")
@@ -121,5 +120,92 @@ val startSonatypeStaging by tasks.registering {
 
     // 1. Expose as a Gradle extra property
     project.extra["stagingRepoId"] = repoId
+  }
+}
+
+
+val publishSonatypeStaging by tasks.registering {
+  description = "Creates a new OSSRH staging repository and records its ID"
+
+  doLast {
+    /* ---- gather inputs exactly as before ---- */
+    val pid   = "io.exoquery"
+    val user  = System.getenv("SONATYPE_USERNAME")   ?: error("SONATYPE_USERNAME not set")
+    val pass  = System.getenv("SONATYPE_PASSWORD")   ?: error("SONATYPE_PASSWORD not set")
+    val desc = "${System.getenv("GITHUB_REPOSITORY")}/${System.getenv("GITHUB_WORKFLOW")}#${System.getenv("GITHUB_RUN_NUMBER")}"
+
+    val auth     = Base64.getEncoder().encodeToString("$user:$pass".toByteArray())
+    val request  = HttpRequest.newBuilder()
+      .uri(URI.create("https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?profile_id=$pid&ip=any"))
+      .header("Content-Type", "application/json")
+      .header("Authorization", "Basic $auth")
+      .GET()
+      .build()
+
+    val http = HttpClient.newHttpClient()
+    val response = http.send(request, HttpResponse.BodyHandlers.ofString())
+
+    println("HTTP Response Code: ${response.statusCode()}:\n${response.body()}")
+
+    /* ── 1.  Sanity-check the HTTP call ───────────────────────────────────── */
+    if (response.statusCode() !in 200..299) {
+      logger.error("OSS RH search failed:\nHTTP ${response.statusCode()}\n${response.body()}")
+      throw GradleException("Search request was not successful")
+    }
+
+    /* ── 2.  Parse the JSON payload ───────────────────────────────────────── */
+    data class Repo(
+      val key: String,
+      val state: String,
+      val description: String? = null,
+      val portal_deployment_id: String? = null
+    ) {
+      val encodedKey get() = java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8)
+    }
+    data class Wrapper(val repositories: List<Repo>)
+    val payload: Wrapper = jacksonObjectMapper().readValue<Wrapper>(response.body())
+
+    /* ── 3.  Pick the repositories whose description matches `desc` ───────── */
+    val matching = payload.repositories.filter { it.description == desc }
+
+    if (matching.isEmpty()) {
+      logger.lifecycle("No repositories found with description “$desc”.")
+      return@doLast
+    }
+
+    var ok = 0
+    var failed = 0
+
+    matching.forEach { repo ->
+      // Encode the key exactly like `jq -sRr @uri`
+      val enc = repo.encodedKey
+      val promoteRequest = HttpRequest.newBuilder()
+        .uri(URI.create("https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/$enc?publishing_type=user_managed"))
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/json")
+        .header("Authorization", "Basic $auth")
+        .POST(HttpRequest.BodyPublishers.ofString("{}"))
+        .build()
+
+      val promoteResp = http.send(promoteRequest, HttpResponse.BodyHandlers.ofString())
+
+      if (promoteResp.statusCode() in 200..299) {
+        logger.lifecycle("✓  Promoted staging repo ${repo.key}")
+        ok++
+      } else {
+        logger.error(
+          """✗  Failed to promote repo ${repo.key}
+                HTTP ${promoteResp.statusCode()}
+                ${promoteResp.body()}
+          """.trimIndent())
+        failed++
+      }
+    }
+
+    if (failed > 0) {
+      throw GradleException("Some repositories failed to publish: $failed of ${matching.size}")
+    } else {
+      logger.lifecycle("All $ok staging repositories successfully switched to user-managed.")
+    }
   }
 }
