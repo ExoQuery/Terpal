@@ -10,20 +10,6 @@ plugins {
   id("org.jetbrains.dokka")
 }
 
-// nexusPublishing {
-//   val user = System.getenv("SONATYPE_USERNAME")
-//   val pass = System.getenv("SONATYPE_PASSWORD")
-//
-//   repositories {
-//     sonatype {
-//       nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-//       snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-//       username.set(user)
-//       password.set(pass)
-//     }
-//   }
-// }
-
 apply(plugin = "io.github.gradle-nexus.publish-plugin")
 apply(plugin = "kotlin")
 apply(plugin = "maven-publish")
