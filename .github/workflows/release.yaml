@@ -36,24 +36,24 @@ jobs:
               :terpal-plugin-kotlin:publish
               :terpal-plugin-gradle:publish
             platform: linux
-          - os: macOS-latest
-            # (Need to do >- or for some reason it preserves a newline after all the entries)
-            publish_command: >-
-              build
-              :terpal-runtime:publishMacosX64PublicationToOss
-              :terpal-runtime:publishMacosArm64PublicationToOss
-              :terpal-runtime:publishIosX64PublicationToOss
-              :terpal-runtime:publishIosArm64PublicationToOss
-              :terpal-runtime:publishIosSimulatorArm64PublicationToOss
-              :terpal-runtime:publishTvosX64PublicationToOss
-              :terpal-runtime:publishTvosArm64PublicationToOss
-              :terpal-runtime:publishWatchosX64PublicationToOss
-              :terpal-runtime:publishWatchosArm32PublicationToOss
-              :terpal-runtime:publishWatchosArm64PublicationToOss
-            platform: mac
-          - os: windows-latest
-            publish_command: build :terpal-runtime:publishMingwX64PublicationToOss
-            platform: windows
+#          - os: macOS-latest
+#            # (Need to do >- or for some reason it preserves a newline after all the entries)
+#            publish_command: >-
+#              build
+#              :terpal-runtime:publishMacosX64PublicationToOss
+#              :terpal-runtime:publishMacosArm64PublicationToOss
+#              :terpal-runtime:publishIosX64PublicationToOss
+#              :terpal-runtime:publishIosArm64PublicationToOss
+#              :terpal-runtime:publishIosSimulatorArm64PublicationToOss
+#              :terpal-runtime:publishTvosX64PublicationToOss
+#              :terpal-runtime:publishTvosArm64PublicationToOss
+#              :terpal-runtime:publishWatchosX64PublicationToOss
+#              :terpal-runtime:publishWatchosArm32PublicationToOss
+#              :terpal-runtime:publishWatchosArm64PublicationToOss
+#            platform: mac
+#          - os: windows-latest
+#            publish_command: build :terpal-runtime:publishMingwX64PublicationToOss
+#            platform: windows
     env:
       SONATYPE_REPOSITORY_ID: ${{ needs.create_staging_repository.outputs.repository_id }}
       SONATYPE_USERNAME: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
@@ -88,7 +88,7 @@ jobs:
           # 1) URL-encode the repository key ----------------------------
           repo="${SONATYPE_REPOSITORY_ID}"
           enc=$(printf '%s' "$repo" | jq -sRr @uri)
-          echo "Encoded repo id: $enc"
+          echo "Encoded repo id: $SONATYPE_REPOSITORY_ID -> $repo -> $enc"
     
           # 2) POST to the manual-upload endpoint -----------------------
           response=$(curl -sS -w '%{http_code}' -o /tmp/out \
