@@ -100,7 +100,7 @@ jobs:
       - run: ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI -no-daemon --stacktrace
 
   upload_to_central:
-    needs: [release]
+    needs: [release, create_staging_repository]
     runs-on: ubuntu-latest
     env:
       SONATYPE_REPOSITORY_ID: ${{ needs.create_staging_repository.outputs.repository_id }}
