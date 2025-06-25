@@ -91,7 +91,7 @@ publishing {
       setUrl {
         val repositoryId = System.getenv("SONATYPE_REPOSITORY_ID") ?: error("Missing env variable: SONATYPE_REPOSITORY_ID")
         if (repositoryId.trim().isEmpty() || repositoryId.trim() == "") error("SONATYPE_REPOSITORY_ID is empty")
-        "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
+        "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deployByRepositoryId/$repositoryId/"
       }
       credentials {
         username = user
