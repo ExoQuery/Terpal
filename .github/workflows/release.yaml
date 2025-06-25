@@ -33,7 +33,7 @@ jobs:
             exit 1
           fi
           
-          echo "::group::Repo Id"; echo "repo_id"; echo "::endgroup::"
+          echo "::group::Repo Id"; echo "$repo_id"; echo "::endgroup::"
           
           echo "repository_id=$repo_id" >> "$GITHUB_OUTPUT"
 
