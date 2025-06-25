@@ -113,15 +113,15 @@ jobs:
 
           echo "::group::Central response"; echo "$repo_json"; echo "::endgroup::"
 
-          export SONATYPE_REPOSITORY_ID=$(printf '%s' "$repo_json" | jq -r '.data.stagedRepositoryId')
-          if [[ -z "$SONATYPE_REPOSITORY_ID" || "$SONATYPE_REPOSITORY_ID" == "null" ]]; then
+          repo=$(printf '%s' "$repo_json" | jq -r '.data.stagedRepositoryId')
+          if [[ -z "$repo" || "$repo" == "null" ]]; then
             echo "::error ::Central API did not return a repository id"
             exit 1
           fi
 
-          echo "::group::SONATYPE_REPOSITORY_ID"; echo "$SONATYPE_REPOSITORY_ID"; echo "::endgroup::"
+          echo "::group::repo"; echo "$repo"; echo "::endgroup::"
           
-          ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI -no-daemon --stacktrace
+          SONATYPE_REPOSITORY_ID=$repo ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI -no-daemon --stacktrace
 
 #  upload_to_central:
 #    needs: [release, create_staging_repository]
