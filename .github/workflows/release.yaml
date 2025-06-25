@@ -11,14 +11,41 @@ jobs:
       repository_id: ${{ steps.create.outputs.repository_id }}
     steps:
       - id: create
-        uses: nexus-actions/create-nexus-staging-repo@main
-        with:
-          username: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
-          password: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}
-          staging_profile_id: ${{ vars.SONATYPE_PROFILE_ID }}
-          # Defaults to the https://oss.sonatype.org so we need to override it
-          base_url: https://ossrh-staging-api.central.sonatype.com/service/local/
-          description: ${{ github.repository }}/${{ github.workflow }}#${{ github.run_number }}
+        name: Create Central staging repo
+        shell: bash
+        env:
+          USER:  ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}      # Portal token user
+          PASS:  ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}      # Portal token pwd
+          PID:   ${{ vars.SONATYPE_PROFILE_ID }}   # unchanged
+        run: |
+          repo_json=$(curl -sS \
+            -u "$USER:$PASS" \
+            -H 'Content-Type: application/json' \
+            -X POST \
+            -d '{"data":{"description":"${{ github.repository }}/${{ github.workflow }}#${{ github.run_number }}"}}' \
+            "https://ossrh-staging-api.central.sonatype.com/service/local/staging/profiles/$PID/start")
+
+          echo "::group::Central response"; echo "$repo_json"; echo "::endgroup::"
+
+          repo_id=$(printf '%s' "$repo_json" | jq -r '.data.stagedRepositoryId')
+          if [[ -z "$repo_id" || "$repo_id" == "null" ]]; then
+            echo "::error ::Central API did not return a repository id"
+            exit 1
+          fi
+          
+          echo "::group::Repo Id"; echo "$repo_id"; echo "::endgroup::"
+          
+          echo "repository_id=$repo_id" >> "$GITHUB_OUTPUT"
+
+#      - id: create
+#        uses: nexus-actions/create-nexus-staging-repo@main
+#        with:
+#          username: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
+#          password: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}
+#          staging_profile_id: ${{ vars.SONATYPE_PROFILE_ID }}
+#          # Defaults to the https://oss.sonatype.org, not https://s01.oss.sonatype.org
+#          base_url: https://ossrh-staging-api.central.sonatype.com/service/local/
+#          description: ${{ github.repository }}/${{ github.workflow }}#${{ github.run_number }}
 
   release:
     needs: [create_staging_repository]
