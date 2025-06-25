@@ -87,7 +87,7 @@ val startSonatypeStaging by tasks.registering {
 
   doLast {
     /* ---- gather inputs exactly as before ---- */
-    val pid   = System.getenv("SONATYPE_PROFILE_ID") ?: error("SONATYPE_PROFILE_ID not set")
+    val pid   = "io.exoquery"
     val user  = System.getenv("SONATYPE_USERNAME")   ?: error("SONATYPE_USERNAME not set")
     val pass  = System.getenv("SONATYPE_PASSWORD")   ?: error("SONATYPE_PASSWORD not set")
     val desc = "${System.getenv("GITHUB_REPOSITORY")}/${System.getenv("GITHUB_WORKFLOW")}#${System.getenv("GITHUB_RUN_NUMBER")}"
