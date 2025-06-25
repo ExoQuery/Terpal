@@ -73,19 +73,36 @@ jobs:
       - run: ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI -no-daemon --stacktrace
 
   upload_to_central:
-    needs: [release]
-    runs-on: ubuntu-latest
-    env:
-      SONATYPE_REPOSITORY_ID: ${{ needs.create_staging_repository.outputs.repository_id }}
-    steps:
-      - name: Hand repo to Central Portal
-        uses: ./.github/actions/central-upload
-        with:
-          username: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
-          password: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}
-          repository_id: ${{ env.SONATYPE_REPOSITORY_ID }}
-          # optional – automatic publishes as soon as validation passes
-          publishing_type: user_managed
+    - name: Hand staging repo to Central Portal
+      shell: bash
+      env:
+        SONATYPE_REPOSITORY_ID: ${{ needs.create_staging_repository.outputs.repository_id }}
+        SONATYPE_USERNAME: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
+        SONATYPE_PASSWORD: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}
+      run: |
+        set -euo pipefail
+
+        # 1) URL-encode the repository key ----------------------------
+        repo="${SONATYPE_REPOSITORY_ID}"
+        enc=$(printf '%s' "$repo" | jq -sRr @uri)
+        echo "Encoded repo id: $enc"
+
+        # 2) POST to the manual-upload endpoint -----------------------
+        response=$(curl -sS -w '%{http_code}' -o /tmp/out \
+          -u "$SONATYPE_USERNAME:$SONATYPE_PASSWORD" \
+          -H 'Content-Type: application/json' \
+          -H 'Accept: application/json' \
+          -X POST -d '{}' \
+          "https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/$enc?publishing_type=user_managed")
+
+        # 3) Evaluate HTTP status -------------------------------------
+        if [[ "$response" =~ ^2 ]]; then
+          echo "Hand-off succeeded (HTTP $response)."
+        else
+          echo "::error ::Central upload failed (HTTP $response)"
+          cat /tmp/out
+          exit 1
+        fi
 
   # Once all of the Nexus artifacts are published, we can release the plugin to gradle plugin portal
   release_plugin:
