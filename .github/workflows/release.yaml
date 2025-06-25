@@ -159,7 +159,7 @@ jobs:
 
   # Once all of the Nexus artifacts are published, we can release the plugin to gradle plugin portal
   release_plugin:
-    needs: [release]
+    needs: [release_repos]
     runs-on: ubuntu-latest
     env:
       SONATYPE_REPOSITORY_ID: ${{ needs.create_staging_repository.outputs.repository_id }}

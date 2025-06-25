@@ -151,7 +151,7 @@ tasks.withType<AbstractPublishToMaven>().configureEach {
   // This ensures stagingRepoId is set before it's used
   rootProject.tasks.findByName("startSonatypeStaging")?.let {
     dependsOn(it)
-  }
+  } ?: error("ERROR: startSonatypeStaging task not found. ")
 
   // Also, do not publish the decomat-examples project
   onlyIf {
