@@ -23,8 +23,6 @@ jobs:
             # (Need to do >- or for some reason it preserves a newline after all the entries)
             publish_command: >-
               build
-              :terpal-runtime:publishMacosX64PublicationToOss
-              :terpal-runtime:publishMacosArm64PublicationToOss
               :terpal-runtime:publishIosX64PublicationToOss
               :terpal-runtime:publishIosArm64PublicationToOss
               :terpal-runtime:publishIosSimulatorArm64PublicationToOss
