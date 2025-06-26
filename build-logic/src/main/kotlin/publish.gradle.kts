@@ -21,6 +21,11 @@ repositories {
 tasks.withType<PublishToMavenRepository>().configureEach {
   gradle.startParameter.maxWorkerCount = 1
 
+  doLast {
+    logger.lifecycle("Sleeping 20 s after $name")
+    Thread.sleep(20_000)
+  }
+
   onlyIf {
     publication.artifactId != "testing"
   }
