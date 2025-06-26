@@ -1,4 +1,5 @@
 import org.jetbrains.dokka.gradle.AbstractDokkaTask
+import org.jetbrains.kotlin.konan.target.HostManager
 
 plugins {
   // Remove for now because unnecessary can add back in order to share settings.
@@ -21,9 +22,11 @@ repositories {
 tasks.withType<PublishToMavenRepository>().configureEach {
   gradle.startParameter.maxWorkerCount = 1
 
-  doLast {
-    logger.lifecycle("Sleeping 20 s after $name")
-    Thread.sleep(20_000)
+  if (HostManager.hostIsMac) {
+    doLast {
+      logger.lifecycle("Sleeping 20 s after $name")
+      Thread.sleep(20_000)
+    }
   }
 
   onlyIf {
