@@ -11,7 +11,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(17)
 }
 
 val conventionsDecomatVersion = Conventions_gradle.Versions.decomatVersion

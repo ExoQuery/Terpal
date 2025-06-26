@@ -20,7 +20,7 @@ kotlin {
   val isMac = platform == "mac"
   val isWindows = platform == "windows"
 
-  jvmToolchain(11)
+  jvmToolchain(17)
   val isLocalMultiplatform = project.hasProperty("isLocalMultiplatform")
 
   jvm {

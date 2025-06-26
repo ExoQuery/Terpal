@@ -6,6 +6,7 @@ plugins {
   id("maven-publish")
   id("conventions-multiplatform")
   id("publish")
+  id("com.gradleup.nmcp.aggregation").version("0.2.1")
 
   signing
 }
@@ -26,4 +27,16 @@ kotlin {
       }
     }
   }
+}
+
+nmcpAggregation {
+  centralPortal {
+    username = System.getenv("SONATYPE_USERNAME")   ?: "default_username"
+    password = System.getenv("SONATYPE_PASSWORD")   ?: "default_password"
+    // publish manually from the portal
+    publishingType = "USER_MANAGED"
+  }
+
+  // Publish all projects that apply the 'maven-publish' plugin
+  publishAllProjectsProbablyBreakingProjectIsolation()
 }

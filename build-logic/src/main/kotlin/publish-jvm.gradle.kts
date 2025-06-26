@@ -22,16 +22,16 @@ repositories {
 tasks {
   compileKotlin {
     kotlinOptions.suppressWarnings = true
-    kotlinOptions.jvmTarget = "11"
+    kotlinOptions.jvmTarget = "17"
   }
 
   compileJava {
-    sourceCompatibility = "11"
-    targetCompatibility = "11"
+    sourceCompatibility = "17"
+    targetCompatibility = "17"
   }
 
   compileTestKotlin {
-    kotlinOptions.jvmTarget = "11"
+    kotlinOptions.jvmTarget = "17"
   }
 
   compileTestJava {
@@ -40,14 +40,14 @@ tasks {
 }
 
 java {
-  sourceCompatibility = JavaVersion.VERSION_11
-  targetCompatibility = JavaVersion.VERSION_11
+  sourceCompatibility = JavaVersion.VERSION_17
+  targetCompatibility = JavaVersion.VERSION_17
 }
 
 // Can also do this instead of above, for more details
 // see here: https://stackoverflow.com/questions/69079963/how-to-set-compilejava-task-11-and-compilekotlin-task-1-8-jvm-target-com
 //  java {
-//    toolchain.languageVersion.set(JavaLanguageVersion.of(11))
+//    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
 //  }
 
 // Disable publishing for decomat examples
@@ -93,7 +93,7 @@ publishing {
       setUrl {
         val repositoryId = System.getenv("STAGING_REPO_ID")
         if (repositoryId.trim().isEmpty() || repositoryId.trim() == "") error("STAGING_REPO_ID is empty")
-        "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deployByRepositoryId/$repositoryId/"
+        "https://ossrh-staging-api.central.sonatype.com/service/local/staging/maven2/"
       }
       credentials {
         username = user

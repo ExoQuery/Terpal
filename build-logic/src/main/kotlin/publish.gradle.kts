@@ -8,6 +8,7 @@ plugins {
   signing
   id("io.github.gradle-nexus.publish-plugin")
   id("org.jetbrains.dokka")
+  //id("com.gradleup.nmcp.aggregation")
 }
 
 apply(plugin = "io.github.gradle-nexus.publish-plugin")
@@ -18,16 +19,29 @@ repositories {
 }
 
 
+//nmcpAggregation {
+//  centralPortal {
+//    username = System.getenv("SONATYPE_USERNAME")   ?: error("SONATYPE_USERNAME not set")
+//    password = System.getenv("SONATYPE_PASSWORD")   ?: error("SONATYPE_PASSWORD not set")
+//    // publish manually from the portal
+//    publishingType = "USER_MANAGED"
+//  }
+//
+//  // Publish all projects that apply the 'maven-publish' plugin
+//  publishAllProjectsProbablyBreakingProjectIsolation()
+//}
+
+
 // Disable publishing for testing project
 tasks.withType<PublishToMavenRepository>().configureEach {
   gradle.startParameter.maxWorkerCount = 1
 
-  if (HostManager.hostIsMac) {
-    doLast {
-      logger.lifecycle("Sleeping 120 s after $name")
-      Thread.sleep(20_000)
-    }
-  }
+  //if (HostManager.hostIsMac) {
+  //  doLast {
+  //    logger.lifecycle("Sleeping 120 s after $name")
+  //    Thread.sleep(20_000)
+  //  }
+  //}
 
   onlyIf {
     publication.artifactId != "testing"
@@ -55,7 +69,7 @@ publishing {
       setUrl {
         val repositoryId = System.getenv("STAGING_REPO_ID")
         if (repositoryId.trim().isEmpty() || repositoryId.trim() == "") error("STAGING_REPO_ID is empty")
-        "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deployByRepositoryId/$repositoryId/"
+        "https://ossrh-staging-api.central.sonatype.com/service/local/staging/maven2/"
       }
       credentials {
         username = user
@@ -154,7 +168,6 @@ tasks.withType<Sign>().configureEach {
 // I tried a few things that caused other issues. Ultimately the working solution I got from here:
 // https://github.com/gradle/gradle/issues/26091#issuecomment-1722947958
 tasks.withType<AbstractPublishToMaven>().configureEach {
-  gradle.startParameter.maxWorkerCount = 1
   val signingTasks = tasks.withType<Sign>()
   mustRunAfter(signingTasks)
 

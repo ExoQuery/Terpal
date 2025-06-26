@@ -1,6 +1,15 @@
 pluginManagement {
   includeBuild("terpal-plugin-gradle")
   includeBuild("build-logic")
+
+  pluginManagement {
+    repositories {
+      mavenCentral()
+      google()
+      gradlePluginPortal()
+      mavenLocal()
+    }
+  }
 }
 
 includeBuild("terpal-runtime")
