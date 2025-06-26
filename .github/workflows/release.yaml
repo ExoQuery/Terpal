@@ -7,7 +7,6 @@ jobs:
   release:
     runs-on: ${{ matrix.os }}
     strategy:
-      max-parallel: 1
       matrix:
         os: [ ubuntu-latest, macOS-latest, windows-latest ]
         include:
@@ -63,7 +62,7 @@ jobs:
         shell: bash
         env:
           STAGING_REPO_ID: ${{ steps.create_staging_repo.outputs.repository_id }}
-        run: ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI --no-parallel --max-workers 1 --no-daemon --stacktrace
+        run: ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI --no-parallel --max-workers 1 --no-daemon --stacktrace --info
 
   release_repos:
     needs: [ release ]
