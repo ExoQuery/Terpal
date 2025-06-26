@@ -58,7 +58,7 @@ publishing {
           "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deployByRepositoryId/$repositoryId/"
         } else {
           // For macOS builds, create the default repo
-          "https://ossrh-staging-api.central.sonatype.com/service/local/staging/maven2/"
+          "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
         }
       }
       credentials {
