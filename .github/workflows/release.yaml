@@ -21,12 +21,12 @@ jobs:
             platform: linux
           - os: macOS-latest
             # (Need to do >- or for some reason it preserves a newline after all the entries)
+            #              :terpal-runtime:publishMacosX64PublicationToOss
+            #              :terpal-runtime:publishMacosArm64PublicationToOss
+            #              :terpal-runtime:publishIosX64PublicationToOss
+            #              :terpal-runtime:publishIosArm64PublicationToOss
             publish_command: >-
               build
-#              :terpal-runtime:publishMacosX64PublicationToOss
-#              :terpal-runtime:publishMacosArm64PublicationToOss
-#              :terpal-runtime:publishIosX64PublicationToOss
-#              :terpal-runtime:publishIosArm64PublicationToOss
               :terpal-runtime:publishIosSimulatorArm64PublicationToOss
               :terpal-runtime:publishTvosX64PublicationToOss
               :terpal-runtime:publishTvosArm64PublicationToOss
