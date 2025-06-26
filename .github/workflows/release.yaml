@@ -23,8 +23,10 @@ jobs:
             # (Need to do >- or for some reason it preserves a newline after all the entries)
             publish_command: >-
               build
-              :terpal-runtime:publishIosX64PublicationToOss
-              :terpal-runtime:publishIosArm64PublicationToOss
+#              :terpal-runtime:publishMacosX64PublicationToOss
+#              :terpal-runtime:publishMacosArm64PublicationToOss
+#              :terpal-runtime:publishIosX64PublicationToOss
+#              :terpal-runtime:publishIosArm64PublicationToOss
               :terpal-runtime:publishIosSimulatorArm64PublicationToOss
               :terpal-runtime:publishTvosX64PublicationToOss
               :terpal-runtime:publishTvosArm64PublicationToOss
@@ -52,12 +54,14 @@ jobs:
         uses: gradle/actions/wrapper-validation@v3
       - run: echo "*************** PublishCommand ${{ matrix.publish_command }}"
 
-      - name: Create Central staging repo
+      - id: create_staging_repo
+        name: Create Central staging repo (Gradle)
+        run: ./gradlew startSonatypeStaging --no-daemon
+
+      - name: Publish the project
         shell: bash
         env:
-          USER:  ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}      # Portal token user
-          PASS:  ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}      # Portal token pwd
-          PID:   ${{ vars.SONATYPE_PROFILE_ID }}   # unchanged
+          STAGING_REPO_ID: ${{ steps.create_staging_repo.outputs.repository_id }}
         run: ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI -no-daemon --stacktrace
 
   release_repos:

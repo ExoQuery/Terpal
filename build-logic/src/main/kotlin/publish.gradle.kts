@@ -19,10 +19,6 @@ repositories {
 
 // Disable publishing for testing project
 tasks.withType<PublishToMavenRepository>().configureEach {
-  tasks.findByName("startSonatypeStaging")?.let {
-    dependsOn(it)
-  } ?: error("ERROR: startSonatypeStaging task not found (PublishToMavenRepository in publish.gradle).")
-
   onlyIf {
     publication.artifactId != "testing"
   }
@@ -47,7 +43,7 @@ publishing {
     maven {
       name = "Oss"
       setUrl {
-        val repositoryId = project.extra["stagingRepoId"].toString()
+        val repositoryId = System.getenv("STAGING_REPO_ID")
         if (repositoryId.trim().isEmpty() || repositoryId.trim() == "") error("stagingRepoId is empty")
         "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deployByRepositoryId/$repositoryId/"
       }
@@ -150,12 +146,6 @@ tasks.withType<Sign>().configureEach {
 tasks.withType<AbstractPublishToMaven>().configureEach {
   val signingTasks = tasks.withType<Sign>()
   mustRunAfter(signingTasks)
-
-  // Make sure startSonatypeStaging runs before any publishing task
-  // This ensures stagingRepoId is set before it's used
-  tasks.findByName("startSonatypeStaging")?.let {
-    dependsOn(it)
-  } ?: error("ERROR: startSonatypeStaging task not found (AbstractPublishToMaven in publish.gradle).")
 
   onlyIf {
     publication.artifactId != "testing"

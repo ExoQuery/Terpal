@@ -55,9 +55,6 @@ tasks.withType<PublishToMavenRepository>().configureEach {
   onlyIf {
     publication.artifactId != "testing"
   }
-  tasks.findByName("startSonatypeStaging")?.let {
-    dependsOn(it)
-  } ?: error("ERROR: startSonatypeStaging task not found (PublishToMavenRepository in publish.gradle).")
 }
 
 val varintName = project.name
@@ -92,7 +89,7 @@ publishing {
     maven {
       name = "Oss"
       setUrl {
-        val repositoryId = project.extra["stagingRepoId"].toString()
+        val repositoryId = System.getenv("STAGING_REPO_ID")
         if (repositoryId.trim().isEmpty() || repositoryId.trim() == "") error("stagingRepoId is empty")
         "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deployByRepositoryId/$repositoryId/"
       }

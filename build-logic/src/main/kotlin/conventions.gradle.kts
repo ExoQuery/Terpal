@@ -91,7 +91,7 @@ val startSonatypeStaging by tasks.registering {
     val pid   = "io.exoquery"
     val user  = System.getenv("SONATYPE_USERNAME")   ?: error("SONATYPE_USERNAME not set")
     val pass  = System.getenv("SONATYPE_PASSWORD")   ?: error("SONATYPE_PASSWORD not set")
-    val desc = "${System.getenv("GITHUB_REPOSITORY")}/${System.getenv("GITHUB_WORKFLOW")}#${System.getenv("GITHUB_RUN_NUMBER")}/${project.name}/${System.getenv("MATRIX_OS")}"
+    val desc = "${System.getenv("GITHUB_REPOSITORY")}/${System.getenv("GITHUB_WORKFLOW")}#${System.getenv("GITHUB_RUN_NUMBER")}/${System.getenv("MATRIX_OS")}"
 
     val bodyJson = """{"data":{"description":"$desc"}}"""
     val auth     = Base64.getEncoder().encodeToString("$user:$pass".toByteArray())
@@ -120,7 +120,10 @@ val startSonatypeStaging by tasks.registering {
 
     // 1. Expose as a Gradle extra property
     println("-------------- Exposing Repo ID: $repoId in ${project.name} --------------")
-    project.extra["stagingRepoId"] = repoId
+
+    System.getenv("GITHUB_OUTPUT")?.let { path ->
+      File(path).appendText("repository_id=$repoId\n")
+    } ?: error("GITHUB_OUTPUT environment variable is not set. Cannot expose repository_id.")
   }
 }
 
