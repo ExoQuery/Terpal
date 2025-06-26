@@ -7,8 +7,8 @@ jobs:
   release:
     runs-on: ${{ matrix.os }}
     strategy:
+      max-parallel: 1
       matrix:
-        max-parallel: 1
         os: [ ubuntu-latest, macOS-latest, windows-latest ]
         include:
           - os: ubuntu-latest
