@@ -19,6 +19,8 @@ repositories {
 
 // Disable publishing for testing project
 tasks.withType<PublishToMavenRepository>().configureEach {
+  gradle.startParameter.maxWorkerCount = 1
+
   onlyIf {
     publication.artifactId != "testing"
   }
@@ -144,6 +146,7 @@ tasks.withType<Sign>().configureEach {
 // I tried a few things that caused other issues. Ultimately the working solution I got from here:
 // https://github.com/gradle/gradle/issues/26091#issuecomment-1722947958
 tasks.withType<AbstractPublishToMaven>().configureEach {
+  gradle.startParameter.maxWorkerCount = 1
   val signingTasks = tasks.withType<Sign>()
   mustRunAfter(signingTasks)
 
