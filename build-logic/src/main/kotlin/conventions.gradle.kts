@@ -158,7 +158,7 @@ fun HttpClient.listStagingRepos(user: String, pass: String): Wrapper {
       json
     }
   }
-  val response = http.send(request, HttpResponse.BodyHandlers.ofString())
+  val response = this.send(request, HttpResponse.BodyHandlers.ofString())
   println("================ /manual/search/repositories Response Code: ${response.statusCode()}: ================\n${tryPrintJson(response.body())}")
 
   /* 1.  Sanity-check the HTTP call */
@@ -181,6 +181,7 @@ val publishSonatypeStaging by tasks.registering {
     val pass  = System.getenv("SONATYPE_PASSWORD")   ?: error("SONATYPE_PASSWORD not set")
     val desc = "${System.getenv("GITHUB_REPOSITORY")}/${System.getenv("GITHUB_WORKFLOW")}#${System.getenv("GITHUB_RUN_NUMBER")}"
     val http = HttpClient.newHttpClient()
+    val auth = Base64.getEncoder().encodeToString("$user:$pass".toByteArray())
 
     /* Pick the repositories whose description matches `desc` */
     val matching = http.listStagingRepos(user, pass).repositoriesSorted.filter { it.description?.startsWith(desc) ?: false }
