@@ -13,29 +13,13 @@ jobs:
           - os: ubuntu-latest
             # On ubuntu publish everything you can i.e. the linuxX64 and jvm binaries
             # (Need to do >- or for some reason it preserves a newline after all the entries)
-            publish_command: >-
-              build
-              :terpal-runtime:publishAllPublicationsToOss 
-              :terpal-plugin-kotlin:publish
-              :terpal-plugin-gradle:publish
+            publish_command: build publishLinux
             platform: linux
           - os: macOS-latest
-            # (Need to do >- or for some reason it preserves a newline after all the entries)
-            #              :terpal-runtime:publishMacosX64PublicationToOss
-            #              :terpal-runtime:publishMacosArm64PublicationToOss
-            #              :terpal-runtime:publishIosX64PublicationToOss
-            #              :terpal-runtime:publishIosArm64PublicationToOss
-            publish_command: >-
-              build
-              :terpal-runtime:publishIosSimulatorArm64PublicationToOss
-              :terpal-runtime:publishTvosX64PublicationToOss
-              :terpal-runtime:publishTvosArm64PublicationToOss
-              :terpal-runtime:publishWatchosX64PublicationToOss
-              :terpal-runtime:publishWatchosArm32PublicationToOss
-              :terpal-runtime:publishWatchosArm64PublicationToOss
+            publish_command: build publishMac
             platform: mac
           - os: windows-latest
-            publish_command: build :terpal-runtime:publishMingwX64PublicationToOss
+            publish_command: build publishWindows
             platform: windows
     env:
       SONATYPE_USERNAME: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
