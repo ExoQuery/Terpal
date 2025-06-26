@@ -13,13 +13,13 @@ jobs:
           - os: ubuntu-latest
             # On ubuntu publish everything you can i.e. the linuxX64 and jvm binaries
             # (Need to do >- or for some reason it preserves a newline after all the entries)
-            publish_command: build publishAggregationToCentralPortal
+            publish_command: build :terpal-runtime:publishAggregationToCentralPortal
             platform: linux
           - os: macOS-latest
-            publish_command: build publishAggregationToCentralPortal
+            publish_command: build :terpal-runtime:publishAggregationToCentralPortal
             platform: mac
           - os: windows-latest
-            publish_command: build publishAggregationToCentralPortal
+            publish_command: build :terpal-runtime:publishAggregationToCentralPortal
             platform: windows
     env:
       SONATYPE_USERNAME: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
