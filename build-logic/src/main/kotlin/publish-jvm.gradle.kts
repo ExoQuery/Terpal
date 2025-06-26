@@ -90,7 +90,7 @@ publishing {
       name = "Oss"
       setUrl {
         val repositoryId = System.getenv("STAGING_REPO_ID")
-        if (repositoryId.trim().isEmpty() || repositoryId.trim() == "") error("stagingRepoId is empty")
+        if (repositoryId.trim().isEmpty() || repositoryId.trim() == "") error("STAGING_REPO_ID is empty")
         "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deployByRepositoryId/$repositoryId/"
       }
       credentials {
