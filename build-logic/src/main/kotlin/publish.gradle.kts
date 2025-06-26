@@ -25,7 +25,7 @@ tasks.withType<PublishToMavenRepository>().configureEach {
   if (HostManager.hostIsMac) {
     doLast {
       logger.lifecycle("Sleeping 120 s after $name")
-      Thread.sleep(120_000)
+      Thread.sleep(20_000)
     }
   }
 
