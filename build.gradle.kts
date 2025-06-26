@@ -29,12 +29,12 @@ tasks.register("publishLinuxLocal") {
 }
 
 tasks.register("publishMac") {
-  //Release.macBuildCommands.forEach {
-  //  dependsOn(gradle.includedBuild(Release.Project.`terpal-runtime`).task(":$it"))
-  //}
-  dependsOn(
-    gradle.includedBuild(Release.Project.`terpal-runtime`).task(":publishAllPublicationsToOssRepository")
-  )
+  Release.macBuildCommands.forEach {
+    dependsOn(gradle.includedBuild(Release.Project.`terpal-runtime`).task(":$it"))
+  }
+  //dependsOn(
+  //  gradle.includedBuild(Release.Project.`terpal-runtime`).task(":publishAllPublicationsToOssRepository")
+  //)
 }
 
 tasks.register("publishWindows") {

@@ -24,12 +24,12 @@ tasks.withType<PublishToMavenRepository>().configureEach {
 
   onlyIf {
     publication.artifactId != "testing"
-      && !publication.name.lowercase().contains("iosX64".lowercase())
-      && !publication.name.lowercase().contains("iosArm64".lowercase())
-      && !publication.name.lowercase().contains("macosX64".lowercase())
-      && !publication.name.lowercase().contains("macosArm64".lowercase())
-      && publication.name != "publishKotlinMultiplatformPublicationToOssRepository"
-      && publication.name != "publishJvmPublicationToOssRepository"
+//      && !publication.name.lowercase().contains("iosX64".lowercase())
+//      && !publication.name.lowercase().contains("iosArm64".lowercase())
+//      && !publication.name.lowercase().contains("macosX64".lowercase())
+//      && !publication.name.lowercase().contains("macosArm64".lowercase())
+//      && publication.name != "publishKotlinMultiplatformPublicationToOssRepository"
+//      && publication.name != "publishJvmPublicationToOssRepository"
   }
 }
 
@@ -52,9 +52,14 @@ publishing {
     maven {
       name = "Oss"
       setUrl {
-        val repositoryId = System.getenv("STAGING_REPO_ID")
-        if (repositoryId.trim().isEmpty() || repositoryId.trim() == "") error("STAGING_REPO_ID is empty")
-        "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deployByRepositoryId/$repositoryId/"
+        if (!HostManager.hostIsMac) {
+          val repositoryId = System.getenv("STAGING_REPO_ID")
+          if (repositoryId.trim().isEmpty() || repositoryId.trim() == "") error("STAGING_REPO_ID is empty")
+          "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deployByRepositoryId/$repositoryId/"
+        } else {
+          // For macOS builds, create the default repo
+          "https://ossrh-staging-api.central.sonatype.com/service/local/staging/maven2/"
+        }
       }
       credentials {
         username = user
