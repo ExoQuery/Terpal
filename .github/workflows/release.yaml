@@ -18,7 +18,6 @@ jobs:
               :terpal-runtime:publishAllPublicationsToOss 
               :terpal-plugin-kotlin:publish
               :terpal-plugin-gradle:publish
-              --no-parallel --max-workers 1
             platform: linux
           - os: macOS-latest
             # (Need to do >- or for some reason it preserves a newline after all the entries)
@@ -34,10 +33,9 @@ jobs:
               :terpal-runtime:publishWatchosX64PublicationToOss
               :terpal-runtime:publishWatchosArm32PublicationToOss
               :terpal-runtime:publishWatchosArm64PublicationToOss
-              --no-parallel --max-workers 1
             platform: mac
           - os: windows-latest
-            publish_command: build :terpal-runtime:publishMingwX64PublicationToOss --no-parallel --max-workers 1
+            publish_command: build :terpal-runtime:publishMingwX64PublicationToOss
             platform: windows
     env:
       SONATYPE_USERNAME: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
@@ -64,7 +62,7 @@ jobs:
         shell: bash
         env:
           STAGING_REPO_ID: ${{ steps.create_staging_repo.outputs.repository_id }}
-        run: ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI -no-daemon --stacktrace
+        run: ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI --no-parallel --max-workers 1 --no-daemon --stacktrace
 
   release_repos:
     needs: [ release ]
