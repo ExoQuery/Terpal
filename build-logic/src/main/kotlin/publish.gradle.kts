@@ -22,15 +22,14 @@ repositories {
 tasks.withType<PublishToMavenRepository>().configureEach {
   gradle.startParameter.maxWorkerCount = 1
 
-  if (HostManager.hostIsMac) {
-    doLast {
-      logger.lifecycle("Sleeping 120 s after $name")
-      Thread.sleep(20_000)
-    }
-  }
-
   onlyIf {
     publication.artifactId != "testing"
+      && !publication.name.lowercase().contains("iosX64".lowercase())
+      && !publication.name.lowercase().contains("iosArm64".lowercase())
+      && !publication.name.lowercase().contains("macosX64".lowercase())
+      && !publication.name.lowercase().contains("macosArm64".lowercase())
+      && publication.name != "publishKotlinMultiplatformPublicationToOssRepository"
+      && publication.name != "publishJvmPublicationToOssRepository"
   }
 }
 
