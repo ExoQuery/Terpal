@@ -103,7 +103,7 @@ jobs:
           USER:  ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}      # Portal token user
           PASS:  ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}      # Portal token pwd
           PID:   ${{ vars.SONATYPE_PROFILE_ID }}   # unchanged
-        run: ./gradlew startSonatypeStaging ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI -no-daemon --stacktrace
+        run: ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI -no-daemon --stacktrace
 
 #  upload_to_central:
 #    needs: [release, create_staging_repository]

@@ -53,8 +53,11 @@ java {
 // Disable publishing for decomat examples
 tasks.withType<PublishToMavenRepository>().configureEach {
   onlyIf {
-    publication.artifactId != "decomat-examples"
+    publication.artifactId != "testing"
   }
+  tasks.findByName("startSonatypeStaging")?.let {
+    dependsOn(it)
+  } ?: error("ERROR: startSonatypeStaging task not found. ")
 }
 
 val varintName = project.name
@@ -209,11 +212,4 @@ tasks.withType<Sign>().configureEach {
 tasks.withType<AbstractPublishToMaven>().configureEach {
     val signingTasks = tasks.withType<Sign>()
     mustRunAfter(signingTasks)
-
-    // Make sure startSonatypeStaging runs before any publishing task
-    // This ensures stagingRepoId is set before it's used
-    rootProject.tasks.findByName("startSonatypeStaging")?.let {
-        dependsOn(it)
-    } ?: error("ERROR: startSonatypeStaging task not found. ")
-
 }

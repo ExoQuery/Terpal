@@ -22,6 +22,9 @@ tasks.withType<PublishToMavenRepository>().configureEach {
   onlyIf {
     publication.artifactId != "testing"
   }
+  tasks.findByName("startSonatypeStaging")?.let {
+    dependsOn(it)
+  } ?: error("ERROR: startSonatypeStaging task not found. ")
 }
 
 apply {
@@ -149,7 +152,7 @@ tasks.withType<AbstractPublishToMaven>().configureEach {
 
   // Make sure startSonatypeStaging runs before any publishing task
   // This ensures stagingRepoId is set before it's used
-  rootProject.tasks.findByName("startSonatypeStaging")?.let {
+  tasks.findByName("startSonatypeStaging")?.let {
     dependsOn(it)
   } ?: error("ERROR: startSonatypeStaging task not found. ")
 
