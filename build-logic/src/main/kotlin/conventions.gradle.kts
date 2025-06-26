@@ -91,7 +91,7 @@ val startSonatypeStaging by tasks.registering {
     val pid   = "io.exoquery"
     val user  = System.getenv("SONATYPE_USERNAME")   ?: error("SONATYPE_USERNAME not set")
     val pass  = System.getenv("SONATYPE_PASSWORD")   ?: error("SONATYPE_PASSWORD not set")
-    val desc = "${System.getenv("GITHUB_REPOSITORY")}/${System.getenv("GITHUB_WORKFLOW")}#${System.getenv("GITHUB_RUN_NUMBER")}"
+    val desc = "${System.getenv("GITHUB_REPOSITORY")}/${System.getenv("GITHUB_WORKFLOW")}#${System.getenv("GITHUB_RUN_NUMBER")}/${project.name}"
 
     val bodyJson = """{"data":{"description":"$desc"}}"""
     val auth     = Base64.getEncoder().encodeToString("$user:$pass".toByteArray())
@@ -120,7 +120,7 @@ val startSonatypeStaging by tasks.registering {
 
     // 1. Expose as a Gradle extra property
     println("-------------- Exposing Repo ID: $repoId --------------")
-    extra["stagingRepoId"] = repoId
+    project.extra["stagingRepoId"] = repoId
   }
 }
 
@@ -179,17 +179,21 @@ val publishSonatypeStaging by tasks.registering {
     val payload: Wrapper = mapper.readValue<Wrapper>(response.body())
 
     /* 3.  Pick the repositories whose description matches `desc` */
-    val matching = payload.repositories.filter { it.description == desc }
+    val matching = payload.repositories.filter { it.description?.startsWith(desc) ?: false }
 
     if (matching.isEmpty()) {
       logger.lifecycle("No repositories found with description “$desc”.")
       return@doLast
+    } else {
+      println("---------------- Found ${matching.size} repositories matching description “$desc” ---------------\n${matching.joinToString("\n")}")
     }
 
     var ok = 0
     var failed = 0
 
     matching.forEach { repo ->
+      println("------------- Processing Repo: ${repo.description} - Key: ${repo.key} -------------")
+
       // Encode the key exactly like `jq -sRr @uri`
       val enc = repo.encodedKey
       val promoteRequest = HttpRequest.newBuilder()

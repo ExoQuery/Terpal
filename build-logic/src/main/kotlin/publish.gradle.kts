@@ -19,12 +19,13 @@ repositories {
 
 // Disable publishing for testing project
 tasks.withType<PublishToMavenRepository>().configureEach {
+  tasks.findByName("startSonatypeStaging")?.let {
+    dependsOn(it)
+  } ?: error("ERROR: startSonatypeStaging task not found (PublishToMavenRepository in publish.gradle).")
+
   onlyIf {
     publication.artifactId != "testing"
   }
-  tasks.findByName("startSonatypeStaging")?.let {
-    dependsOn(it)
-  } ?: error("ERROR: startSonatypeStaging task not found. ")
 }
 
 apply {
@@ -46,8 +47,8 @@ publishing {
     maven {
       name = "Oss"
       setUrl {
-        val repositoryId = extra["stagingRepoId"].toString()
-        if (repositoryId.trim().isEmpty() || repositoryId.trim() == "") error("SONATYPE_REPOSITORY_ID is empty")
+        val repositoryId = project.extra["stagingRepoId"].toString()
+        if (repositoryId.trim().isEmpty() || repositoryId.trim() == "") error("stagingRepoId is empty")
         "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deployByRepositoryId/$repositoryId/"
       }
       credentials {
@@ -154,10 +155,9 @@ tasks.withType<AbstractPublishToMaven>().configureEach {
   // This ensures stagingRepoId is set before it's used
   tasks.findByName("startSonatypeStaging")?.let {
     dependsOn(it)
-  } ?: error("ERROR: startSonatypeStaging task not found. ")
+  } ?: error("ERROR: startSonatypeStaging task not found (AbstractPublishToMaven in publish.gradle).")
 
-  // Also, do not publish the decomat-examples project
   onlyIf {
-    !this.project.name.contains("decomat-examples")
+    publication.artifactId != "testing"
   }
 }
