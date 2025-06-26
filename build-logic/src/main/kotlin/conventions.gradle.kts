@@ -210,7 +210,7 @@ val publishSonatypeStaging by tasks.registering {
         println("--- Promoted staging repo ${repo.showName} ---")
         ok++
       } else {
-        println("--- Failed to promote repo ${repo.showName} - HTTP Code ${promoteResp.statusCode()} ---")
+        println("--- Failed to promote repo ${repo.showName} - HTTP Code ${promoteResp.statusCode()} ---\n${promoteResp.body()}")
         failed++
       }
     }

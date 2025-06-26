@@ -4,49 +4,6 @@ on:
   workflow_dispatch
 
 jobs:
-#  create_staging_repository:
-#    runs-on: ubuntu-latest
-#    name: Create staging repository
-#    outputs:
-#      repository_id: ${{ steps.create.outputs.repository_id }}
-#    steps:
-#      - id: create
-#        name: Create Central staging repo
-#        shell: bash
-#        env:
-#          USER:  ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}      # Portal token user
-#          PASS:  ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}      # Portal token pwd
-#          PID:   ${{ vars.SONATYPE_PROFILE_ID }}   # unchanged
-#        run: |
-#          repo_json=$(curl -sS \
-#            -u "$USER:$PASS" \
-#            -H 'Content-Type: application/json' \
-#            -X POST \
-#            -d '{"data":{"description":"${{ github.repository }}/${{ github.workflow }}#${{ github.run_number }}"}}' \
-#            "https://ossrh-staging-api.central.sonatype.com/service/local/staging/profiles/$PID/start")
-#
-#          echo "::group::Central response"; echo "$repo_json"; echo "::endgroup::"
-#
-#          repo_id=$(printf '%s' "$repo_json" | jq -r '.data.stagedRepositoryId')
-#          if [[ -z "$repo_id" || "$repo_id" == "null" ]]; then
-#            echo "::error ::Central API did not return a repository id"
-#            exit 1
-#          fi
-#
-#          echo "::group::Repo Id"; echo "$repo_id"; echo "::endgroup::"
-#
-#          echo "repository_id=$repo_id" >> "$GITHUB_OUTPUT"
-
-#      - id: create
-#        uses: nexus-actions/create-nexus-staging-repo@main
-#        with:
-#          username: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
-#          password: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}
-#          staging_profile_id: ${{ vars.SONATYPE_PROFILE_ID }}
-#          # Defaults to the https://oss.sonatype.org, not https://s01.oss.sonatype.org
-#          base_url: https://ossrh-staging-api.central.sonatype.com/service/local/
-#          description: ${{ github.repository }}/${{ github.workflow }}#${{ github.run_number }}
-
   release:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -62,26 +19,25 @@ jobs:
               :terpal-plugin-kotlin:publish
               :terpal-plugin-gradle:publish
             platform: linux
-#          - os: macOS-latest
-#            # (Need to do >- or for some reason it preserves a newline after all the entries)
-#            publish_command: >-
-#              build
-#              :terpal-runtime:publishMacosX64PublicationToOss
-#              :terpal-runtime:publishMacosArm64PublicationToOss
-#              :terpal-runtime:publishIosX64PublicationToOss
-#              :terpal-runtime:publishIosArm64PublicationToOss
-#              :terpal-runtime:publishIosSimulatorArm64PublicationToOss
-#              :terpal-runtime:publishTvosX64PublicationToOss
-#              :terpal-runtime:publishTvosArm64PublicationToOss
-#              :terpal-runtime:publishWatchosX64PublicationToOss
-#              :terpal-runtime:publishWatchosArm32PublicationToOss
-#              :terpal-runtime:publishWatchosArm64PublicationToOss
-#            platform: mac
-#          - os: windows-latest
-#            publish_command: build :terpal-runtime:publishMingwX64PublicationToOss
-#            platform: windows
+          - os: macOS-latest
+            # (Need to do >- or for some reason it preserves a newline after all the entries)
+            publish_command: >-
+              build
+              :terpal-runtime:publishMacosX64PublicationToOss
+              :terpal-runtime:publishMacosArm64PublicationToOss
+              :terpal-runtime:publishIosX64PublicationToOss
+              :terpal-runtime:publishIosArm64PublicationToOss
+              :terpal-runtime:publishIosSimulatorArm64PublicationToOss
+              :terpal-runtime:publishTvosX64PublicationToOss
+              :terpal-runtime:publishTvosArm64PublicationToOss
+              :terpal-runtime:publishWatchosX64PublicationToOss
+              :terpal-runtime:publishWatchosArm32PublicationToOss
+              :terpal-runtime:publishWatchosArm64PublicationToOss
+            platform: mac
+          - os: windows-latest
+            publish_command: build :terpal-runtime:publishMingwX64PublicationToOss
+            platform: windows
     env:
-      #SONATYPE_REPOSITORY_ID: ${{ needs.create_staging_repository.outputs.repository_id }}
       SONATYPE_USERNAME: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
       SONATYPE_PASSWORD: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}
       NEW_SIGNING_KEY_ID_BASE64: ${{ secrets.NEW_SIGNING_KEY_ID_BASE64 }}
@@ -105,41 +61,6 @@ jobs:
           PID:   ${{ vars.SONATYPE_PROFILE_ID }}   # unchanged
         run: ./gradlew ${{ matrix.publish_command }} -Pplatform=${{ matrix.platform }} -PisCI -no-daemon --stacktrace
 
-#  upload_to_central:
-#    needs: [release, create_staging_repository]
-#    runs-on: ubuntu-latest
-#    env:
-#      SONATYPE_REPOSITORY_ID: ${{ needs.create_staging_repository.outputs.repository_id }}
-#      SONATYPE_USERNAME: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
-#      SONATYPE_PASSWORD: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}
-#    steps:
-#      - name: Hand staging repo to Central Portal
-#        shell: bash
-#        run: |
-#          set -euo pipefail
-#
-#          # 1) URL-encode the repository key ----------------------------
-#          repo="${SONATYPE_REPOSITORY_ID}"
-#          enc=$(printf '%s' "$repo" | jq -sRr @uri)
-#          echo "Encoded repo id: $SONATYPE_REPOSITORY_ID -> $repo -> $enc"
-#
-#          # 2) POST to the manual-upload endpoint -----------------------
-#          response=$(curl -sS -w '%{http_code}' -o /tmp/out \
-#            -u "$SONATYPE_USERNAME:$SONATYPE_PASSWORD" \
-#            -H 'Content-Type: application/json' \
-#            -H 'Accept: application/json' \
-#            -X POST -d '{}' \
-#            "https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/$enc?publishing_type=user_managed")
-#
-#          # 3) Evaluate HTTP status -------------------------------------
-#          if [[ "$response" =~ ^2 ]]; then
-#            echo "Hand-off succeeded (HTTP $response)."
-#          else
-#            echo "::error ::Central upload failed (HTTP $response)"
-#            cat /tmp/out
-#            exit 1
-#          fi
-
   release_repos:
     needs: [ release ]
     runs-on: ubuntu-latest
@@ -162,7 +83,6 @@ jobs:
     needs: [release_repos]
     runs-on: ubuntu-latest
     env:
-      SONATYPE_REPOSITORY_ID: ${{ needs.create_staging_repository.outputs.repository_id }}
       SONATYPE_USERNAME: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEUSERNAME }}
       SONATYPE_PASSWORD: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPEPASSWORD }}
       NEW_SIGNING_KEY_ID_BASE64: ${{ secrets.NEW_SIGNING_KEY_ID_BASE64 }}
