@@ -132,6 +132,7 @@ data class Repo(
   val portal_deployment_id: String? = null
 ) {
   val encodedKey get() = java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8)
+  val showName get() = description?.let { "${it}-${key}" } ?: key
 }
 
 val publishSonatypeStaging by tasks.registering {
@@ -192,7 +193,7 @@ val publishSonatypeStaging by tasks.registering {
     var failed = 0
 
     matching.forEach { repo ->
-      println("------------- Processing Repo: ${repo.description} - Key: ${repo.key} -------------")
+      println("==== Processing Repo: ${repo.showName} ====")
 
       // Encode the key exactly like `jq -sRr @uri`
       val enc = repo.encodedKey
@@ -206,18 +207,19 @@ val publishSonatypeStaging by tasks.registering {
 
       val promoteResp = http.send(promoteRequest, HttpResponse.BodyHandlers.ofString())
       if (promoteResp.statusCode() in 200..299) {
-        println("=============== Promoted staging repo ${repo.key} ===============")
+        println("--- Promoted staging repo ${repo.showName} ---")
         ok++
       } else {
-        println("""=============== Failed to promote repo ${repo.key} - HTTP Code ${promoteResp.statusCode()}: ===============\n${promoteResp.body()}""".trimIndent())
+        println("--- Failed to promote repo ${repo.showName} - HTTP Code ${promoteResp.statusCode()} ---")
         failed++
       }
     }
+    println("==== Processing of Repos Completed ====")
 
     if (failed > 0) {
       throw GradleException("Some repositories failed to publish: $failed of ${matching.size}")
     } else {
-      logger.lifecycle("All $ok staging repositories successfully switched to user-managed.")
+      println("All $ok staging repositories successfully switched to user-managed.")
     }
   }
 }
