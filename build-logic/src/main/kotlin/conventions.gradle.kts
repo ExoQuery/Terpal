@@ -91,7 +91,7 @@ val startSonatypeStaging by tasks.registering {
     val pid   = "io.exoquery"
     val user  = System.getenv("SONATYPE_USERNAME")   ?: error("SONATYPE_USERNAME not set")
     val pass  = System.getenv("SONATYPE_PASSWORD")   ?: error("SONATYPE_PASSWORD not set")
-    val desc = "${System.getenv("GITHUB_REPOSITORY")}/${System.getenv("GITHUB_WORKFLOW")}#${System.getenv("GITHUB_RUN_NUMBER")}/${project.name}"
+    val desc = "${System.getenv("GITHUB_REPOSITORY")}/${System.getenv("GITHUB_WORKFLOW")}#${System.getenv("GITHUB_RUN_NUMBER")}/${project.name}/${System.getenv("MATRIX_OS")}"
 
     val bodyJson = """{"data":{"description":"$desc"}}"""
     val auth     = Base64.getEncoder().encodeToString("$user:$pass".toByteArray())
@@ -135,52 +135,55 @@ data class Repo(
   val showName get() = description?.let { "${it}-${key}" } ?: key
 }
 
+data class Wrapper(val repositories: List<Repo>) {
+  val repositoriesSorted = repositories.sortedBy { it.showName }
+}
+
+fun HttpClient.listStagingRepos(user: String, pass: String): Wrapper {
+  val pid   = "io.exoquery"
+  val auth     = Base64.getEncoder().encodeToString("$user:$pass".toByteArray())
+  val request  = HttpRequest.newBuilder()
+    .uri(URI.create("https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?profile_id=$pid&ip=any"))
+    .header("Content-Type", "application/json")
+    .header("Authorization", "Basic $auth")
+    .GET()
+    .build()
+
+  val mapper = jacksonObjectMapper()
+
+  fun tryPrintJson(json: String) {
+    try {
+      mapper.writerWithDefaultPrettyPrinter().writeValueAsString(mapper.readTree(json))
+    } catch (e: Exception) {
+      json
+    }
+  }
+  val response = http.send(request, HttpResponse.BodyHandlers.ofString())
+  println("================ /manual/search/repositories Response Code: ${response.statusCode()}: ================\n${tryPrintJson(response.body())}")
+
+  /* 1.  Sanity-check the HTTP call */
+  if (response.statusCode() !in 200..299) {
+    val msg = "================ OSS RH search failed Code:${response.statusCode()} ================\n${response.body()}"
+    logger.error(msg)
+    throw GradleException("Search request was not successful because of:\n${msg}")
+  }
+
+  val payload: Wrapper = mapper.readValue<Wrapper>(response.body())
+  return payload
+}
+
 val publishSonatypeStaging by tasks.registering {
   description = "Creates a new OSSRH staging repository and records its ID"
 
   doLast {
     /* ---- gather inputs exactly as before ---- */
-    val pid   = "io.exoquery"
     val user  = System.getenv("SONATYPE_USERNAME")   ?: error("SONATYPE_USERNAME not set")
     val pass  = System.getenv("SONATYPE_PASSWORD")   ?: error("SONATYPE_PASSWORD not set")
     val desc = "${System.getenv("GITHUB_REPOSITORY")}/${System.getenv("GITHUB_WORKFLOW")}#${System.getenv("GITHUB_RUN_NUMBER")}"
-
-    val auth     = Base64.getEncoder().encodeToString("$user:$pass".toByteArray())
-    val request  = HttpRequest.newBuilder()
-      .uri(URI.create("https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?profile_id=$pid&ip=any"))
-      .header("Content-Type", "application/json")
-      .header("Authorization", "Basic $auth")
-      .GET()
-      .build()
-
-    val mapper = jacksonObjectMapper()
-
-    fun tryPrintJson(json: String) {
-      try {
-        mapper.writerWithDefaultPrettyPrinter().writeValueAsString(mapper.readTree(json))
-      } catch (e: Exception) {
-        json
-      }
-    }
-
     val http = HttpClient.newHttpClient()
-    val response = http.send(request, HttpResponse.BodyHandlers.ofString())
 
-    println("================ /manual/search/repositories Response Code: ${response.statusCode()}: ================\n${tryPrintJson(response.body())}")
-
-    /* 1.  Sanity-check the HTTP call */
-    if (response.statusCode() !in 200..299) {
-      val msg = "================ OSS RH search failed Code:${response.statusCode()} ================\n${response.body()}"
-      logger.error(msg)
-      throw GradleException("Search request was not successful because of:\n${msg}")
-    }
-
-    /* 2.  Parse the JSON payload */
-    data class Wrapper(val repositories: List<Repo>)
-    val payload: Wrapper = mapper.readValue<Wrapper>(response.body())
-
-    /* 3.  Pick the repositories whose description matches `desc` */
-    val matching = payload.repositories.filter { it.description?.startsWith(desc) ?: false }
+    /* Pick the repositories whose description matches `desc` */
+    val matching = http.listStagingRepos(user, pass).repositoriesSorted.filter { it.description?.startsWith(desc) ?: false }
 
     if (matching.isEmpty()) {
       logger.lifecycle("No repositories found with description “$desc”.")
@@ -220,6 +223,14 @@ val publishSonatypeStaging by tasks.registering {
       throw GradleException("Some repositories failed to publish: $failed of ${matching.size}")
     } else {
       println("All $ok staging repositories successfully switched to user-managed.")
+    }
+
+    /* List the repos again with the deployment ID */
+    val updated = http.listStagingRepos(user, pass).repositoriesSorted.filter { it.description?.startsWith(desc) ?: false }
+    if (updated.isEmpty()) {
+      logger.lifecycle("No repositories found with description “$desc”.")
+    } else {
+      println("---------------- Completed Repositories (${updated.size}): ----------------\n${updated.withIndex().map { (i, it) -> "${i}) ${it.showName}\n   - ${it.portal_deployment_id}\n" }.joinToString("\n")}")
     }
   }
 }
