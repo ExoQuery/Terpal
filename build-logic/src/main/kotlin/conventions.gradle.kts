@@ -119,7 +119,7 @@ val startSonatypeStaging by tasks.registering {
       throw GradleException("========= Failed to parse staging repository ID from response: =========\n${response.body()}")
 
     // 1. Expose as a Gradle extra property
-    println("-------------- Exposing Repo ID: $repoId --------------")
+    println("-------------- Exposing Repo ID: $repoId in ${project.name} --------------")
     project.extra["stagingRepoId"] = repoId
   }
 }
