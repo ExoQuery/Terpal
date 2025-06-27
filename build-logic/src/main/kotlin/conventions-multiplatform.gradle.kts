@@ -18,7 +18,6 @@ kotlin {
           "any"
   val isLinux = platform == "linux"
   val isMac = platform == "mac"
-  val isWindows = platform == "windows"
 
   jvmToolchain(11)
   val isLocalMultiplatform = project.hasProperty("isLocalMultiplatform")
@@ -92,9 +91,7 @@ kotlin {
     tvosSimulatorArm64()
     watchosSimulatorArm64()
   }
-  if (isWindows && isCI) {
-    mingwX64()
-  }
+  mingwX64()
 
 
     sourceSets {
