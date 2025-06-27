@@ -6,13 +6,18 @@ plugins {
   `java-library`
   `maven-publish`
   signing
-  id("io.github.gradle-nexus.publish-plugin")
+  id("com.gradleup.nmcp")
   id("org.jetbrains.dokka")
 }
 
-apply(plugin = "io.github.gradle-nexus.publish-plugin")
 apply(plugin = "kotlin")
-apply(plugin = "maven-publish")
+
+nmcp {
+  publishAllPublicationsToCentralPortal {
+    username = System.getenv("CENTRAL_USERNAME")
+    password = System.getenv("CENTRAL_PASSWORD")
+  }
+}
 
 repositories {
   mavenCentral()
