@@ -18,7 +18,7 @@ repositories {
 
 group = "io.exoquery"
 // Everything inherits the version from here
-version = "2.2.0-2.0.0.PL"
+version = "2.2.20-2.0.0.PL"
 
 object Versions {
     val decomatVersion = "0.3.0"

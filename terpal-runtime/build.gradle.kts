@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.konan.target.HostManager
 
 plugins {
-  kotlin("multiplatform") version "2.2.0"
+  kotlin("multiplatform") version "2.2.20"
 
   id("maven-publish")
   id("conventions-multiplatform")

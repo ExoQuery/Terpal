@@ -1,5 +1,5 @@
 plugins {
-  kotlin("multiplatform") version "2.2.0" apply false
+  kotlin("multiplatform") version "2.2.20" apply false
   id("io.github.gradle-nexus.publish-plugin") version "1.1.0" apply false
 }
 

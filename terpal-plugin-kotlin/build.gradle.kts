@@ -1,11 +1,11 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    kotlin("jvm") version "2.2.0"
+    kotlin("jvm") version "2.2.20"
     id("maven-publish")
     id("conventions")
     id("publish-jvm")
-    kotlin("kapt") version "2.2.0"
+    kotlin("kapt") version "2.2.20"
 }
 
 kotlin {

@@ -1,5 +1,7 @@
 name: Release
 
+# STILL NEED TO REPUBLISH TERPAL SQL
+
 on:
   workflow_dispatch
 
