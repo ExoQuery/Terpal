@@ -128,7 +128,7 @@ context(bc: BuilderContext) fun createLambdaN(functionBody: IrExpression, params
 context(bc: BuilderContext) fun createLambdaClosure(functionBody: IrExpression, params: List<IrValueParameter>, functionParent: IrDeclarationParent): IrSimpleFunction {
   return with(bc.pluginCtx) {
     irFactory.buildFun {
-      origin = IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
+      origin = IrDeclarationOrigin.LOCAL_FUNCTION
       name = SpecialNames.NO_NAME_PROVIDED
       visibility = DescriptorVisibilities.LOCAL
       returnType = functionBody.type
